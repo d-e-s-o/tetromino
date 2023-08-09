@@ -9,5 +9,40 @@
 
 mod opengl;
 
+use anyhow::Context as _;
+use anyhow::Result;
 
-fn main() {}
+use winit::event::Event;
+use winit::event::WindowEvent;
+use winit::event_loop::ControlFlow;
+use winit::event_loop::EventLoop;
+
+use crate::opengl::Window;
+
+
+fn main() -> Result<()> {
+  let event_loop = EventLoop::new();
+  let _window = Window::new(&event_loop).context("failed to create OpenGL window")?;
+
+  event_loop.run(move |event, _, control_flow| {
+    *control_flow = ControlFlow::Wait;
+    let result = (|| {
+      let () = match event {
+        Event::LoopDestroyed => (),
+        Event::WindowEvent { event, .. } => match event {
+          WindowEvent::ReceivedCharacter(c) if c == 'q' => control_flow.set_exit(),
+          WindowEvent::CloseRequested => control_flow.set_exit(),
+          _ => (),
+        },
+        _ => (),
+      };
+
+      <Result<()>>::Ok(())
+    })();
+
+    if let Err(err) = result {
+      eprintln!("{err:#}");
+      control_flow.set_exit_with_code(1);
+    }
+  });
+}
