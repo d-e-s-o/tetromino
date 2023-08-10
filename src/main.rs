@@ -22,7 +22,7 @@ use crate::opengl::Window;
 
 fn main() -> Result<()> {
   let event_loop = EventLoop::new();
-  let _window = Window::new(&event_loop).context("failed to create OpenGL window")?;
+  let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
   event_loop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
@@ -33,6 +33,11 @@ fn main() -> Result<()> {
           WindowEvent::ReceivedCharacter(c) if c == 'q' => control_flow.set_exit(),
           WindowEvent::CloseRequested => control_flow.set_exit(),
           _ => (),
+        },
+        Event::RedrawRequested(_) => {
+          let renderer = window.renderer();
+          let () = renderer.on_pre_render()?;
+          let () = renderer.on_post_render()?;
         },
         _ => (),
       };

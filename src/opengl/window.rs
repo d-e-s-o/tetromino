@@ -27,11 +27,16 @@ use winit::platform::x11::WindowBuilderExtX11 as _;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
 
+use super::Renderer;
+
 
 /// The Tetris window.
 pub(crate) struct Window {
   /// The underlying `winit` window.
   _window: WinitWindow,
+  /// The renderer that clients should use to draw to the window's
+  /// surface.
+  renderer: Renderer,
 }
 
 impl Window {
@@ -77,7 +82,16 @@ impl Window {
       .make_current(&surface)
       .context("failed to make context current")?;
 
-    let slf = Self { _window: window };
+    let slf = Self {
+      _window: window,
+      renderer: Renderer::new(surface, context),
+    };
     Ok(slf)
+  }
+
+  /// Retrieve the window's [`Renderer`].
+  #[inline]
+  pub(crate) fn renderer(&mut self) -> &mut Renderer {
+    &mut self.renderer
   }
 }
