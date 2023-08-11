@@ -8,6 +8,7 @@
 )]
 
 mod opengl;
+mod point;
 
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
@@ -20,7 +21,9 @@ use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 
+use crate::opengl::Color;
 use crate::opengl::Window;
+use crate::point::Point;
 
 
 fn main() -> Result<()> {
@@ -53,6 +56,11 @@ fn main() -> Result<()> {
         Event::RedrawRequested(_) => {
           let renderer = window.renderer();
           let () = renderer.on_pre_render()?;
+          let () = renderer.set_color(Color::black());
+          let () = renderer.render_line(Point { x: 1, y: 1 }, Point { x: 1, y: 10 });
+          let () = renderer.render_line(Point { x: 1, y: 10 }, Point { x: 10, y: 10 });
+          let () = renderer.render_line(Point { x: 10, y: 10 }, Point { x: 10, y: 1 });
+          let () = renderer.render_line(Point { x: 10, y: 1 }, Point { x: 1, y: 1 });
           let () = renderer.on_post_render()?;
         },
         _ => (),

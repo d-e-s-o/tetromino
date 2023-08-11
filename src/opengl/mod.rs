@@ -4,6 +4,7 @@
 mod renderer;
 mod window;
 
+pub(crate) use renderer::Color;
 pub(crate) use renderer::Renderer;
 pub(crate) use window::Window;
 
