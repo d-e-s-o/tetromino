@@ -1,6 +1,7 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
 use anyhow::Context as _;
@@ -41,7 +42,11 @@ pub(crate) struct Window {
 
 impl Window {
   /// Create a new window using the provided `EventLoop`.
-  pub(crate) fn new(event_loop: &EventLoop<()>) -> Result<Self> {
+  pub(crate) fn new(
+    event_loop: &EventLoop<()>,
+    logic_w: NonZeroU16,
+    logic_h: NonZeroU16,
+  ) -> Result<Self> {
     let preference = DisplayApiPreference::Glx(Box::new(register_xlib_error_hook));
     let display = unsafe { Display::new(event_loop.raw_display_handle(), preference) }
       .context("failed to create display object")?;
@@ -84,9 +89,21 @@ impl Window {
 
     let slf = Self {
       _window: window,
-      renderer: Renderer::new(surface, context),
+      renderer: Renderer::new(surface, context, phys_w, phys_h, logic_w, logic_h),
     };
     Ok(slf)
+  }
+
+  /// Inform the window that it has been resized.
+  #[inline]
+  pub(crate) fn on_resize(
+    &mut self,
+    phys_w: NonZeroU32,
+    phys_h: NonZeroU32,
+    logic_w: NonZeroU16,
+    logic_h: NonZeroU16,
+  ) {
+    let () = self.renderer.update_view(phys_w, phys_h, logic_w, logic_h);
   }
 
   /// Retrieve the window's [`Renderer`].
