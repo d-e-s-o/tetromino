@@ -15,6 +15,7 @@ use glutin::surface::GlSurface;
 use glutin::surface::Surface;
 use glutin::surface::WindowSurface;
 
+use crate::guard::Guard;
 use crate::Point;
 
 use super::gl;
@@ -130,8 +131,9 @@ impl Renderer {
 
   /// Set the color with which subsequent vertices are to be rendered.
   #[inline]
-  pub(crate) fn set_color(&self, color: Color) {
-    let _prev = self.color.replace(color);
+  pub(crate) fn set_color(&self, color: Color) -> Guard<'_, impl FnOnce() + '_> {
+    let prev_color = self.color.replace(color);
+    Guard::new(move || self.color.set(prev_color))
   }
 
   fn calculate_view(

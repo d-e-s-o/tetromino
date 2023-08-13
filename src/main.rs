@@ -7,6 +7,7 @@
   clippy::module_inception
 )]
 
+mod guard;
 mod opengl;
 mod point;
 
@@ -56,7 +57,7 @@ fn main() -> Result<()> {
         Event::RedrawRequested(_) => {
           let renderer = window.renderer();
           let () = renderer.on_pre_render()?;
-          let () = renderer.set_color(Color::black());
+          let _guard = renderer.set_color(Color::black());
           let () = renderer.render_line(Point { x: 1, y: 1 }, Point { x: 1, y: 10 });
           let () = renderer.render_line(Point { x: 1, y: 10 }, Point { x: 10, y: 10 });
           let () = renderer.render_line(Point { x: 10, y: 10 }, Point { x: 10, y: 1 });
