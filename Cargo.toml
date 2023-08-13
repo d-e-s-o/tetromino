@@ -17,5 +17,6 @@ gl_generator = {version = "0.14", optional = true, default-features = false}
 [dependencies]
 anyhow = {version = "1.0.72", default-features = false, features = ["std"]}
 glutin = {version = "0.30", default-features = false, features = ["glx", "x11"]}
+image = {version = "0.24", default-features = false, features = ["png"]}
 raw-window-handle = {version = "0.5.2", default-features = false}
 winit = {version = "0.28.6", default-features = false, features = ["x11"]}

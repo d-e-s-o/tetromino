@@ -17,8 +17,10 @@ use glutin::surface::WindowSurface;
 
 use crate::guard::Guard;
 use crate::Point;
+use crate::Rect;
 
 use super::gl;
+use super::Texture;
 
 
 /// The capacity of our vertex buffer.
@@ -67,6 +69,16 @@ impl Color {
       a: gl::GLubyte::MAX,
     }
   }
+
+  #[inline]
+  pub(crate) const fn white() -> Self {
+    Self {
+      r: gl::GLubyte::MAX,
+      g: gl::GLubyte::MAX,
+      b: gl::GLubyte::MAX,
+      a: gl::GLubyte::MAX,
+    }
+  }
 }
 
 
@@ -99,6 +111,8 @@ pub(crate) struct Renderer {
   logic_h: gl::GLfloat,
   /// The currently set color.
   color: Cell<Color>,
+  /// The currently set texture.
+  texture: Cell<Texture>,
   /// The vertex buffer we use.
   vertices: RefCell<Vec<Vertex>>,
   /// The type of primitive currently active for rendering.
@@ -124,6 +138,7 @@ impl Renderer {
       logic_w,
       logic_h,
       color: Cell::new(Color::black()),
+      texture: Cell::new(Texture::invalid()),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
       primitive: Cell::new(Primitive::Quad),
     }
@@ -134,6 +149,24 @@ impl Renderer {
   pub(crate) fn set_color(&self, color: Color) -> Guard<'_, impl FnOnce() + '_> {
     let prev_color = self.color.replace(color);
     Guard::new(move || self.color.set(prev_color))
+  }
+
+  #[inline]
+  pub(crate) fn set_texture(&self, texture: &Texture) -> Guard<'_, impl FnOnce() + '_> {
+    fn unguarded_set(renderer: &Renderer, texture: &Texture) {
+      // We are about to change the texture, which means all primitives
+      // referencing the previously set texture should get rendered first.
+      let () = renderer.flush_vertex_buffer();
+      let () = texture.bind();
+    }
+
+    let () = unguarded_set(self, texture);
+    let prev_texture = self.texture.replace(texture.clone());
+
+    Guard::new(move || {
+      let () = unguarded_set(self, &prev_texture);
+      let _ignore = self.texture.replace(prev_texture);
+    })
   }
 
   fn calculate_view(
@@ -332,6 +365,51 @@ impl Renderer {
 
     let len = buffer.len();
     let () = unsafe { buffer.set_len(len + VERTEX_COUNT_LINE) };
+  }
+
+  /// Render a rectangle.
+  pub(crate) fn render_rect(&self, rect: Rect<u16>) {
+    const VERTEX_COUNT_QUAD: usize = 4;
+
+    let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
+    let color = self.color.get();
+    // Texture coordinates for the quad. We always map the complete
+    // texture on it.
+    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
+
+    let mut vertex = Vertex {
+      u: coords.x,
+      v: coords.y,
+      r: color.r,
+      g: color.g,
+      b: color.b,
+      a: color.a,
+      x: rect.x.into(),
+      y: rect.y.into(),
+      z: 0.0,
+    };
+
+    let mut buffer = self.vertices.borrow_mut();
+    let vertices = buffer.spare_capacity_mut();
+    vertices[0].write(vertex);
+
+    // lower right
+    vertex.u += coords.w;
+    vertex.x += gl::GLfloat::from(rect.w);
+    vertices[1].write(vertex);
+
+    // upper right
+    vertex.v += coords.h;
+    vertex.y += gl::GLfloat::from(rect.h);
+    vertices[2].write(vertex);
+
+    // upper left
+    vertex.u = coords.x;
+    vertex.x = rect.x.into();
+    vertices[3].write(vertex);
+
+    let len = buffer.len();
+    let () = unsafe { buffer.set_len(len + VERTEX_COUNT_QUAD) };
   }
 
   /// Set the type of primitive that we currently render and ensure that

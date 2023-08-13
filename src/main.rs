@@ -10,7 +10,9 @@
 mod guard;
 mod opengl;
 mod point;
+mod rect;
 
+use std::io::Cursor;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
@@ -23,8 +25,12 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 
 use crate::opengl::Color;
+use crate::opengl::Texture;
 use crate::opengl::Window;
 use crate::point::Point;
+use crate::rect::Rect;
+
+const TETRIS_FIELD_TEXTURE: &[u8] = include_bytes!("../var/tetris_field_256x512.png");
 
 
 fn main() -> Result<()> {
@@ -35,6 +41,11 @@ fn main() -> Result<()> {
   let event_loop = EventLoop::new();
   let mut window =
     Window::new(&event_loop, logic_w, logic_h).context("failed to create OpenGL window")?;
+
+  let img =
+    image::io::Reader::with_format(Cursor::new(TETRIS_FIELD_TEXTURE), image::ImageFormat::Png)
+      .decode()?;
+  let texture = Texture::with_image(img).unwrap();
 
   event_loop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
@@ -57,11 +68,9 @@ fn main() -> Result<()> {
         Event::RedrawRequested(_) => {
           let renderer = window.renderer();
           let () = renderer.on_pre_render()?;
-          let _guard = renderer.set_color(Color::black());
-          let () = renderer.render_line(Point { x: 1, y: 1 }, Point { x: 1, y: 10 });
-          let () = renderer.render_line(Point { x: 1, y: 10 }, Point { x: 10, y: 10 });
-          let () = renderer.render_line(Point { x: 10, y: 10 }, Point { x: 10, y: 1 });
-          let () = renderer.render_line(Point { x: 10, y: 1 }, Point { x: 1, y: 1 });
+          let _guard = renderer.set_color(Color::white());
+          let _guard = renderer.set_texture(&texture);
+          let () = renderer.render_rect(Rect::new(1, 1, 10, 10));
           let () = renderer.on_post_render()?;
         },
         _ => (),
