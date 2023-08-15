@@ -5,6 +5,7 @@ mod renderer;
 mod texture;
 mod window;
 
+pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Color;
 pub(crate) use renderer::Renderer;
 pub(crate) use texture::Texture;

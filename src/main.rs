@@ -49,39 +49,30 @@ fn main() -> Result<()> {
 
   event_loop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
-    let result = (|| {
-      let () = match event {
-        Event::LoopDestroyed => (),
-        Event::WindowEvent { event, .. } => match event {
-          WindowEvent::ReceivedCharacter(c) if c == 'q' => control_flow.set_exit(),
-          WindowEvent::CloseRequested => control_flow.set_exit(),
-          WindowEvent::Resized(phys_size) => {
-            let phys_w = NonZeroU32::new(phys_size.width)
-              .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
-            let phys_h = NonZeroU32::new(phys_size.height)
-              .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
 
-            window.on_resize(phys_w, phys_h, logic_w, logic_h);
-          },
-          _ => (),
-        },
-        Event::RedrawRequested(_) => {
-          let renderer = window.renderer();
-          let () = renderer.on_pre_render()?;
-          let _guard = renderer.set_color(Color::white());
-          let _guard = renderer.set_texture(&texture);
-          let () = renderer.render_rect(Rect::new(1, 1, 10, 10));
-          let () = renderer.on_post_render()?;
+    let () = match event {
+      Event::LoopDestroyed => (),
+      Event::WindowEvent { event, .. } => match event {
+        WindowEvent::ReceivedCharacter(c) if c == 'q' => control_flow.set_exit(),
+        WindowEvent::CloseRequested => control_flow.set_exit(),
+        WindowEvent::Resized(phys_size) => {
+          let phys_w = NonZeroU32::new(phys_size.width)
+            .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
+          let phys_h = NonZeroU32::new(phys_size.height)
+            .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
+
+          window.on_resize(phys_w, phys_h, logic_w, logic_h);
         },
         _ => (),
-      };
-
-      <Result<()>>::Ok(())
-    })();
-
-    if let Err(err) = result {
-      eprintln!("{err:#}");
-      control_flow.set_exit_with_code(1);
-    }
+      },
+      Event::RedrawRequested(_) => {
+        let renderer = window.renderer();
+        let renderer = renderer.on_pre_render();
+        let _guard = renderer.set_color(Color::white());
+        let _guard = renderer.set_texture(&texture);
+        let () = renderer.render_rect(Rect::new(1, 1, 10, 10));
+      },
+      _ => (),
+    };
   });
 }

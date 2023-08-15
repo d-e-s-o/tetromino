@@ -7,9 +7,6 @@ use std::mem::needs_drop;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
-use anyhow::Context as _;
-use anyhow::Result;
-
 use glutin::context::PossiblyCurrentContext;
 use glutin::surface::GlSurface;
 use glutin::surface::Surface;
@@ -96,6 +93,172 @@ impl Primitive {
 }
 
 
+pub(crate) struct ActiveRenderer<'renderer> {
+  /// The `Renderer` this object belongs to.
+  renderer: &'renderer Renderer,
+  /// The currently set color.
+  color: Cell<Color>,
+  /// The currently set texture.
+  texture: Cell<Texture>,
+  /// The vertex buffer we use.
+  vertices: RefCell<Vec<Vertex>>,
+  /// The type of primitive currently active for rendering.
+  primitive: Cell<Primitive>,
+}
+
+impl<'renderer> ActiveRenderer<'renderer> {
+  fn new(renderer: &'renderer Renderer) -> Self {
+    Self {
+      renderer,
+      color: Cell::new(Color::black()),
+      texture: Cell::new(Texture::invalid()),
+      vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
+      primitive: Cell::new(Primitive::Quad),
+    }
+  }
+
+  /// Set the color with which subsequent vertices are to be rendered.
+  #[inline]
+  pub(crate) fn set_color(&self, color: Color) -> Guard<'_, impl FnOnce() + '_> {
+    let prev_color = self.color.replace(color);
+    Guard::new(move || self.color.set(prev_color))
+  }
+
+  #[inline]
+  pub(crate) fn set_texture(&self, texture: &Texture) -> Guard<'_, impl FnOnce() + '_> {
+    fn unguarded_set(renderer: &ActiveRenderer, texture: &Texture) {
+      // We are about to change the texture, which means all primitives
+      // referencing the previously set texture should get rendered first.
+      let () = renderer.flush_vertex_buffer();
+      let () = texture.bind();
+    }
+
+    let () = unguarded_set(self, texture);
+    let prev_texture = self.texture.replace(texture.clone());
+
+    Guard::new(move || {
+      let () = unguarded_set(self, &prev_texture);
+      let _ignore = self.texture.replace(prev_texture);
+    })
+  }
+
+  /// Render a line.
+  pub(crate) fn render_line(&self, p1: Point<u16>, p2: Point<u16>) {
+    const VERTEX_COUNT_LINE: usize = 2;
+
+    let () = self.set_primitive(Primitive::Line, VERTEX_COUNT_LINE);
+    let color = self.color.get();
+
+    let mut vertex = Vertex {
+      u: 0.0,
+      v: 0.0,
+      r: color.r,
+      g: color.g,
+      b: color.b,
+      a: color.a,
+      x: p1.x.into(),
+      y: p1.y.into(),
+      z: 0.0,
+    };
+
+    let mut buffer = self.vertices.borrow_mut();
+    let vertices = buffer.spare_capacity_mut();
+    vertices[0].write(vertex);
+
+    // second point
+    vertex.x = p2.x.into();
+    vertex.y = p2.y.into();
+    vertices[1].write(vertex);
+
+    let len = buffer.len();
+    let () = unsafe { buffer.set_len(len + VERTEX_COUNT_LINE) };
+  }
+
+  /// Render a rectangle.
+  pub(crate) fn render_rect(&self, rect: Rect<u16>) {
+    const VERTEX_COUNT_QUAD: usize = 4;
+
+    let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
+    let color = self.color.get();
+    // Texture coordinates for the quad. We always map the complete
+    // texture on it.
+    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
+
+    let mut vertex = Vertex {
+      u: coords.x,
+      v: coords.y,
+      r: color.r,
+      g: color.g,
+      b: color.b,
+      a: color.a,
+      x: rect.x.into(),
+      y: rect.y.into(),
+      z: 0.0,
+    };
+
+    let mut buffer = self.vertices.borrow_mut();
+    let vertices = buffer.spare_capacity_mut();
+    vertices[0].write(vertex);
+
+    // lower right
+    vertex.u += coords.w;
+    vertex.x += gl::GLfloat::from(rect.w);
+    vertices[1].write(vertex);
+
+    // upper right
+    vertex.v += coords.h;
+    vertex.y += gl::GLfloat::from(rect.h);
+    vertices[2].write(vertex);
+
+    // upper left
+    vertex.u = coords.x;
+    vertex.x = rect.x.into();
+    vertices[3].write(vertex);
+
+    let len = buffer.len();
+    let () = unsafe { buffer.set_len(len + VERTEX_COUNT_QUAD) };
+  }
+
+  /// Set the type of primitive that we currently render and ensure that
+  /// there is space for at least `vertex_cnt` vertices in our vertex
+  /// buffer.
+  fn set_primitive(&self, primitive: Primitive, vertex_cnt: usize) {
+    if primitive != self.primitive.get()
+      || self.vertices.borrow_mut().spare_capacity_mut().len() < vertex_cnt
+    {
+      let () = self.flush_vertex_buffer();
+      let () = self.primitive.set(primitive);
+    }
+  }
+
+  /// Send the cached data to the graphics device for rendering.
+  fn flush_vertex_buffer(&self) {
+    let mut buffer = self.vertices.borrow_mut();
+    let size = buffer.len() as _;
+    if size > 0 {
+      unsafe {
+        gl::InterleavedArrays(gl::T2F_C4UB_V3F, 0, buffer.as_ptr().cast());
+        gl::DrawArrays(self.primitive.get().as_glenum(), 0, size);
+
+        debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
+      }
+
+      debug_assert!(!needs_drop::<Vertex>());
+      // SAFETY: We are strictly decreasing size and our vertices are
+      //         plain old data. No need to drop them properly.
+      unsafe { buffer.set_len(0) };
+    }
+  }
+}
+
+impl Drop for ActiveRenderer<'_> {
+  fn drop(&mut self) {
+    let () = self.flush_vertex_buffer();
+    let () = self.renderer.on_post_render();
+  }
+}
+
+
 pub(crate) struct Renderer {
   /// The OpenGL surface that is used for rendering.
   surface: Surface<WindowSurface>,
@@ -109,14 +272,6 @@ pub(crate) struct Renderer {
   logic_w: gl::GLfloat,
   /// The logical height of the view maintained by this renderer.
   logic_h: gl::GLfloat,
-  /// The currently set color.
-  color: Cell<Color>,
-  /// The currently set texture.
-  texture: Cell<Texture>,
-  /// The vertex buffer we use.
-  vertices: RefCell<Vec<Vertex>>,
-  /// The type of primitive currently active for rendering.
-  primitive: Cell<Primitive>,
 }
 
 impl Renderer {
@@ -137,36 +292,7 @@ impl Renderer {
       phys_h: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
-      color: Cell::new(Color::black()),
-      texture: Cell::new(Texture::invalid()),
-      vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
-      primitive: Cell::new(Primitive::Quad),
     }
-  }
-
-  /// Set the color with which subsequent vertices are to be rendered.
-  #[inline]
-  pub(crate) fn set_color(&self, color: Color) -> Guard<'_, impl FnOnce() + '_> {
-    let prev_color = self.color.replace(color);
-    Guard::new(move || self.color.set(prev_color))
-  }
-
-  #[inline]
-  pub(crate) fn set_texture(&self, texture: &Texture) -> Guard<'_, impl FnOnce() + '_> {
-    fn unguarded_set(renderer: &Renderer, texture: &Texture) {
-      // We are about to change the texture, which means all primitives
-      // referencing the previously set texture should get rendered first.
-      let () = renderer.flush_vertex_buffer();
-      let () = texture.bind();
-    }
-
-    let () = unguarded_set(self, texture);
-    let prev_texture = self.texture.replace(texture.clone());
-
-    Guard::new(move || {
-      let () = unguarded_set(self, &prev_texture);
-      let _ignore = self.texture.replace(prev_texture);
-    })
   }
 
   fn calculate_view(
@@ -308,7 +434,7 @@ impl Renderer {
     }
   }
 
-  pub(crate) fn on_pre_render(&self) -> Result<()> {
+  pub(crate) fn on_pre_render(&self) -> ActiveRenderer<'_> {
     let () = self.push_states();
     let () = self.push_matrizes();
 
@@ -320,126 +446,16 @@ impl Renderer {
 
       debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
     }
-    Ok(())
+    ActiveRenderer::new(self)
   }
 
-  pub(crate) fn on_post_render(&self) -> Result<()> {
-    let () = self.flush_vertex_buffer();
+  fn on_post_render(&self) {
     let () = self.pop_matrizes();
     let () = self.pop_states();
 
     let () = self
       .surface
       .swap_buffers(&self.context)
-      .context("failed to swap OpenGL buffers")?;
-    Ok(())
-  }
-
-  /// Render a line.
-  pub(crate) fn render_line(&self, p1: Point<u16>, p2: Point<u16>) {
-    const VERTEX_COUNT_LINE: usize = 2;
-
-    let () = self.set_primitive(Primitive::Line, VERTEX_COUNT_LINE);
-    let color = self.color.get();
-
-    let mut vertex = Vertex {
-      u: 0.0,
-      v: 0.0,
-      r: color.r,
-      g: color.g,
-      b: color.b,
-      a: color.a,
-      x: p1.x.into(),
-      y: p1.y.into(),
-      z: 0.0,
-    };
-
-    let mut buffer = self.vertices.borrow_mut();
-    let vertices = buffer.spare_capacity_mut();
-    vertices[0].write(vertex);
-
-    // second point
-    vertex.x = p2.x.into();
-    vertex.y = p2.y.into();
-    vertices[1].write(vertex);
-
-    let len = buffer.len();
-    let () = unsafe { buffer.set_len(len + VERTEX_COUNT_LINE) };
-  }
-
-  /// Render a rectangle.
-  pub(crate) fn render_rect(&self, rect: Rect<u16>) {
-    const VERTEX_COUNT_QUAD: usize = 4;
-
-    let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
-    let color = self.color.get();
-    // Texture coordinates for the quad. We always map the complete
-    // texture on it.
-    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
-
-    let mut vertex = Vertex {
-      u: coords.x,
-      v: coords.y,
-      r: color.r,
-      g: color.g,
-      b: color.b,
-      a: color.a,
-      x: rect.x.into(),
-      y: rect.y.into(),
-      z: 0.0,
-    };
-
-    let mut buffer = self.vertices.borrow_mut();
-    let vertices = buffer.spare_capacity_mut();
-    vertices[0].write(vertex);
-
-    // lower right
-    vertex.u += coords.w;
-    vertex.x += gl::GLfloat::from(rect.w);
-    vertices[1].write(vertex);
-
-    // upper right
-    vertex.v += coords.h;
-    vertex.y += gl::GLfloat::from(rect.h);
-    vertices[2].write(vertex);
-
-    // upper left
-    vertex.u = coords.x;
-    vertex.x = rect.x.into();
-    vertices[3].write(vertex);
-
-    let len = buffer.len();
-    let () = unsafe { buffer.set_len(len + VERTEX_COUNT_QUAD) };
-  }
-
-  /// Set the type of primitive that we currently render and ensure that
-  /// there is space for at least `vertex_cnt` vertices in our vertex
-  /// buffer.
-  fn set_primitive(&self, primitive: Primitive, vertex_cnt: usize) {
-    if primitive != self.primitive.get()
-      || self.vertices.borrow_mut().spare_capacity_mut().len() < vertex_cnt
-    {
-      let () = self.flush_vertex_buffer();
-      let () = self.primitive.set(primitive);
-    }
-  }
-
-  /// Send the cached data to the graphics device for rendering.
-  fn flush_vertex_buffer(&self) {
-    let mut buffer = self.vertices.borrow_mut();
-    let size = buffer.len() as _;
-    if size > 0 {
-      unsafe {
-        gl::InterleavedArrays(gl::T2F_C4UB_V3F, 0, buffer.as_ptr().cast());
-        gl::DrawArrays(self.primitive.get().as_glenum(), 0, size);
-
-        debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-      }
-
-      debug_assert!(!needs_drop::<Vertex>());
-      // SAFETY: We are strictly decreasing size and our vertices are
-      //         plain old data. No need to drop them properly.
-      unsafe { buffer.set_len(0) };
-    }
+      .expect("failed to swap OpenGL buffers");
   }
 }
