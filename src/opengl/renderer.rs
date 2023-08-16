@@ -4,6 +4,7 @@
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::mem::needs_drop;
+use std::mem::replace;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
@@ -93,13 +94,45 @@ impl Primitive {
 }
 
 
+#[derive(Clone, Debug)]
+enum TextureState {
+  /// The texture has been bound and will be used when rendering.
+  Bound(Texture),
+  /// The texture has not yet been bound. [`Bind`](Texture::bind) it
+  /// before sending primitives to the graphics device if it is meant to
+  /// be used.
+  Unbound(Texture),
+}
+
+impl TextureState {
+  /// Make sure that the represented texture is bound.
+  fn ensure_bound(&mut self) {
+    if let Self::Unbound(texture) = self {
+      // The clone is reasonably cheap, but also entirely unnecessary at
+      // a conceptual level. We just want to flip the enum variant from
+      // `Unbound` to `Bound`. Thanks Rust...
+      let texture = texture.clone();
+      let () = texture.bind();
+      let _prev = replace(self, Self::Bound(texture));
+    }
+  }
+
+  /// Extract the wrapped [`Texture`].
+  fn into_inner(self) -> Texture {
+    match self {
+      Self::Bound(texture) | Self::Unbound(texture) => texture,
+    }
+  }
+}
+
+
 pub(crate) struct ActiveRenderer<'renderer> {
   /// The `Renderer` this object belongs to.
   renderer: &'renderer Renderer,
   /// The currently set color.
   color: Cell<Color>,
   /// The currently set texture.
-  texture: Cell<Texture>,
+  texture: RefCell<TextureState>,
   /// The vertex buffer we use.
   vertices: RefCell<Vec<Vertex>>,
   /// The type of primitive currently active for rendering.
@@ -111,7 +144,11 @@ impl<'renderer> ActiveRenderer<'renderer> {
     Self {
       renderer,
       color: Cell::new(Color::black()),
-      texture: Cell::new(Texture::invalid()),
+      // We know that no texture is active, because we are called on the
+      // `Renderer::on_pre_render` path and it just cleared a bunch of
+      // state. So it's fine for us to claim that an "invalid" texture
+      // is bound already.
+      texture: RefCell::new(TextureState::Bound(Texture::invalid())),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
       primitive: Cell::new(Primitive::Quad),
     }
@@ -126,19 +163,23 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
   #[inline]
   pub(crate) fn set_texture(&self, texture: &Texture) -> Guard<'_, impl FnOnce() + '_> {
-    fn unguarded_set(renderer: &ActiveRenderer, texture: &Texture) {
-      // We are about to change the texture, which means all primitives
-      // referencing the previously set texture should get rendered first.
-      let () = renderer.flush_vertex_buffer();
-      let () = texture.bind();
-    }
-
-    let () = unguarded_set(self, texture);
-    let prev_texture = self.texture.replace(texture.clone());
+    // We are about to change the texture, which means all primitives
+    // referencing the previously set texture should get rendered first.
+    let () = self.flush_vertex_buffer();
+    let () = texture.bind();
+    let prev_texture = self
+      .texture
+      .replace(TextureState::Bound(texture.clone()))
+      .into_inner();
 
     Guard::new(move || {
-      let () = unguarded_set(self, &prev_texture);
-      let _ignore = self.texture.replace(prev_texture);
+      // Make sure that anything relying on the previous texture is
+      // rendered. This can't be postponed anymore, because we are about
+      // to loose any references to said texture.
+      let () = self.flush_vertex_buffer();
+      // No point in binding the texture eagerly. Chances are it won't
+      // actually be used for any primitives.
+      let _unused = self.texture.replace(TextureState::Unbound(prev_texture));
     })
   }
 
@@ -236,6 +277,8 @@ impl<'renderer> ActiveRenderer<'renderer> {
     let mut buffer = self.vertices.borrow_mut();
     let size = buffer.len() as _;
     if size > 0 {
+      let () = self.texture.borrow_mut().ensure_bound();
+
       unsafe {
         gl::InterleavedArrays(gl::T2F_C4UB_V3F, 0, buffer.as_ptr().cast());
         gl::DrawArrays(self.primitive.get().as_glenum(), 0, size);
