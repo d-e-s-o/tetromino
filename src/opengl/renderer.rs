@@ -129,6 +129,8 @@ impl TextureState {
 pub(crate) struct ActiveRenderer<'renderer> {
   /// The `Renderer` this object belongs to.
   renderer: &'renderer Renderer,
+  /// The origin relative to which rendering happens.
+  origin: Cell<Point<u16>>,
   /// The currently set color.
   color: Cell<Color>,
   /// The currently set texture.
@@ -143,6 +145,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
   fn new(renderer: &'renderer Renderer) -> Self {
     Self {
       renderer,
+      origin: Cell::new(Point::default()),
       color: Cell::new(Color::black()),
       // We know that no texture is active, because we are called on the
       // `Renderer::on_pre_render` path and it just cleared a bunch of
@@ -152,6 +155,14 @@ impl<'renderer> ActiveRenderer<'renderer> {
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
       primitive: Cell::new(Primitive::Quad),
     }
+  }
+
+  /// Set the origin relative to which rendering happens.
+  #[inline]
+  pub(crate) fn set_origin(&self, origin: Point<u16>) -> Guard<'_, impl FnOnce() + '_> {
+    let new_origin = self.origin.get() + origin;
+    let prev_origin = self.origin.replace(new_origin);
+    Guard::new(move || self.origin.set(prev_origin))
   }
 
   /// Set the color with which subsequent vertices are to be rendered.
@@ -184,8 +195,12 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a line.
-  pub(crate) fn render_line(&self, p1: Point<u16>, p2: Point<u16>) {
+  pub(crate) fn render_line(&self, mut p1: Point<u16>, mut p2: Point<u16>) {
     const VERTEX_COUNT_LINE: usize = 2;
+
+    let origin = self.origin.get();
+    p1 += origin;
+    p2 += origin;
 
     let () = self.set_primitive(Primitive::Line, VERTEX_COUNT_LINE);
     let color = self.color.get();
@@ -216,8 +231,11 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect(&self, rect: Rect<u16>) {
+  pub(crate) fn render_rect(&self, mut rect: Rect<u16>) {
     const VERTEX_COUNT_QUAD: usize = 4;
+
+    let origin = self.origin.get();
+    rect += origin;
 
     let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
     let color = self.color.get();

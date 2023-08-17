@@ -68,9 +68,10 @@ fn main() -> Result<()> {
       Event::RedrawRequested(_) => {
         let renderer = window.renderer();
         let renderer = renderer.on_pre_render();
+        let _guard = renderer.set_origin(Point::new(1, 1));
         let _guard = renderer.set_color(Color::white());
         let _guard = renderer.set_texture(&texture);
-        let () = renderer.render_rect(Rect::new(1, 1, 10, 10));
+        let () = renderer.render_rect(Rect::new(0, 0, 10, 10));
       },
       _ => (),
     };
