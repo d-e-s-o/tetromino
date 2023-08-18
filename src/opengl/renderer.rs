@@ -129,6 +129,8 @@ impl TextureState {
 pub(crate) struct ActiveRenderer<'renderer> {
   /// The `Renderer` this object belongs to.
   renderer: &'renderer Renderer,
+  /// An invalid texture.
+  invalid_texture: Texture,
   /// The origin relative to which rendering happens.
   origin: Cell<Point<u16>>,
   /// The currently set color.
@@ -143,15 +145,17 @@ pub(crate) struct ActiveRenderer<'renderer> {
 
 impl<'renderer> ActiveRenderer<'renderer> {
   fn new(renderer: &'renderer Renderer) -> Self {
+    let invalid_texture = Texture::invalid();
     Self {
       renderer,
+      invalid_texture: invalid_texture.clone(),
       origin: Cell::new(Point::default()),
       color: Cell::new(Color::black()),
       // We know that no texture is active, because we are called on the
       // `Renderer::on_pre_render` path and it just cleared a bunch of
       // state. So it's fine for us to claim that an "invalid" texture
       // is bound already.
-      texture: RefCell::new(TextureState::Bound(Texture::invalid())),
+      texture: RefCell::new(TextureState::Bound(invalid_texture)),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
       primitive: Cell::new(Primitive::Quad),
     }
@@ -192,6 +196,11 @@ impl<'renderer> ActiveRenderer<'renderer> {
       // actually be used for any primitives.
       let _unused = self.texture.replace(TextureState::Unbound(prev_texture));
     })
+  }
+
+  #[inline]
+  pub(crate) fn set_no_texture(&self) -> Guard<'_, impl FnOnce() + '_> {
+    self.set_texture(&self.invalid_texture)
   }
 
   /// Render a line.
