@@ -11,11 +11,14 @@ use glutin::config::ConfigTemplateBuilder;
 use glutin::context::ContextApi;
 use glutin::context::ContextAttributesBuilder;
 use glutin::context::NotCurrentGlContextSurfaceAccessor as _;
+use glutin::context::PossiblyCurrentContext;
 use glutin::context::Version;
 use glutin::display::Display;
 use glutin::display::DisplayApiPreference;
 use glutin::display::GlDisplay as _;
 use glutin::platform::x11::X11GlConfigExt as _;
+use glutin::surface::GlSurface;
+use glutin::surface::Surface;
 use glutin::surface::SurfaceAttributesBuilder;
 use glutin::surface::WindowSurface;
 
@@ -35,6 +38,10 @@ use super::Renderer;
 pub(crate) struct Window {
   /// The underlying `winit` window.
   _window: WinitWindow,
+  /// The OpenGL surface that is used for rendering.
+  surface: Surface<WindowSurface>,
+  /// The OpenGL context used for double buffering.
+  context: PossiblyCurrentContext,
   /// The renderer that clients should use to draw to the window's
   /// surface.
   renderer: Renderer,
@@ -89,7 +96,9 @@ impl Window {
 
     let slf = Self {
       _window: window,
-      renderer: Renderer::new(surface, context, phys_w, phys_h, logic_w, logic_h),
+      surface,
+      context,
+      renderer: Renderer::new(phys_w, phys_h, logic_w, logic_h),
     };
     Ok(slf)
   }
@@ -103,7 +112,20 @@ impl Window {
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) {
+    let () = self.surface.resize(&self.context, phys_w, phys_h);
     let () = self.renderer.update_view(phys_w, phys_h, logic_w, logic_h);
+  }
+
+  /// Swap the rendering buffers to activate the one that any rendering
+  /// operations occurred on.
+  // This method has an exclusive receiver to prevent invocation while a
+  // renderer is active.
+  #[inline]
+  pub(crate) fn swap_buffers(&mut self) {
+    let () = self
+      .surface
+      .swap_buffers(&self.context)
+      .expect("failed to swap OpenGL buffers");
   }
 
   /// Retrieve the window's [`Renderer`].

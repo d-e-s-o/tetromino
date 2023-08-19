@@ -8,11 +8,6 @@ use std::mem::replace;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
-use glutin::context::PossiblyCurrentContext;
-use glutin::surface::GlSurface;
-use glutin::surface::Surface;
-use glutin::surface::WindowSurface;
-
 use crate::guard::Guard;
 use crate::Point;
 use crate::Rect;
@@ -330,10 +325,6 @@ impl Drop for ActiveRenderer<'_> {
 
 
 pub(crate) struct Renderer {
-  /// The OpenGL surface that is used for rendering.
-  surface: Surface<WindowSurface>,
-  /// The OpenGL context used for double buffering.
-  context: PossiblyCurrentContext,
   /// The physical width of the window to which this renderer belongs.
   phys_w: gl::GLsizei,
   /// The physical height of the window to which this renderer belongs.
@@ -346,8 +337,6 @@ pub(crate) struct Renderer {
 
 impl Renderer {
   pub(super) fn new(
-    surface: Surface<WindowSurface>,
-    context: PossiblyCurrentContext,
     phys_w: NonZeroU32,
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
@@ -356,8 +345,6 @@ impl Renderer {
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     Self {
-      surface,
-      context,
       phys_w: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
       phys_h: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
@@ -405,7 +392,6 @@ impl Renderer {
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) {
-    let () = self.surface.resize(&self.context, phys_w, phys_h);
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     self.phys_w = gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX);
@@ -522,10 +508,5 @@ impl Renderer {
   fn on_post_render(&self) {
     let () = self.pop_matrizes();
     let () = self.pop_states();
-
-    let () = self
-      .surface
-      .swap_buffers(&self.context)
-      .expect("failed to swap OpenGL buffers");
   }
 }
