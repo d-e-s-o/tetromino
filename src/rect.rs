@@ -20,6 +20,20 @@ impl<T> Rect<T> {
   pub(crate) fn new(x: T, y: T, w: T, h: T) -> Self {
     Self { x, y, w, h }
   }
+
+  /// Convert the `Rect` into one with a different `T`, assuming there
+  /// exists a lossless conversion between the two inner types.
+  pub(crate) fn into_other<U>(self) -> Rect<U>
+  where
+    U: From<T>,
+  {
+    Rect {
+      x: U::from(self.x),
+      y: U::from(self.y),
+      w: U::from(self.w),
+      h: U::from(self.h),
+    }
+  }
 }
 
 impl<T> From<(T, T, T, T)> for Rect<T> {

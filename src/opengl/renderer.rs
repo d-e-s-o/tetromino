@@ -72,6 +72,16 @@ impl Color {
       a: gl::GLubyte::MAX,
     }
   }
+
+  #[inline]
+  pub(crate) const fn orange() -> Self {
+    Self {
+      r: gl::GLubyte::MAX,
+      g: gl::GLubyte::MAX / 2,
+      b: gl::GLubyte::MIN,
+      a: gl::GLubyte::MAX,
+    }
+  }
 }
 
 
@@ -235,7 +245,15 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect(&self, mut rect: Rect<u16>) {
+  pub(crate) fn render_rect(&self, rect: Rect<u16>) {
+    // Texture coordinates for the quad. We always map the complete
+    // texture on it.
+    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
+    let () = self.render_rect_with_tex_coords(rect, coords);
+  }
+
+  /// Render a rectangle.
+  pub(crate) fn render_rect_with_tex_coords(&self, mut rect: Rect<u16>, coords: Rect<f32>) {
     const VERTEX_COUNT_QUAD: usize = 4;
 
     let origin = self.origin.get();
@@ -243,9 +261,6 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
     let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
     let color = self.color.get();
-    // Texture coordinates for the quad. We always map the complete
-    // texture on it.
-    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
 
     let mut vertex = Vertex {
       u: coords.x,
