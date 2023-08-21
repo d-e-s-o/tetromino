@@ -1,7 +1,6 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
 use anyhow::Context as _;
@@ -31,29 +30,29 @@ use winit::platform::x11::WindowBuilderExtX11 as _;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowBuilder;
 
-use super::Renderer;
 
+fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
+  let size = window.inner_size();
+  let phys_w =
+    NonZeroU32::new(size.width).unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
+  let phys_h =
+    NonZeroU32::new(size.height).unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
+  (phys_w, phys_h)
+}
 
 /// The Tetris window.
 pub(crate) struct Window {
   /// The underlying `winit` window.
-  _window: WinitWindow,
+  window: WinitWindow,
   /// The OpenGL surface that is used for rendering.
   surface: Surface<WindowSurface>,
   /// The OpenGL context used for double buffering.
   context: PossiblyCurrentContext,
-  /// The renderer that clients should use to draw to the window's
-  /// surface.
-  renderer: Renderer,
 }
 
 impl Window {
   /// Create a new window using the provided `EventLoop`.
-  pub(crate) fn new(
-    event_loop: &EventLoop<()>,
-    logic_w: NonZeroU16,
-    logic_h: NonZeroU16,
-  ) -> Result<Self> {
+  pub(crate) fn new(event_loop: &EventLoop<()>) -> Result<Self> {
     let preference = DisplayApiPreference::Glx(Box::new(register_xlib_error_hook));
     let display = unsafe { Display::new(event_loop.raw_display_handle(), preference) }
       .context("failed to create display object")?;
@@ -81,9 +80,7 @@ impl Window {
     let context_attributes = ContextAttributesBuilder::new()
       .with_context_api(ContextApi::OpenGl(Some(Version::new(1, 3))))
       .build(Some(raw_window_handle));
-    let size = window.inner_size();
-    let phys_w = NonZeroU32::new(size.width).context("window width is zero")?;
-    let phys_h = NonZeroU32::new(size.height).context("window height is zero")?;
+    let (phys_w, phys_h) = window_size(&window);
     let attrs =
       SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
     let surface = unsafe { display.create_window_surface(&config, &attrs) }
@@ -95,42 +92,35 @@ impl Window {
       .context("failed to make context current")?;
 
     let slf = Self {
-      _window: window,
+      window,
       surface,
       context,
-      renderer: Renderer::new(phys_w, phys_h, logic_w, logic_h),
     };
     Ok(slf)
   }
 
+  /// Retrieve the window's inner size (i.e., the size of the drawable
+  /// area).
+  pub(crate) fn size(&self) -> (NonZeroU32, NonZeroU32) {
+    window_size(&self.window)
+  }
+
   /// Inform the window that it has been resized.
   #[inline]
-  pub(crate) fn on_resize(
-    &mut self,
-    phys_w: NonZeroU32,
-    phys_h: NonZeroU32,
-    logic_w: NonZeroU16,
-    logic_h: NonZeroU16,
-  ) {
+  pub(crate) fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
     let () = self.surface.resize(&self.context, phys_w, phys_h);
-    let () = self.renderer.update_view(phys_w, phys_h, logic_w, logic_h);
   }
 
   /// Swap the rendering buffers to activate the one that any rendering
   /// operations occurred on.
   // This method has an exclusive receiver to prevent invocation while a
-  // renderer is active.
+  // renderer is active, because an active renderer already has an
+  // exclusive reference to the window.
   #[inline]
   pub(crate) fn swap_buffers(&mut self) {
     let () = self
       .surface
       .swap_buffers(&self.context)
       .expect("failed to swap OpenGL buffers");
-  }
-
-  /// Retrieve the window's [`Renderer`].
-  #[inline]
-  pub(crate) fn renderer(&mut self) -> &mut Renderer {
-    &mut self.renderer
   }
 }

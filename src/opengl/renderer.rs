@@ -14,6 +14,7 @@ use crate::Rect;
 
 use super::gl;
 use super::Texture;
+use super::Window;
 
 
 /// The capacity of our vertex buffer.
@@ -351,7 +352,7 @@ pub(crate) struct Renderer {
 }
 
 impl Renderer {
-  pub(super) fn new(
+  pub(crate) fn new(
     phys_w: NonZeroU32,
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
@@ -505,7 +506,11 @@ impl Renderer {
     }
   }
 
-  pub(crate) fn on_pre_render(&self) -> ActiveRenderer<'_> {
+  // This method requires an exclusive `Window` reference do ensure that
+  // while a renderer is active the window can't swap buffers, for
+  // example.
+  pub(crate) fn on_pre_render<'win>(&'win self, window: &'win mut Window) -> ActiveRenderer<'win> {
+    let _ = window;
     let () = self.push_states();
     let () = self.push_matrizes();
 
