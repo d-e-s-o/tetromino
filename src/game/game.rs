@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::Cursor;
+use std::num::NonZeroU16;
 
 use anyhow::Result;
 
@@ -52,5 +53,17 @@ impl Game {
   /// Render the game and its components.
   pub(crate) fn render(&self, renderer: &Renderer) {
     let () = self.field.render(renderer);
+  }
+
+  /// Retrieve the game surface's width.
+  pub(crate) fn width(&self) -> NonZeroU16 {
+    // SAFETY: The provided height is guaranteed to be greater than zero.
+    unsafe { NonZeroU16::new_unchecked(LEFT_SPACE + self.field.width() + RIGHT_SPACE) }
+  }
+
+  /// Retrieve the game surface's height.
+  pub(crate) fn height(&self) -> NonZeroU16 {
+    // SAFETY: The provided height is guaranteed to be greater than zero.
+    unsafe { NonZeroU16::new_unchecked(BOTTOM_SPACE + self.field.height() + TOP_SPACE) }
   }
 }

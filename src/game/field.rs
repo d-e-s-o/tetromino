@@ -69,12 +69,12 @@ impl Field {
   }
 
   #[inline]
-  fn width(&self) -> u16 {
+  pub(super) fn width(&self) -> u16 {
     2 * WALL_WIDTH + self.pieces.width()
   }
 
   #[inline]
-  fn height(&self) -> u16 {
+  pub(super) fn height(&self) -> u16 {
     WALL_WIDTH + self.pieces.height()
   }
 }

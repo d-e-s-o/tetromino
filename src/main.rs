@@ -13,7 +13,6 @@ mod opengl;
 mod point;
 mod rect;
 
-use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
 use anyhow::Context as _;
@@ -38,13 +37,9 @@ fn main() -> Result<()> {
   let event_loop = EventLoop::new();
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
-  // TODO: Should inquire the game field size.
-  let logic_w = NonZeroU16::new(15).unwrap();
-  let logic_h = NonZeroU16::new(23).unwrap();
   let (phys_w, phys_h) = window.size();
-  let mut renderer = Renderer::new(phys_w, phys_h, logic_w, logic_h);
-
   let game = Game::new().context("failed to instantiate game object")?;
+  let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
 
   event_loop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
@@ -61,7 +56,7 @@ fn main() -> Result<()> {
             .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
 
           let () = window.on_resize(phys_w, phys_h);
-          let () = renderer.update_view(phys_w, phys_h, logic_w, logic_h);
+          let () = renderer.update_view(phys_w, phys_h, game.width(), game.height());
         },
         _ => (),
       },
