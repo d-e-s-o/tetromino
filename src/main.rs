@@ -11,6 +11,7 @@ mod game;
 mod guard;
 mod opengl;
 mod point;
+mod rand;
 mod rect;
 
 use std::num::NonZeroU32;
