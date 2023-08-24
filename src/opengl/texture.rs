@@ -119,7 +119,15 @@ impl Texture {
     Ok(texture)
   }
 
+  #[cfg(not(test))]
   pub(super) fn invalid() -> Self {
+    Self { id: Rc::new(0) }
+  }
+
+  // For testing purposes we allow access of this constructor outside of
+  // the parent module.
+  #[cfg(test)]
+  pub(crate) fn invalid() -> Self {
     Self { id: Rc::new(0) }
   }
 

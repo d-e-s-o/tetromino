@@ -16,6 +16,18 @@ impl<T> Point<T> {
   pub const fn new(x: T, y: T) -> Self {
     Self { x, y }
   }
+
+  /// Convert the `Point` into one with a different `T`, assuming there
+  /// exists a lossless conversion between the two inner types.
+  pub(crate) fn into_other<U>(self) -> Point<U>
+  where
+    U: From<T>,
+  {
+    Point {
+      x: U::from(self.x),
+      y: U::from(self.y),
+    }
+  }
 }
 
 impl<T> From<(T, T)> for Point<T> {
