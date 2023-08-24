@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod data;
+mod factory;
 mod field;
 mod game;
 mod matrix;

@@ -7,6 +7,7 @@ use std::mem::needs_drop;
 use std::mem::replace;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
+use std::ops::Add;
 
 use crate::guard::Guard;
 use crate::Point;
@@ -54,6 +55,16 @@ pub(crate) struct Color {
 }
 
 impl Color {
+  /// A `const` version of `Add::add`.
+  const fn cadd(self, other: Color) -> Self {
+    Self {
+      r: self.r.saturating_add(other.r),
+      g: self.g.saturating_add(other.g),
+      b: self.b.saturating_add(other.b),
+      a: self.a.saturating_add(other.a),
+    }
+  }
+
   #[inline]
   pub(crate) const fn black() -> Self {
     Self {
@@ -75,6 +86,51 @@ impl Color {
   }
 
   #[inline]
+  pub(crate) const fn red() -> Self {
+    Self {
+      r: gl::GLubyte::MAX,
+      g: gl::GLubyte::MIN,
+      b: gl::GLubyte::MIN,
+      a: gl::GLubyte::MAX,
+    }
+  }
+
+  #[inline]
+  pub(crate) const fn green() -> Self {
+    Self {
+      r: gl::GLubyte::MIN,
+      g: gl::GLubyte::MAX,
+      b: gl::GLubyte::MIN,
+      a: gl::GLubyte::MAX,
+    }
+  }
+
+  #[inline]
+  pub(crate) const fn blue() -> Self {
+    Self {
+      r: gl::GLubyte::MIN,
+      g: gl::GLubyte::MIN,
+      b: gl::GLubyte::MAX,
+      a: gl::GLubyte::MAX,
+    }
+  }
+
+  #[inline]
+  pub(crate) const fn yellow() -> Self {
+    Self::red().cadd(Self::green())
+  }
+
+  #[inline]
+  pub(crate) const fn violet() -> Self {
+    Self::red().cadd(Self::blue())
+  }
+
+  #[inline]
+  pub(crate) const fn cyan() -> Self {
+    Self::green().cadd(Self::blue())
+  }
+
+  #[inline]
   pub(crate) const fn orange() -> Self {
     Self {
       r: gl::GLubyte::MAX,
@@ -82,6 +138,24 @@ impl Color {
       b: gl::GLubyte::MIN,
       a: gl::GLubyte::MAX,
     }
+  }
+
+  #[inline]
+  pub(crate) const fn gray() -> Self {
+    Self {
+      r: gl::GLubyte::MAX / 2,
+      g: gl::GLubyte::MAX / 2,
+      b: gl::GLubyte::MAX / 2,
+      a: gl::GLubyte::MAX,
+    }
+  }
+}
+
+impl Add<Color> for Color {
+  type Output = Color;
+
+  fn add(self, other: Color) -> Self::Output {
+    self.cadd(other)
   }
 }
 

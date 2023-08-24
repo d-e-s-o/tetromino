@@ -31,6 +31,7 @@ use crate::opengl::Renderer;
 use crate::opengl::Texture;
 use crate::opengl::Window;
 use crate::point::Point;
+use crate::rand::Rng;
 use crate::rect::Rect;
 
 
