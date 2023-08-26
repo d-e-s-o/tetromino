@@ -7,6 +7,7 @@ use crate::Rng;
 use crate::Texture;
 
 use super::Stone;
+use super::StoneProducer;
 
 
 type StoneTemplate = Vec<Point<u8>>;
@@ -53,9 +54,11 @@ impl StoneFactory {
       rng: Rng::new(),
     }
   }
+}
 
+impl StoneProducer for StoneFactory {
   /// Create a new random stone, based on one of the known templates.
-  pub(crate) fn create_stone(&self) -> Stone {
+  fn create_stone(&self) -> Stone {
     let index = self.rng.rand_u32() as usize % self.templates.len();
     let template = &self.templates[index];
     let color = COLORS[index % COLORS.len()];

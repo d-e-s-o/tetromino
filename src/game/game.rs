@@ -3,6 +3,7 @@
 
 use std::io::Cursor;
 use std::num::NonZeroU16;
+use std::rc::Rc;
 
 use anyhow::Result;
 
@@ -12,6 +13,7 @@ use crate::Texture;
 
 use super::data;
 use super::Field;
+use super::StoneFactory;
 
 /// Space between the left screen side and the field.
 const LEFT_SPACE: u16 = 1;
@@ -36,6 +38,8 @@ impl Game {
     let piece = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::with_image(piece)?;
 
+    let factory = Rc::new(StoneFactory::with_default_stones(piece.clone()));
+
     let reader = Cursor::new(data::TETRIS_FIELD_BACK_TEXTURE);
     let field_back = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
     let field_back = Texture::with_image(field_back)?;
@@ -43,10 +47,16 @@ impl Game {
     let field_width = 10;
     let field_height = 20;
     let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
+    let field = Field::new(
+      field_location,
+      field_width,
+      field_height,
+      factory.clone(),
+      piece,
+      field_back,
+    );
 
-    let slf = Self {
-      field: Field::new(field_location, field_width, field_height, piece, field_back),
-    };
+    let slf = Self { field };
     Ok(slf)
   }
 

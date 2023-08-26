@@ -1,6 +1,8 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::rc::Rc;
+
 use crate::ActiveRenderer as Renderer;
 use crate::Color;
 use crate::Point;
@@ -8,6 +10,8 @@ use crate::Rect;
 use crate::Texture;
 
 use super::Matrix;
+use super::Stone;
+use super::StoneProducer;
 
 
 /// The width of each wall.
@@ -19,16 +23,31 @@ pub(crate) struct Field {
   location: Point<u16>,
   /// The inner field area, containing dropped pieces.
   pieces: PieceField,
+  /// The producer we use for creating new stones.
+  producer: Rc<dyn StoneProducer>,
+  /// The currently active stone.
+  stone: Stone,
   /// The texture to use for one unit of wall.
   wall: Texture,
 }
 
 impl Field {
-  pub(super) fn new(location: Point<u16>, width: u16, height: u16, piece: Texture, back: Texture) -> Self {
+  pub(super) fn new(
+    location: Point<u16>,
+    width: u16,
+    height: u16,
+    producer: Rc<dyn StoneProducer>,
+    piece: Texture,
+    back: Texture,
+  ) -> Self {
     let pieces = PieceField::new(width, height, back);
+    let mut stone = producer.create_stone();
+    let () = pieces.reset_stone(&mut stone);
 
     Self {
       location,
+      producer,
+      stone,
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
@@ -55,6 +74,10 @@ impl Field {
     let () = renderer.render_rect_with_tex_coords(right, right.into_other());
   }
 
+  /// Render the currently active stone (if any).
+  fn render_stone(&self, renderer: &Renderer) {
+    let () = self.stone.render(renderer);
+  }
 
   /// Render the Tetris field.
   pub(super) fn render(&self, renderer: &Renderer) {
@@ -63,6 +86,7 @@ impl Field {
     {
       let _guard = renderer.set_origin(Point::new(WALL_WIDTH, WALL_WIDTH));
       let () = self.pieces.render(renderer);
+      let () = self.render_stone(renderer);
     }
 
     let () = self.render_walls(renderer);
@@ -93,6 +117,14 @@ impl PieceField {
       matrix: Matrix::new(width, height),
       back,
     }
+  }
+
+  /// Move the stone to its initial position.
+  fn reset_stone(&self, stone: &mut Stone) {
+    let stone_bounds = stone.bounds();
+    let x = self.width() / 2 - stone_bounds.w / 2;
+    let y = self.height() - stone_bounds.h;
+    let () = stone.move_to(Point::new(x, y));
   }
 
   /// Render the background of the field and draw vertical lines.
