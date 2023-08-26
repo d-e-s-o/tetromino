@@ -35,6 +35,13 @@ use crate::rand::Rng;
 use crate::rect::Rect;
 
 
+#[derive(Clone, Copy, Debug)]
+enum State {
+  Changed,
+  Unchanged,
+}
+
+
 fn main() -> Result<()> {
   let event_loop = EventLoop::new();
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
@@ -46,11 +53,17 @@ fn main() -> Result<()> {
   event_loop.run(move |event, _, control_flow| {
     *control_flow = ControlFlow::Wait;
 
-    let () = match event {
-      Event::LoopDestroyed => (),
+    let state = match event {
+      Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
-        WindowEvent::ReceivedCharacter(c) if c == 'q' => control_flow.set_exit(),
-        WindowEvent::CloseRequested => control_flow.set_exit(),
+        WindowEvent::ReceivedCharacter(c) if c == 'q' => {
+          let () = control_flow.set_exit();
+          State::Unchanged
+        },
+        WindowEvent::CloseRequested => {
+          let () = control_flow.set_exit();
+          State::Unchanged
+        },
         WindowEvent::Resized(phys_size) => {
           let phys_w = NonZeroU32::new(phys_size.width)
             .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
@@ -59,17 +72,22 @@ fn main() -> Result<()> {
 
           let () = window.on_resize(phys_w, phys_h);
           let () = renderer.update_view(phys_w, phys_h, game.width(), game.height());
+          State::Changed
         },
-        _ => (),
+        _ => State::Unchanged,
       },
       Event::RedrawRequested(_) => {
-        {
-          let renderer = renderer.on_pre_render(&mut window);
-          let () = game.render(&renderer);
-        }
+        let renderer = renderer.on_pre_render(&mut window);
+        let () = game.render(&renderer);
+        let () = drop(renderer);
         let () = window.swap_buffers();
+        State::Unchanged
       },
-      _ => (),
+      _ => State::Unchanged,
     };
+
+    if let State::Changed = state {
+      let () = window.request_redraw();
+    }
   });
 }

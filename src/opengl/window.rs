@@ -123,4 +123,13 @@ impl Window {
       .swap_buffers(&self.context)
       .expect("failed to swap OpenGL buffers");
   }
+
+  /// Request a redraw of the window's contents.
+  ///
+  /// This method informs the system that the window's contents may be
+  /// out-of-date to ultimately send a redraw event.
+  #[inline]
+  pub(crate) fn request_redraw(&self) {
+    self.window.request_redraw()
+  }
 }
