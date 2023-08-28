@@ -19,7 +19,10 @@ use std::num::NonZeroU32;
 use anyhow::Context as _;
 use anyhow::Result;
 
+use winit::event::ElementState;
 use winit::event::Event;
+use winit::event::KeyboardInput;
+use winit::event::VirtualKeyCode;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
@@ -47,7 +50,7 @@ fn main() -> Result<()> {
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
   let (phys_w, phys_h) = window.size();
-  let game = Game::new().context("failed to instantiate game object")?;
+  let mut game = Game::new().context("failed to instantiate game object")?;
   let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
 
   event_loop.run(move |event, _, control_flow| {
@@ -56,9 +59,29 @@ fn main() -> Result<()> {
     let state = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
-        WindowEvent::ReceivedCharacter(c) if c == 'q' => {
-          let () = control_flow.set_exit();
-          State::Unchanged
+        WindowEvent::ReceivedCharacter(c) => match c {
+          'h' => game.on_move_left(),
+          'j' => game.on_move_down(),
+          'l' => game.on_move_right(),
+          'q' => {
+            let () = control_flow.set_exit();
+            State::Unchanged
+          },
+          _ => State::Unchanged,
+        },
+        WindowEvent::KeyboardInput {
+          input:
+            KeyboardInput {
+              virtual_keycode: Some(keycode),
+              state: ElementState::Pressed,
+              ..
+            },
+          ..
+        } => match keycode {
+          VirtualKeyCode::Down => game.on_move_down(),
+          VirtualKeyCode::Left => game.on_move_left(),
+          VirtualKeyCode::Right => game.on_move_right(),
+          _ => State::Unchanged,
         },
         WindowEvent::CloseRequested => {
           let () = control_flow.set_exit();

@@ -7,6 +7,7 @@ use crate::ActiveRenderer as Renderer;
 use crate::Color;
 use crate::Point;
 use crate::Rect;
+use crate::State;
 use crate::Texture;
 
 use super::Matrix;
@@ -52,6 +53,23 @@ impl Field {
       // The walls just use the "piece" texture.
       wall: piece,
     }
+  }
+
+  fn move_stone_by(&mut self, x: i16, y: i16) -> State {
+    let () = self.stone.move_by(x, y);
+    State::Changed
+  }
+
+  pub(crate) fn move_stone_down(&mut self) -> State {
+    self.move_stone_by(0, -1)
+  }
+
+  pub(super) fn move_stone_left(&mut self) -> State {
+    self.move_stone_by(-1, 0)
+  }
+
+  pub(super) fn move_stone_right(&mut self) -> State {
+    self.move_stone_by(1, 0)
   }
 
   /// Render the walls of the field.

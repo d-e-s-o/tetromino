@@ -9,6 +9,7 @@ use anyhow::Result;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Point;
+use crate::State;
 use crate::Texture;
 
 use super::data;
@@ -58,6 +59,21 @@ impl Game {
 
     let slf = Self { field };
     Ok(slf)
+  }
+
+  #[inline]
+  pub(crate) fn on_move_down(&mut self) -> State {
+    self.field.move_stone_down()
+  }
+
+  #[inline]
+  pub(crate) fn on_move_left(&mut self) -> State {
+    self.field.move_stone_left()
+  }
+
+  #[inline]
+  pub(crate) fn on_move_right(&mut self) -> State {
+    self.field.move_stone_right()
   }
 
   /// Render the game and its components.
