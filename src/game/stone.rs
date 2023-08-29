@@ -86,6 +86,12 @@ impl Stone {
       h: y_max + 1 - y_min,
     }
   }
+
+  pub(crate) fn pieces(
+    &self,
+  ) -> impl Iterator<Item = Point<u16>> + DoubleEndedIterator + ExactSizeIterator + '_ {
+    self.pieces.iter().map(|(_piece, location)| *location)
+  }
 }
 
 

@@ -57,7 +57,13 @@ impl Field {
 
   fn move_stone_by(&mut self, x: i16, y: i16) -> State {
     let () = self.stone.move_by(x, y);
-    State::Changed
+
+    if self.pieces.collides(&self.stone) {
+      let () = self.stone.move_by(-x, -y);
+      State::Unchanged
+    } else {
+      State::Changed
+    }
   }
 
   pub(crate) fn move_stone_down(&mut self) -> State {
@@ -143,6 +149,23 @@ impl PieceField {
     let x = self.width() / 2 - stone_bounds.w / 2;
     let y = self.height() - stone_bounds.h;
     let () = stone.move_to(Point::new(x, y));
+  }
+
+  /// Check whether the provided stone collides with any of the pieces.
+  fn collides(&self, stone: &Stone) -> bool {
+    stone.pieces().any(|location| {
+      if location.x >= self.matrix.width() {
+        return true
+      }
+
+      // Check necessary because we may have done a movement that
+      // underflowed beforehand.
+      if location.y >= self.matrix.height() {
+        return true
+      }
+
+      self.matrix[location].is_some()
+    })
   }
 
   /// Render the background of the field and draw vertical lines.
