@@ -92,6 +92,12 @@ impl Stone {
   ) -> impl Iterator<Item = Point<u16>> + DoubleEndedIterator + ExactSizeIterator + '_ {
     self.pieces.iter().map(|(_piece, location)| *location)
   }
+
+  pub(crate) fn into_pieces(
+    self,
+  ) -> impl Iterator<Item = (Piece, Point<u16>)> + DoubleEndedIterator + ExactSizeIterator {
+    self.pieces.into_iter()
+  }
 }
 
 

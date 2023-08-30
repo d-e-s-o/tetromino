@@ -1,6 +1,7 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::mem::replace;
 use std::rc::Rc;
 
 use crate::ActiveRenderer as Renderer;
@@ -11,6 +12,7 @@ use crate::State;
 use crate::Texture;
 
 use super::Matrix;
+use super::Piece;
 use super::Stone;
 use super::StoneProducer;
 
@@ -55,6 +57,26 @@ impl Field {
     }
   }
 
+  pub(crate) fn move_stone_down(&mut self) -> State {
+    debug_assert!(!self.pieces.collides(&self.stone));
+
+    let () = self.stone.move_by(0, -1);
+
+    if self.pieces.collides(&self.stone) {
+      let () = self.stone.move_by(0, 1);
+
+      let new_stone = self.producer.create_stone();
+      let old_stone = replace(&mut self.stone, new_stone);
+
+      let () = self.pieces.merge_stone(old_stone);
+      let () = self.pieces.reset_stone(&mut self.stone);
+
+      // TODO: Check whether the new stone collides with the field
+      //       already and end the game if so.
+    }
+    State::Changed
+  }
+
   fn move_stone_by(&mut self, x: i16, y: i16) -> State {
     let () = self.stone.move_by(x, y);
 
@@ -64,10 +86,6 @@ impl Field {
     } else {
       State::Changed
     }
-  }
-
-  pub(crate) fn move_stone_down(&mut self) -> State {
-    self.move_stone_by(0, -1)
   }
 
   pub(super) fn move_stone_left(&mut self) -> State {
@@ -130,7 +148,7 @@ impl Field {
 
 struct PieceField {
   /// The matrix (2D array) of pieces.
-  matrix: Matrix<()>,
+  matrix: Matrix<Piece>,
   /// The texture to use for the entire inner back area.
   back: Texture,
 }
@@ -166,6 +184,17 @@ impl PieceField {
 
       self.matrix[location].is_some()
     })
+  }
+
+  fn merge_stone(&mut self, stone: Stone) {
+    // We should not have a current collision so that there is no
+    // overlap of pieces in any shape or form.
+    debug_assert!(!self.collides(&stone));
+
+    let () = stone.into_pieces().for_each(|(piece, location)| {
+      let _prev = self.matrix[location].replace(piece);
+      debug_assert!(_prev.is_none(), "{location:?}");
+    });
   }
 
   /// Render the background of the field and draw vertical lines.
