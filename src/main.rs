@@ -6,6 +6,10 @@
   clippy::let_unit_value,
   clippy::module_inception
 )]
+#![cfg_attr(feature = "nightly", feature(test))]
+
+#[cfg(feature = "nightly")]
+extern crate test;
 
 mod game;
 mod guard;
@@ -113,4 +117,35 @@ fn main() -> Result<()> {
       let () = window.request_redraw();
     }
   });
+}
+
+
+#[cfg(test)]
+#[cfg(feature = "nightly")]
+mod tests {
+  use super::*;
+
+  use test::Bencher;
+
+  use winit::event_loop::EventLoopBuilder;
+  use winit::platform::x11::EventLoopBuilderExtX11 as _;
+
+
+  /// Benchmark the performance of the rendering path.
+  #[bench]
+  fn bench_render(b: &mut Bencher) {
+    let event_loop = EventLoopBuilder::new().with_any_thread(true).build();
+    let mut window = Window::new(&event_loop).unwrap();
+
+    let (phys_w, phys_h) = window.size();
+    let game = Game::new().unwrap();
+    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
+
+    let () = b.iter(|| {
+      let renderer = renderer.on_pre_render(&mut window);
+      let () = game.render(&renderer);
+      let () = drop(renderer);
+      let () = window.swap_buffers();
+    });
+  }
 }
