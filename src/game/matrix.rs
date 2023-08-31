@@ -35,6 +35,22 @@ impl<T> Matrix<T> {
     }
   }
 
+  /// Create an iterator over all present elements, along with their
+  /// positions.
+  pub(crate) fn iter_present(&self) -> impl Iterator<Item = (&T, Point<u16>)> {
+    let width = usize::from(self.width);
+
+    self.matrix.iter().enumerate().filter_map(move |(i, t)| {
+      if let Some(t) = t {
+        let x = i % width;
+        let y = i / width;
+        Some((t, Point::new(x as u16, y as u16)))
+      } else {
+        None
+      }
+    })
+  }
+
   #[inline]
   pub(crate) fn width(&self) -> u16 {
     self.width

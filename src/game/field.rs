@@ -43,7 +43,7 @@ impl Field {
     piece: Texture,
     back: Texture,
   ) -> Self {
-    let pieces = PieceField::new(width, height, back);
+    let pieces = PieceField::new(width, height, back, piece.clone());
     let mut stone = producer.create_stone();
     let () = pieces.reset_stone(&mut stone);
 
@@ -151,13 +151,16 @@ struct PieceField {
   matrix: Matrix<Piece>,
   /// The texture to use for the entire inner back area.
   back: Texture,
+  /// The texture to use for pieces.
+  piece: Texture,
 }
 
 impl PieceField {
-  fn new(width: u16, height: u16, back: Texture) -> Self {
+  fn new(width: u16, height: u16, back: Texture, piece: Texture) -> Self {
     Self {
       matrix: Matrix::new(width, height),
       back,
+      piece,
     }
   }
 
@@ -219,8 +222,18 @@ impl PieceField {
     }
   }
 
+  /// Render the already dropped pieces.
+  fn render_pieces(&self, renderer: &Renderer) {
+    let _guard = renderer.set_texture(&self.piece);
+
+    self.matrix.iter_present().for_each(|(piece, location)| {
+      let () = piece.render(renderer, location);
+    })
+  }
+
   fn render(&self, renderer: &Renderer) {
     let () = self.render_back(renderer);
+    let () = self.render_pieces(renderer);
   }
 
   #[inline]
