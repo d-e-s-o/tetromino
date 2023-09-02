@@ -19,6 +19,7 @@ use glutin::platform::x11::X11GlConfigExt as _;
 use glutin::surface::GlSurface;
 use glutin::surface::Surface;
 use glutin::surface::SurfaceAttributesBuilder;
+use glutin::surface::SwapInterval;
 use glutin::surface::WindowSurface;
 
 use raw_window_handle::HasRawDisplayHandle as _;
@@ -90,6 +91,13 @@ impl Window {
       .context("failed to create context")?
       .make_current(&surface)
       .context("failed to make context current")?;
+
+    // Disable vsync. We are using demand-driven rendering and vsync
+    // would cause artificial delays by synchronizing buffer swaps to
+    // some video frame.
+    let () = surface
+      .set_swap_interval(&context, SwapInterval::DontWait)
+      .context("failed to disable vsync")?;
 
     let slf = Self {
       window,
