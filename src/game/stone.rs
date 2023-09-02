@@ -3,6 +3,7 @@
 
 use std::cmp::max;
 use std::cmp::min;
+use std::f32::consts::PI;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Color;
@@ -11,6 +12,49 @@ use crate::Rect;
 use crate::Texture;
 
 use super::Piece;
+
+
+#[inline]
+fn deg_to_rad(x: f32) -> f32 {
+  x * PI * 1.0 / 180.0
+}
+
+fn rotate_point_by(point: Point<f32>, angle: f32) -> Point<f32> {
+  // Get the distance from origin.
+  let distance = (point.x * point.x + point.y * point.y).sqrt();
+
+  if distance > 0.0 {
+    // Calculate the angle the stone has currently and add the angle to
+    // rotate to the old one.
+    let new_angle = if point.x < 0.0 { -1.0 } else { 1.0 } * (point.y / distance).acos() + angle;
+
+    let x = new_angle.sin() * distance;
+    let y = new_angle.cos() * distance;
+
+    Point::new(x, y)
+  } else {
+    point
+  }
+}
+
+/// Rotate a point around a center.
+///
+/// This function rotates a given point around a center by 90°, either
+/// left or right. The provided point has integer coordinates that are
+/// understood to be in game dimensions. The function furthermore
+/// assumes that the point actually represents the lower left corner of
+/// a 1-unit square, while rotation happens based on the center of said
+/// square.
+fn rotate_point(point: Point<u16>, center: Point<f32>, left: bool) -> Point<u16> {
+  let angle = if left { -90.0 } else { 90.0 };
+
+  let mut point = point.into_other::<f32>();
+  point += Point::new(0.5, 0.5);
+  point = rotate_point_by(point - center, deg_to_rad(angle)) + center;
+  point -= Point::new(0.5, 0.5);
+
+  Point::new(point.x as u16, point.y as u16)
+}
 
 
 /// The representation of a Tetris stone.
@@ -62,6 +106,35 @@ impl Stone {
     let y = location.y.wrapping_sub(bounds.y) as _;
 
     self.move_by(x, y)
+  }
+
+  pub(crate) fn rotate(&mut self, left: bool) {
+    let center_x;
+    let center_y;
+
+    let bounds = self.bounds();
+    let w = bounds.w;
+    let h = bounds.h;
+    let bounds = bounds.into_other::<f32>();
+
+    if left {
+      center_x = 0.5 * bounds.w;
+      center_y = 0.5 * bounds.h + if h & 1 == 0 { 0.0 } else { 0.5 };
+    } else {
+      center_x = 0.5 * bounds.w + if w & 1 == 0 { 0.5 } else { 0.0 };
+      center_y = 0.5 * bounds.h;
+    }
+
+    // TODO: For now we need to add a constant value here before we
+    //       rotate -- this is necessary because the rotation code is
+    //       somewhat broken for values close to zero -- fix this!
+    let center = Point::new(bounds.x + center_x + 10.0, bounds.y + center_y + 10.0);
+
+    let () = self.pieces.iter_mut().for_each(|(_piece, location)| {
+      *location += Point::new(10, 10);
+      *location = rotate_point(*location, center, left);
+      *location -= Point::new(10, 10);
+    });
   }
 
   pub(crate) fn bounds(&self) -> Rect<u16> {
@@ -170,5 +243,24 @@ mod tests {
     assert_eq!(bounds.y, 0);
     assert_eq!(bounds.w, 2);
     assert_eq!(bounds.h, 2);
+  }
+
+  /// Check that we can move a `Stone` object as expected.
+  #[test]
+  fn stone_rotation() {
+    // T stone
+    let template = [
+      Point::new(0, 0),
+      Point::new(1, 0),
+      Point::new(1, 1),
+      Point::new(2, 0),
+    ];
+    let mut stone = new_stone(&template);
+    let () = stone.move_to(Point::new(6, 4));
+    let before = stone.pieces().collect::<Vec<_>>();
+    let () = stone.rotate(true);
+    let after = stone.pieces().collect::<Vec<_>>();
+
+    assert_ne!(before, after);
   }
 }

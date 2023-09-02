@@ -96,6 +96,25 @@ impl Field {
     self.move_stone_by(1, 0)
   }
 
+  fn rotate_stone(&mut self, left: bool) -> State {
+    let () = self.stone.rotate(left);
+
+    if self.pieces.collides(&self.stone) {
+      let () = self.stone.rotate(!left);
+      State::Unchanged
+    } else {
+      State::Changed
+    }
+  }
+
+  pub(super) fn rotate_stone_left(&mut self) -> State {
+    self.rotate_stone(true)
+  }
+
+  pub(super) fn rotate_stone_right(&mut self) -> State {
+    self.rotate_stone(false)
+  }
+
   /// Render the walls of the field.
   fn render_walls(&self, renderer: &Renderer) {
     let _guard = renderer.set_texture(&self.wall);

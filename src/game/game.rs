@@ -76,6 +76,16 @@ impl Game {
     self.field.move_stone_right()
   }
 
+  #[inline]
+  pub(crate) fn on_rotate_left(&mut self) -> State {
+    self.field.rotate_stone_left()
+  }
+
+  #[inline]
+  pub(crate) fn on_rotate_right(&mut self) -> State {
+    self.field.rotate_stone_right()
+  }
+
   /// Render the game and its components.
   pub(crate) fn render(&self, renderer: &Renderer) {
     let () = self.field.render(renderer);

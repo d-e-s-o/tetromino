@@ -64,6 +64,8 @@ fn main() -> Result<()> {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
         WindowEvent::ReceivedCharacter(c) => match c {
+          '1' => game.on_rotate_left(),
+          '2' => game.on_rotate_right(),
           'h' => game.on_move_left(),
           'j' => game.on_move_down(),
           'l' => game.on_move_right(),

@@ -3,9 +3,11 @@
 
 use std::ops::Add;
 use std::ops::AddAssign;
+use std::ops::Sub;
+use std::ops::SubAssign;
 
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub(crate) struct Point<T> {
   pub x: T,
   pub y: T,
@@ -58,5 +60,29 @@ where
   fn add_assign(&mut self, rhs: Point<T>) {
     self.x += rhs.x;
     self.y += rhs.y;
+  }
+}
+
+impl<T> Sub<Point<T>> for Point<T>
+where
+  T: SubAssign<T>,
+{
+  type Output = Point<T>;
+
+  #[inline]
+  fn sub(mut self, other: Point<T>) -> Self::Output {
+    self -= other;
+    self
+  }
+}
+
+impl<T> SubAssign<Point<T>> for Point<T>
+where
+  T: SubAssign<T>,
+{
+  #[inline]
+  fn sub_assign(&mut self, rhs: Point<T>) {
+    self.x -= rhs.x;
+    self.y -= rhs.y;
   }
 }
