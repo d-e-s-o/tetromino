@@ -69,6 +69,7 @@ fn main() -> Result<()> {
           'h' => game.on_move_left(),
           'j' => game.on_move_down(),
           'l' => game.on_move_right(),
+          ' ' => game.on_drop(),
           'q' => {
             let () = control_flow.set_exit();
             State::Unchanged

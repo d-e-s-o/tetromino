@@ -67,6 +67,11 @@ impl Game {
   }
 
   #[inline]
+  pub(crate) fn on_drop(&mut self) -> State {
+    self.field.drop_stone()
+  }
+
+  #[inline]
   pub(crate) fn on_move_left(&mut self) -> State {
     self.field.move_stone_left()
   }

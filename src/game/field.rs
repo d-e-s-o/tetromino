@@ -57,7 +57,11 @@ impl Field {
     }
   }
 
-  pub(crate) fn move_stone_down(&mut self) -> State {
+  /// # Returns
+  /// This method returns `true` if the downward move was successful,
+  /// `false` if the stone would have collided with the field and got
+  /// merged instead.
+  fn move_stone_down_impl(&mut self) -> bool {
     debug_assert!(!self.pieces.collides(&self.stone));
 
     let () = self.stone.move_by(0, -1);
@@ -73,7 +77,19 @@ impl Field {
 
       // TODO: Check whether the new stone collides with the field
       //       already and end the game if so.
+      false
+    } else {
+      true
     }
+  }
+
+  pub(crate) fn drop_stone(&mut self) -> State {
+    while self.move_stone_down_impl() {}
+    State::Changed
+  }
+
+  pub(crate) fn move_stone_down(&mut self) -> State {
+    let _moved = self.move_stone_down_impl();
     State::Changed
   }
 
