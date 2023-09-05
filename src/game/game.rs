@@ -4,6 +4,8 @@
 use std::io::Cursor;
 use std::num::NonZeroU16;
 use std::rc::Rc;
+use std::time::Duration;
+use std::time::Instant;
 
 use anyhow::Result;
 
@@ -30,6 +32,8 @@ const TOP_SPACE: u16 = 1;
 pub(crate) struct Game {
   /// The Tetris field.
   field: Field,
+  /// The time of the next tick, i.e., the next downward movement.
+  next_tick: Instant,
 }
 
 impl Game {
@@ -57,8 +61,36 @@ impl Game {
       field_back,
     );
 
-    let slf = Self { field };
+    let slf = Self {
+      field,
+      next_tick: Self::next_tick(Instant::now()),
+    };
     Ok(slf)
+  }
+
+  /// Calculate the time of the next tick, given the current one.
+  fn next_tick(current_tick: Instant) -> Instant {
+    // TODO: Need to use actual level.
+    const LEVEL: u16 = 10;
+
+    // The current stone drop speed, in units per second.
+    let units_per_sec = 1.0 + 0.2 * LEVEL as f32;
+    current_tick + Duration::from_secs_f32(1.0 / units_per_sec)
+  }
+
+  /// Fast-forward the game to the current time.
+  ///
+  /// This includes moving the currently active stone according to the
+  /// elapsed time since the last update.
+  pub(crate) fn tick(&mut self, now: Instant) -> (State, Instant) {
+    let mut state = State::Unchanged;
+
+    while now >= self.next_tick {
+      state |= self.field.move_stone_down();
+      self.next_tick = Self::next_tick(self.next_tick);
+    }
+
+    (state, self.next_tick)
   }
 
   #[inline]

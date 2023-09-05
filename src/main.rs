@@ -19,6 +19,9 @@ mod rand;
 mod rect;
 
 use std::num::NonZeroU32;
+use std::ops::BitOr;
+use std::ops::BitOrAssign;
+use std::time::Instant;
 
 use anyhow::Context as _;
 use anyhow::Result;
@@ -48,6 +51,23 @@ enum State {
   Unchanged,
 }
 
+impl BitOr<State> for State {
+  type Output = State;
+
+  fn bitor(self, rhs: State) -> Self::Output {
+    match (self, rhs) {
+      (Self::Changed, _) | (_, Self::Changed) => Self::Changed,
+      (Self::Unchanged, Self::Unchanged) => Self::Unchanged,
+    }
+  }
+}
+
+impl BitOrAssign<State> for State {
+  fn bitor_assign(&mut self, rhs: State) {
+    *self = *self | rhs;
+  }
+}
+
 
 fn main() -> Result<()> {
   let event_loop = EventLoop::new();
@@ -58,9 +78,8 @@ fn main() -> Result<()> {
   let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
 
   event_loop.run(move |event, _, control_flow| {
-    *control_flow = ControlFlow::Wait;
-
-    let state = match event {
+    let now = Instant::now();
+    let event_state = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
         WindowEvent::ReceivedCharacter(c) => match c {
@@ -72,7 +91,7 @@ fn main() -> Result<()> {
           ' ' => game.on_drop(),
           'q' => {
             let () = control_flow.set_exit();
-            State::Unchanged
+            return
           },
           _ => State::Unchanged,
         },
@@ -92,7 +111,7 @@ fn main() -> Result<()> {
         },
         WindowEvent::CloseRequested => {
           let () = control_flow.set_exit();
-          State::Unchanged
+          return
         },
         WindowEvent::Resized(phys_size) => {
           let phys_w = NonZeroU32::new(phys_size.width)
@@ -116,7 +135,10 @@ fn main() -> Result<()> {
       _ => State::Unchanged,
     };
 
-    if let State::Changed = state {
+    let (tick_state, wait_until) = game.tick(now);
+    *control_flow = ControlFlow::WaitUntil(wait_until);
+
+    if let State::Changed = event_state | tick_state {
       let () = window.request_redraw();
     }
   });
