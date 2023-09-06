@@ -28,11 +28,11 @@ use anyhow::Result;
 
 use winit::event::ElementState;
 use winit::event::Event;
-use winit::event::KeyboardInput;
-use winit::event::VirtualKeyCode;
+use winit::event::KeyEvent;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
+use winit::keyboard::Key;
 
 use crate::game::Game;
 use crate::opengl::ActiveRenderer;
@@ -82,31 +82,31 @@ fn main() -> Result<()> {
     let event_state = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
-        WindowEvent::ReceivedCharacter(c) => match c {
-          '1' => game.on_rotate_left(),
-          '2' => game.on_rotate_right(),
-          'h' => game.on_move_left(),
-          'j' => game.on_move_down(),
-          'l' => game.on_move_right(),
-          ' ' => game.on_drop(),
-          'q' => {
-            let () = control_flow.set_exit();
-            return
-          },
-          _ => State::Unchanged,
-        },
         WindowEvent::KeyboardInput {
-          input:
-            KeyboardInput {
-              virtual_keycode: Some(keycode),
+          event:
+            KeyEvent {
+              logical_key: key,
               state: ElementState::Pressed,
               ..
             },
           ..
-        } => match keycode {
-          VirtualKeyCode::Down => game.on_move_down(),
-          VirtualKeyCode::Left => game.on_move_left(),
-          VirtualKeyCode::Right => game.on_move_right(),
+        } => match key {
+          Key::Character(c) => match c.as_str() {
+            "1" => game.on_rotate_left(),
+            "2" => game.on_rotate_right(),
+            "h" => game.on_move_left(),
+            "j" => game.on_move_down(),
+            "l" => game.on_move_right(),
+            "q" => {
+              let () = control_flow.set_exit();
+              return
+            },
+            _ => State::Unchanged,
+          },
+          Key::ArrowDown => game.on_move_down(),
+          Key::ArrowLeft => game.on_move_left(),
+          Key::ArrowRight => game.on_move_right(),
+          Key::Space => game.on_drop(),
           _ => State::Unchanged,
         },
         WindowEvent::CloseRequested => {
