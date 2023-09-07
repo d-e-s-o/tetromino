@@ -13,6 +13,7 @@ extern crate test;
 
 mod game;
 mod guard;
+mod keys;
 mod opengl;
 mod point;
 mod rand;
@@ -26,7 +27,6 @@ use std::time::Instant;
 use anyhow::Context as _;
 use anyhow::Result;
 
-use winit::event::ElementState;
 use winit::event::Event;
 use winit::event::KeyEvent;
 use winit::event::WindowEvent;
@@ -35,6 +35,8 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::Key;
 
 use crate::game::Game;
+use crate::keys::min_instant;
+use crate::keys::Keys;
 use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
 use crate::opengl::Renderer;
@@ -45,7 +47,7 @@ use crate::rand::Rng;
 use crate::rect::Rect;
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum State {
   Changed,
   Unchanged,
@@ -76,38 +78,32 @@ fn main() -> Result<()> {
   let (phys_w, phys_h) = window.size();
   let mut game = Game::new().context("failed to instantiate game object")?;
   let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
+  let mut keys =
+    Keys::with_system_defaults().context("failed to instantiate auto key repeat manager")?;
 
   event_loop.run(move |event, _, control_flow| {
     let now = Instant::now();
     let event_state = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
+        WindowEvent::Focused(false) => {
+          // We may not get informed about key releases once unfocused.
+          // So just treat such an event as clearing all pressed keys
+          // eagerly.
+          let () = keys.clear();
+          State::Unchanged
+        },
         WindowEvent::KeyboardInput {
           event:
             KeyEvent {
               logical_key: key,
-              state: ElementState::Pressed,
+              state,
               ..
             },
           ..
-        } => match key {
-          Key::Character(c) => match c.as_str() {
-            "1" => game.on_rotate_left(),
-            "2" => game.on_rotate_right(),
-            "h" => game.on_move_left(),
-            "j" => game.on_move_down(),
-            "l" => game.on_move_right(),
-            "q" => {
-              let () = control_flow.set_exit();
-              return
-            },
-            _ => State::Unchanged,
-          },
-          Key::ArrowDown => game.on_move_down(),
-          Key::ArrowLeft => game.on_move_left(),
-          Key::ArrowRight => game.on_move_right(),
-          Key::Space => game.on_drop(),
-          _ => State::Unchanged,
+        } => {
+          let () = keys.on_key_event(now, key, state);
+          State::Unchanged
         },
         WindowEvent::CloseRequested => {
           let () = control_flow.set_exit();
@@ -125,6 +121,39 @@ fn main() -> Result<()> {
         },
         _ => State::Unchanged,
       },
+      Event::MainEventsCleared => {
+        let handle_key = |key: &Key| match key {
+          Key::Character(c) => match c.as_str() {
+            "1" => game.on_rotate_left(),
+            "2" => game.on_rotate_right(),
+            "h" => game.on_move_left(),
+            "j" => game.on_move_down(),
+            "l" => game.on_move_right(),
+            "q" => {
+              let () = control_flow.set_exit();
+              State::Unchanged
+            },
+            _ => State::Unchanged,
+          },
+          Key::ArrowDown => game.on_move_down(),
+          Key::ArrowLeft => game.on_move_left(),
+          Key::ArrowRight => game.on_move_right(),
+          Key::Space => game.on_drop(),
+          _ => State::Unchanged,
+        };
+
+        let (keys_state, keys_wait) = keys.tick(now, handle_key);
+        let (game_state, game_wait) = game.tick(now);
+
+        // A key handler may have indicated a desire to exit. Don't
+        // overwrite that.
+        if !matches!(control_flow, ControlFlow::ExitWithCode(_)) {
+          let wait_until = min_instant(game_wait, keys_wait);
+          *control_flow = ControlFlow::WaitUntil(wait_until);
+        }
+
+        keys_state | game_state
+      },
       Event::RedrawRequested(_) => {
         let renderer = renderer.on_pre_render(&mut window);
         let () = game.render(&renderer);
@@ -135,10 +164,7 @@ fn main() -> Result<()> {
       _ => State::Unchanged,
     };
 
-    let (tick_state, wait_until) = game.tick(now);
-    *control_flow = ControlFlow::WaitUntil(wait_until);
-
-    if let State::Changed = event_state | tick_state {
+    if let State::Changed = event_state {
       let () = window.request_redraw();
     }
   });
