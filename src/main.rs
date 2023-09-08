@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #![allow(
+  clippy::collapsible_else_if,
   clippy::let_and_return,
   clippy::let_unit_value,
   clippy::module_inception

@@ -16,6 +16,7 @@ use crate::Texture;
 
 use super::data;
 use super::Field;
+use super::MoveResult;
 use super::StoneFactory;
 
 /// Space between the left screen side and the field.
@@ -36,6 +37,8 @@ pub(crate) struct Game {
   ///
   /// The attribute is `None` if the game is not running (e.g., paused).
   next_tick: Option<Instant>,
+  /// A flag indicating whether the game has ended.
+  over: bool,
 }
 
 impl Game {
@@ -54,7 +57,7 @@ impl Game {
     let field_width = 10;
     let field_height = 20;
     let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
-    let field = Field::new(
+    let result = Field::new(
       field_location,
       field_width,
       field_height,
@@ -62,10 +65,15 @@ impl Game {
       piece,
       field_back,
     );
+    let (field, over) = match result {
+      Ok(field) => (field, false),
+      Err(field) => (field, true),
+    };
 
     let slf = Self {
       field,
       next_tick: Some(Self::next_tick(Instant::now())),
+      over,
     };
     Ok(slf)
   }
@@ -87,15 +95,29 @@ impl Game {
   pub(crate) fn tick(&mut self, now: Instant) -> (State, Option<Instant>) {
     let mut state = State::Unchanged;
 
-    if let Some(next_tick) = &mut self.next_tick {
-      while now >= *next_tick {
-        state |= self.field.move_stone_down();
+    while let Some(next_tick) = &mut self.next_tick {
+      if now >= *next_tick {
+        let result = self.field.move_stone_down();
+        state |= result.0;
+
+        if let MoveResult::Conflict = result.1 {
+          let () = self.end();
+          break
+        }
+
         *next_tick = Self::next_tick(*next_tick);
+      } else {
+        break
       }
-      (state, self.next_tick)
-    } else {
-      (state, None)
     }
+
+    (state, self.next_tick)
+  }
+
+  /// End the current game.
+  fn end(&mut self) {
+    self.next_tick = None;
+    self.over = true;
   }
 
   /// Toggle the game between the running/pause states.
@@ -104,14 +126,20 @@ impl Game {
     if self.next_tick.is_some() {
       let _next_tick = self.next_tick.take();
     } else {
-      let _next_tick = self.next_tick.replace(Self::next_tick(Instant::now()));
+      if !self.over {
+        let _next_tick = self.next_tick.replace(Self::next_tick(Instant::now()));
+      }
     }
   }
 
   #[inline]
   pub(crate) fn on_move_down(&mut self) -> State {
     if self.next_tick.is_some() {
-      self.field.move_stone_down()
+      let (state, result) = self.field.move_stone_down();
+      if let MoveResult::Conflict = result {
+        let () = self.end();
+      }
+      state
     } else {
       State::Unchanged
     }
@@ -120,7 +148,11 @@ impl Game {
   #[inline]
   pub(crate) fn on_drop(&mut self) -> State {
     if self.next_tick.is_some() {
-      self.field.drop_stone()
+      let (state, result) = self.field.drop_stone();
+      if let MoveResult::Conflict = result {
+        let () = self.end();
+      }
+      state
     } else {
       State::Unchanged
     }

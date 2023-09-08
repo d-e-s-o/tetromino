@@ -12,6 +12,7 @@ mod stone;
 
 use factory::StoneFactory;
 use field::Field;
+use field::MoveResult;
 use matrix::Matrix;
 use piece::Piece;
 use producer::StoneProducer;

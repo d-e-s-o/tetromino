@@ -21,6 +21,20 @@ use super::StoneProducer;
 const WALL_WIDTH: u16 = 1;
 
 
+/// The result of a stone downward movement.
+#[derive(Debug)]
+pub(super) enum MoveResult {
+  /// The stone was moved down successfully and without a collision.
+  Moved,
+  /// The stone got merged into the field.
+  Merged,
+  /// A conflict has occurred, i.e., a stone got merged, but the
+  /// replacement stone immediately collided with previously merged
+  /// pieces in the field.
+  Conflict,
+}
+
+
 pub(crate) struct Field {
   /// The location of the lower left corner of the field, in game units.
   location: Point<u16>,
@@ -42,26 +56,29 @@ impl Field {
     producer: Rc<dyn StoneProducer>,
     piece: Texture,
     back: Texture,
-  ) -> Self {
+  ) -> Result<Self, Self> {
     let pieces = PieceField::new(width, height, back, piece.clone());
     let mut stone = producer.create_stone();
-    let () = pieces.reset_stone(&mut stone);
+    let result = pieces.reset_stone(&mut stone);
 
-    Self {
+    let slf = Self {
       location,
       producer,
       stone,
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
+    };
+
+    if result {
+      Ok(slf)
+    } else {
+      Err(slf)
     }
   }
 
-  /// # Returns
-  /// This method returns `true` if the downward move was successful,
-  /// `false` if the stone would have collided with the field and got
-  /// merged instead.
-  fn move_stone_down_impl(&mut self) -> bool {
+  /// Move the stone down.
+  fn move_stone_down_impl(&mut self) -> MoveResult {
     debug_assert!(!self.pieces.collides(&self.stone));
 
     let () = self.stone.move_by(0, -1);
@@ -73,24 +90,28 @@ impl Field {
       let old_stone = replace(&mut self.stone, new_stone);
 
       let () = self.pieces.merge_stone(old_stone);
-      let () = self.pieces.reset_stone(&mut self.stone);
-
-      // TODO: Check whether the new stone collides with the field
-      //       already and end the game if so.
-      false
+      if !self.pieces.reset_stone(&mut self.stone) {
+        MoveResult::Conflict
+      } else {
+        MoveResult::Merged
+      }
     } else {
-      true
+      MoveResult::Moved
     }
   }
 
-  pub(crate) fn drop_stone(&mut self) -> State {
-    while self.move_stone_down_impl() {}
-    State::Changed
+  pub(super) fn drop_stone(&mut self) -> (State, MoveResult) {
+    loop {
+      let result = self.move_stone_down_impl();
+      if !matches!(result, MoveResult::Moved) {
+        break (State::Changed, result)
+      }
+    }
   }
 
-  pub(crate) fn move_stone_down(&mut self) -> State {
-    let _moved = self.move_stone_down_impl();
-    State::Changed
+  pub(super) fn move_stone_down(&mut self) -> (State, MoveResult) {
+    let result = self.move_stone_down_impl();
+    (State::Changed, result)
   }
 
   fn move_stone_by(&mut self, x: i16, y: i16) -> State {
@@ -200,11 +221,17 @@ impl PieceField {
   }
 
   /// Move the stone to its initial position.
-  fn reset_stone(&self, stone: &mut Stone) {
+  ///
+  /// # Returns
+  /// This method returns `true` when the stone could be positioned and
+  /// `false` if it immediately collided with already merged pieces.
+  fn reset_stone(&self, stone: &mut Stone) -> bool {
     let stone_bounds = stone.bounds();
     let x = self.width() / 2 - stone_bounds.w / 2;
     let y = self.height() - stone_bounds.h;
     let () = stone.move_to(Point::new(x, y));
+
+    !self.collides(stone)
   }
 
   /// Check whether the provided stone collides with any of the pieces.
