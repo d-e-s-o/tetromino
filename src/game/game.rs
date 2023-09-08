@@ -33,7 +33,9 @@ pub(crate) struct Game {
   /// The Tetris field.
   field: Field,
   /// The time of the next tick, i.e., the next downward movement.
-  next_tick: Instant,
+  ///
+  /// The attribute is `None` if the game is not running (e.g., paused).
+  next_tick: Option<Instant>,
 }
 
 impl Game {
@@ -63,7 +65,7 @@ impl Game {
 
     let slf = Self {
       field,
-      next_tick: Self::next_tick(Instant::now()),
+      next_tick: Some(Self::next_tick(Instant::now())),
     };
     Ok(slf)
   }
@@ -82,45 +84,82 @@ impl Game {
   ///
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
-  pub(crate) fn tick(&mut self, now: Instant) -> (State, Instant) {
+  pub(crate) fn tick(&mut self, now: Instant) -> (State, Option<Instant>) {
     let mut state = State::Unchanged;
 
-    while now >= self.next_tick {
-      state |= self.field.move_stone_down();
-      self.next_tick = Self::next_tick(self.next_tick);
+    if let Some(next_tick) = &mut self.next_tick {
+      while now >= *next_tick {
+        state |= self.field.move_stone_down();
+        *next_tick = Self::next_tick(*next_tick);
+      }
+      (state, self.next_tick)
+    } else {
+      (state, None)
     }
+  }
 
-    (state, self.next_tick)
+  /// Toggle the game between the running/pause states.
+  #[inline]
+  pub(crate) fn toggle_pause(&mut self) {
+    if self.next_tick.is_some() {
+      let _next_tick = self.next_tick.take();
+    } else {
+      let _next_tick = self.next_tick.replace(Self::next_tick(Instant::now()));
+    }
   }
 
   #[inline]
   pub(crate) fn on_move_down(&mut self) -> State {
-    self.field.move_stone_down()
+    if self.next_tick.is_some() {
+      self.field.move_stone_down()
+    } else {
+      State::Unchanged
+    }
   }
 
   #[inline]
   pub(crate) fn on_drop(&mut self) -> State {
-    self.field.drop_stone()
+    if self.next_tick.is_some() {
+      self.field.drop_stone()
+    } else {
+      State::Unchanged
+    }
   }
 
   #[inline]
   pub(crate) fn on_move_left(&mut self) -> State {
-    self.field.move_stone_left()
+    if self.next_tick.is_some() {
+      self.field.move_stone_left()
+    } else {
+      State::Unchanged
+    }
   }
 
   #[inline]
   pub(crate) fn on_move_right(&mut self) -> State {
-    self.field.move_stone_right()
+    if self.next_tick.is_some() {
+      self.field.move_stone_right()
+    } else {
+      State::Unchanged
+    }
   }
 
   #[inline]
   pub(crate) fn on_rotate_left(&mut self) -> State {
-    self.field.rotate_stone_left()
+    if self.next_tick.is_some() {
+      self.field.rotate_stone_left()
+    } else {
+      State::Unchanged
+    }
   }
 
   #[inline]
   pub(crate) fn on_rotate_right(&mut self) -> State {
-    self.field.rotate_stone_right()
+    if self.next_tick.is_some() {
+      self.field.rotate_stone_right()
+    } else {
+      State::Unchanged
+    }
   }
 
   /// Render the game and its components.

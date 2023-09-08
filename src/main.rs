@@ -35,7 +35,7 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::Key;
 
 use crate::game::Game;
-use crate::keys::min_instant;
+use crate::keys::maybe_min_instant;
 use crate::keys::Keys;
 use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
@@ -139,6 +139,10 @@ fn main() -> Result<()> {
           Key::ArrowLeft => game.on_move_left(),
           Key::ArrowRight => game.on_move_right(),
           Key::Space => game.on_drop(),
+          Key::F3 => {
+            let () = game.toggle_pause();
+            State::Unchanged
+          },
           _ => State::Unchanged,
         };
 
@@ -148,8 +152,11 @@ fn main() -> Result<()> {
         // A key handler may have indicated a desire to exit. Don't
         // overwrite that.
         if !matches!(control_flow, ControlFlow::ExitWithCode(_)) {
-          let wait_until = min_instant(game_wait, keys_wait);
-          *control_flow = ControlFlow::WaitUntil(wait_until);
+          if let Some(wait_until) = maybe_min_instant(game_wait, keys_wait) {
+            *control_flow = ControlFlow::WaitUntil(wait_until);
+          } else {
+            *control_flow = ControlFlow::Wait;
+          }
         }
 
         keys_state | game_state

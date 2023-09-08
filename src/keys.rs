@@ -31,6 +31,17 @@ pub(crate) fn min_instant(instant1: Instant, instant2: Option<Instant>) -> Insta
   }
 }
 
+pub(crate) fn maybe_min_instant(
+  instant1: Option<Instant>,
+  instant2: Option<Instant>,
+) -> Option<Instant> {
+  match (instant1, instant2) {
+    (Some(instant1), instant2) => Some(min_instant(instant1, instant2)),
+    (instant1, Some(instant2)) => Some(min_instant(instant2, instant1)),
+    (None, None) => None,
+  }
+}
+
 
 /// The state a single key can be in.
 #[derive(Clone, Copy, Debug)]
