@@ -114,6 +114,18 @@ impl Game {
     (state, self.next_tick)
   }
 
+  /// Restart the game.
+  pub(crate) fn restart(&mut self) -> State {
+    let () = if self.field.reset() {
+      self.over = false;
+      self.next_tick = Some(Self::next_tick(Instant::now()));
+    } else {
+      self.end()
+    };
+
+    State::Changed
+  }
+
   /// End the current game.
   fn end(&mut self) {
     self.next_tick = None;

@@ -8,7 +8,7 @@ use crate::Rect;
 
 
 /// The representation of a single "piece" of a stone.
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub(crate) struct Piece {
   /// The color the piece has.
   color: Color,

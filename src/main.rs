@@ -136,6 +136,7 @@ fn main() -> Result<()> {
             },
             _ => State::Unchanged,
           },
+          Key::Enter => game.restart(),
           Key::ArrowDown => game.on_move_down(),
           Key::ArrowLeft => game.on_move_left(),
           Key::ArrowRight => game.on_move_right(),

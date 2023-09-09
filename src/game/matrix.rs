@@ -35,6 +35,15 @@ impl<T> Matrix<T> {
     }
   }
 
+  /// Clear the matrix, removing all elements from it.
+  #[inline]
+  pub(super) fn clear(&mut self)
+  where
+    T: Clone,
+  {
+    let () = self.matrix.fill(None);
+  }
+
   /// Create an iterator over all present elements, along with their
   /// positions.
   pub(crate) fn iter_present(&self) -> impl Iterator<Item = (&T, Point<u16>)> {

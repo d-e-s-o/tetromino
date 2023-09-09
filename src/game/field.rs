@@ -77,6 +77,14 @@ impl Field {
     }
   }
 
+  /// Reset the field back to its initial state, with no merged pieces
+  /// and a stone at its initial position.
+  pub(super) fn reset(&mut self) -> bool {
+    let () = self.pieces.clear();
+    self.stone = self.producer.create_stone();
+    self.pieces.reset_stone(&mut self.stone)
+  }
+
   /// Move the stone down.
   fn move_stone_down_impl(&mut self) -> MoveResult {
     debug_assert!(!self.pieces.collides(&self.stone));
@@ -260,6 +268,12 @@ impl PieceField {
       let _prev = self.matrix[location].replace(piece);
       debug_assert!(_prev.is_none(), "{location:?}");
     });
+  }
+
+  /// Clear all pieces from the field.
+  #[inline]
+  fn clear(&mut self) {
+    self.matrix.clear()
   }
 
   /// Render the background of the field and draw vertical lines.
