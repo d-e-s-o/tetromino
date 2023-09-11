@@ -17,6 +17,7 @@ use crate::Texture;
 use super::data;
 use super::Field;
 use super::MoveResult;
+use super::Score;
 use super::StoneFactory;
 
 /// Space between the left screen side and the field.
@@ -33,6 +34,8 @@ const TOP_SPACE: u16 = 1;
 pub(crate) struct Game {
   /// The Tetris field.
   field: Field,
+  /// The current score.
+  score: Score,
   /// The time of the next tick, i.e., the next downward movement.
   ///
   /// The attribute is `None` if the game is not running (e.g., paused).
@@ -69,22 +72,21 @@ impl Game {
       Ok(field) => (field, false),
       Err(field) => (field, true),
     };
+    let score = Score::default();
 
     let slf = Self {
       field,
-      next_tick: Some(Self::next_tick(Instant::now())),
+      next_tick: Some(Self::next_tick(Instant::now(), score.level())),
+      score,
       over,
     };
     Ok(slf)
   }
 
   /// Calculate the time of the next tick, given the current one.
-  fn next_tick(current_tick: Instant) -> Instant {
-    // TODO: Need to use actual level.
-    const LEVEL: u16 = 10;
-
+  fn next_tick(current_tick: Instant, level: u16) -> Instant {
     // The current stone drop speed, in units per second.
-    let units_per_sec = 1.0 + 0.2 * LEVEL as f32;
+    let units_per_sec = 1.0 + 0.2 * level as f32;
     current_tick + Duration::from_secs_f32(1.0 / units_per_sec)
   }
 
@@ -100,12 +102,18 @@ impl Game {
         let result = self.field.move_stone_down();
         state |= result.0;
 
-        if let MoveResult::Conflict = result.1 {
-          let () = self.end();
-          break
+        match result.1 {
+          MoveResult::Moved => (),
+          MoveResult::Merged(lines) => {
+            let () = self.score.add(lines);
+          },
+          MoveResult::Conflict => {
+            let () = self.end();
+            break
+          },
         }
 
-        *next_tick = Self::next_tick(*next_tick);
+        *next_tick = Self::next_tick(*next_tick, self.score.level());
       } else {
         break
       }
@@ -116,9 +124,11 @@ impl Game {
 
   /// Restart the game.
   pub(crate) fn restart(&mut self) -> State {
+    self.score = Score::default();
+
     let () = if self.field.reset() {
       self.over = false;
-      self.next_tick = Some(Self::next_tick(Instant::now()));
+      self.next_tick = Some(Self::next_tick(Instant::now(), self.score.level()));
     } else {
       self.end()
     };
@@ -139,7 +149,9 @@ impl Game {
       let _next_tick = self.next_tick.take();
     } else {
       if !self.over {
-        let _next_tick = self.next_tick.replace(Self::next_tick(Instant::now()));
+        let _next_tick = self
+          .next_tick
+          .replace(Self::next_tick(Instant::now(), self.score.level()));
       }
     }
   }
@@ -148,9 +160,16 @@ impl Game {
   pub(crate) fn on_move_down(&mut self) -> State {
     if self.next_tick.is_some() {
       let (state, result) = self.field.move_stone_down();
-      if let MoveResult::Conflict = result {
-        let () = self.end();
+      match result {
+        MoveResult::Moved => (),
+        MoveResult::Merged(lines) => {
+          let () = self.score.add(lines);
+        },
+        MoveResult::Conflict => {
+          let () = self.end();
+        },
       }
+
       state
     } else {
       State::Unchanged
@@ -161,9 +180,16 @@ impl Game {
   pub(crate) fn on_drop(&mut self) -> State {
     if self.next_tick.is_some() {
       let (state, result) = self.field.drop_stone();
-      if let MoveResult::Conflict = result {
-        let () = self.end();
+      match result {
+        MoveResult::Moved => (),
+        MoveResult::Merged(lines) => {
+          let () = self.score.add(lines);
+        },
+        MoveResult::Conflict => {
+          let () = self.end();
+        },
       }
+
       state
     } else {
       State::Unchanged

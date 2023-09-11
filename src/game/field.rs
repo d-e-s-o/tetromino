@@ -26,8 +26,9 @@ const WALL_WIDTH: u16 = 1;
 pub(super) enum MoveResult {
   /// The stone was moved down successfully and without a collision.
   Moved,
-  /// The stone got merged into the field.
-  Merged,
+  /// The stone got merged into the field. Reported are the number of
+  /// lines cleared.
+  Merged(u16),
   /// A conflict has occurred, i.e., a stone got merged, but the
   /// replacement stone immediately collided with previously merged
   /// pieces in the field.
@@ -97,11 +98,11 @@ impl Field {
       let new_stone = self.producer.create_stone();
       let old_stone = replace(&mut self.stone, new_stone);
 
-      let () = self.pieces.merge_stone(old_stone);
+      let cleared = self.pieces.merge_stone(old_stone);
       if !self.pieces.reset_stone(&mut self.stone) {
         MoveResult::Conflict
       } else {
-        MoveResult::Merged
+        MoveResult::Merged(cleared)
       }
     } else {
       MoveResult::Moved
@@ -259,7 +260,7 @@ impl PieceField {
     })
   }
 
-  fn merge_stone(&mut self, stone: Stone) {
+  fn merge_stone(&mut self, stone: Stone) -> u16 {
     // We should not have a current collision so that there is no
     // overlap of pieces in any shape or form.
     debug_assert!(!self.collides(&stone));
@@ -270,14 +271,17 @@ impl PieceField {
       debug_assert!(_prev.is_none(), "{location:?}");
     });
 
+    let mut cleared = 0;
     // Remove all completed lines; from top to bottom so that we are
     // unaffected by changes of index to lower lines caused by the
     // removal.
     for line in (bounds.y..bounds.y + bounds.h).rev() {
       if self.line_complete(line) {
         let () = self.matrix.remove_line(line);
+        cleared += 1;
       }
     }
+    cleared
   }
 
   /// Checker whether the line at the given y position is complete.
