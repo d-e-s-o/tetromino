@@ -264,10 +264,26 @@ impl PieceField {
     // overlap of pieces in any shape or form.
     debug_assert!(!self.collides(&stone));
 
+    let bounds = stone.bounds();
     let () = stone.into_pieces().for_each(|(piece, location)| {
       let _prev = self.matrix[location].replace(piece);
       debug_assert!(_prev.is_none(), "{location:?}");
     });
+
+    // Remove all completed lines; from top to bottom so that we are
+    // unaffected by changes of index to lower lines caused by the
+    // removal.
+    for line in (bounds.y..bounds.y + bounds.h).rev() {
+      if self.line_complete(line) {
+        let () = self.matrix.remove_line(line);
+      }
+    }
+  }
+
+  /// Checker whether the line at the given y position is complete.
+  #[inline]
+  fn line_complete(&self, line: u16) -> bool {
+    self.matrix.iter_line(line).all(|elem| elem.is_some())
   }
 
   /// Clear all pieces from the field.

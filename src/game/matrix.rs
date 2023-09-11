@@ -35,6 +35,24 @@ impl<T> Matrix<T> {
     }
   }
 
+  /// Remove the given line, moving all elements above one line down.
+  pub(super) fn remove_line(&mut self, line: u16)
+  where
+    T: Copy,
+  {
+    let src_index = self.calculate_index((0, line + 1));
+    let dst_index = self.calculate_index((0, line));
+    let src_range = src_index..;
+    let () = self.matrix.copy_within(src_range, dst_index);
+
+    // Now clear the very top line, as everything was copied one line
+    // down.
+    let width = usize::from(self.width);
+    let src_index = self.calculate_index((0, self.height - 1));
+    let src_range = src_index..src_index + width;
+    let () = self.matrix.get_mut(src_range).unwrap().fill(None);
+  }
+
   /// Clear the matrix, removing all elements from it.
   #[inline]
   pub(super) fn clear(&mut self)
@@ -58,6 +76,12 @@ impl<T> Matrix<T> {
         None
       }
     })
+  }
+
+  /// Create an iterator over all elements in the given line.
+  pub(crate) fn iter_line(&self, line: u16) -> impl Iterator<Item = &Option<T>> {
+    let index = self.calculate_index((0, line));
+    self.matrix[index..index + usize::from(self.width)].iter()
   }
 
   #[inline]
@@ -134,5 +158,45 @@ mod tests {
     // Set upper-right corner element.
     matrix.matrix[17] = Some(45);
     assert_eq!(matrix[(2, 5)], Some(45));
+  }
+
+  /// Make sure that we can remove a line from the matrix.
+  #[test]
+  fn line_removal() {
+    let mut matrix = Matrix::<usize>::new(2, 4);
+    let mut x = 0;
+    let () = matrix.matrix.fill_with(|| {
+      x += 1;
+      Some(x)
+    });
+
+    // |7,8|
+    // |5,6|
+    // |3,4|
+    // |1,2|
+    // -----
+    #[rustfmt::skip]
+    let expected = [
+      Some(1), Some(2),
+      Some(3), Some(4),
+      Some(5), Some(6),
+      Some(7), Some(8),
+    ];
+    assert_eq!(&*matrix.matrix, expected.as_slice());
+
+    let () = matrix.remove_line(0);
+    // |   |
+    // |7,8|
+    // |5,6|
+    // |3,4|
+    // -----
+    #[rustfmt::skip]
+    let expected = [
+      Some(3), Some(4),
+      Some(5), Some(6),
+      Some(7), Some(8),
+      None, None,
+    ];
+    assert_eq!(&*matrix.matrix, expected.as_slice());
   }
 }
