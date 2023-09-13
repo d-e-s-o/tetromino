@@ -212,7 +212,7 @@ pub(crate) struct ActiveRenderer<'renderer> {
   /// An invalid texture.
   invalid_texture: Texture,
   /// The origin relative to which rendering happens.
-  origin: Cell<Point<u16>>,
+  origin: Cell<Point<i16>>,
   /// The currently set color.
   color: Cell<Color>,
   /// The currently set texture.
@@ -243,7 +243,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
   /// Set the origin relative to which rendering happens.
   #[inline]
-  pub(crate) fn set_origin(&self, origin: Point<u16>) -> Guard<'_, impl FnOnce() + '_> {
+  pub(crate) fn set_origin(&self, origin: Point<i16>) -> Guard<'_, impl FnOnce() + '_> {
     let new_origin = self.origin.get() + origin;
     let prev_origin = self.origin.replace(new_origin);
     Guard::new(move || self.origin.set(prev_origin))
@@ -284,7 +284,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a line.
-  pub(crate) fn render_line(&self, mut p1: Point<u16>, mut p2: Point<u16>) {
+  pub(crate) fn render_line(&self, mut p1: Point<i16>, mut p2: Point<i16>) {
     const VERTEX_COUNT_LINE: usize = 2;
 
     let origin = self.origin.get();
@@ -320,7 +320,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect(&self, rect: Rect<u16>) {
+  pub(crate) fn render_rect(&self, rect: Rect<i16>) {
     // Texture coordinates for the quad. We always map the complete
     // texture on it.
     let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
@@ -328,7 +328,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect_with_tex_coords(&self, mut rect: Rect<u16>, coords: Rect<f32>) {
+  pub(crate) fn render_rect_with_tex_coords(&self, mut rect: Rect<i16>, coords: Rect<f32>) {
     const VERTEX_COUNT_QUAD: usize = 4;
 
     let origin = self.origin.get();

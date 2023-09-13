@@ -18,7 +18,7 @@ use super::StoneProducer;
 
 
 /// The width of each wall.
-const WALL_WIDTH: u16 = 1;
+const WALL_WIDTH: i16 = 1;
 
 
 /// The result of a stone downward movement.
@@ -38,7 +38,7 @@ pub(super) enum MoveResult {
 
 pub(crate) struct Field {
   /// The location of the lower left corner of the field, in game units.
-  location: Point<u16>,
+  location: Point<i16>,
   /// The inner field area, containing dropped pieces.
   pieces: PieceField,
   /// The producer we use for creating new stones.
@@ -51,9 +51,9 @@ pub(crate) struct Field {
 
 impl Field {
   pub(super) fn new(
-    location: Point<u16>,
-    width: u16,
-    height: u16,
+    location: Point<i16>,
+    width: i16,
+    height: i16,
     producer: Rc<dyn StoneProducer>,
     piece: Texture,
     back: Texture,
@@ -200,12 +200,12 @@ impl Field {
   }
 
   #[inline]
-  pub(super) fn width(&self) -> u16 {
+  pub(super) fn width(&self) -> i16 {
     2 * WALL_WIDTH + self.pieces.width()
   }
 
   #[inline]
-  pub(super) fn height(&self) -> u16 {
+  pub(super) fn height(&self) -> i16 {
     WALL_WIDTH + self.pieces.height()
   }
 }
@@ -221,7 +221,7 @@ struct PieceField {
 }
 
 impl PieceField {
-  fn new(width: u16, height: u16, back: Texture, piece: Texture) -> Self {
+  fn new(width: i16, height: i16, back: Texture, piece: Texture) -> Self {
     Self {
       matrix: Matrix::new(width, height),
       back,
@@ -246,13 +246,11 @@ impl PieceField {
   /// Check whether the provided stone collides with any of the pieces.
   fn collides(&self, stone: &Stone) -> bool {
     stone.pieces().any(|location| {
-      if location.x >= self.matrix.width() {
+      if location.x < 0 || location.x >= self.matrix.width() {
         return true
       }
 
-      // Check necessary because we may have done a movement that
-      // underflowed beforehand.
-      if location.y >= self.matrix.height() {
+      if location.y < 0 || location.y >= self.matrix.height() {
         return true
       }
 
@@ -286,7 +284,7 @@ impl PieceField {
 
   /// Checker whether the line at the given y position is complete.
   #[inline]
-  fn line_complete(&self, line: u16) -> bool {
+  fn line_complete(&self, line: i16) -> bool {
     self.matrix.iter_line(line).all(|elem| elem.is_some())
   }
 
@@ -333,12 +331,12 @@ impl PieceField {
   }
 
   #[inline]
-  fn width(&self) -> u16 {
+  fn width(&self) -> i16 {
     self.matrix.width()
   }
 
   #[inline]
-  fn height(&self) -> u16 {
+  fn height(&self) -> i16 {
     self.matrix.height()
   }
 }

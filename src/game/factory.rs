@@ -10,7 +10,7 @@ use super::Stone;
 use super::StoneProducer;
 
 
-type StoneTemplate = Vec<Point<u8>>;
+type StoneTemplate = Vec<Point<i8>>;
 
 
 /// The set of colors we use for stones.

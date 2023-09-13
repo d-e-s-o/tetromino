@@ -21,13 +21,13 @@ use super::Score;
 use super::StoneFactory;
 
 /// Space between the left screen side and the field.
-const LEFT_SPACE: u16 = 1;
+const LEFT_SPACE: i16 = 1;
 /// Space between the bottom of the screen and the field.
-const BOTTOM_SPACE: u16 = 1;
+const BOTTOM_SPACE: i16 = 1;
 /// Space between the right side of the screen and the preview stones.
-const RIGHT_SPACE: u16 = 1;
+const RIGHT_SPACE: i16 = 1;
 /// Space between the upper screen side and the field.
-const TOP_SPACE: u16 = 1;
+const TOP_SPACE: i16 = 1;
 
 
 /// A type representing a game of Tetris.
@@ -240,12 +240,12 @@ impl Game {
   /// Retrieve the game surface's width.
   pub(crate) fn width(&self) -> NonZeroU16 {
     // SAFETY: The provided height is guaranteed to be greater than zero.
-    unsafe { NonZeroU16::new_unchecked(LEFT_SPACE + self.field.width() + RIGHT_SPACE) }
+    unsafe { NonZeroU16::new_unchecked((LEFT_SPACE + self.field.width() + RIGHT_SPACE) as u16) }
   }
 
   /// Retrieve the game surface's height.
   pub(crate) fn height(&self) -> NonZeroU16 {
     // SAFETY: The provided height is guaranteed to be greater than zero.
-    unsafe { NonZeroU16::new_unchecked(BOTTOM_SPACE + self.field.height() + TOP_SPACE) }
+    unsafe { NonZeroU16::new_unchecked((BOTTOM_SPACE + self.field.height() + TOP_SPACE) as u16) }
   }
 }

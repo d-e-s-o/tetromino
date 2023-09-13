@@ -13,20 +13,20 @@ pub(crate) struct Matrix<T> {
   /// The actual matrix.
   matrix: Box<[Option<T>]>,
   /// The width of the matrix.
-  width: u16,
+  width: i16,
   /// The height of the matrix.
-  height: u16,
+  height: i16,
 }
 
 impl<T> Matrix<T> {
   /// # Panics
   /// This constructor panics if either dimension is 0.
-  pub(crate) fn new(width: u16, height: u16) -> Self {
+  pub(crate) fn new(width: i16, height: i16) -> Self {
     assert!(width > 0);
     assert!(height > 0);
 
     let mut matrix = Vec::new();
-    let () = matrix.resize_with(usize::from(width) * usize::from(height), Option::default);
+    let () = matrix.resize_with((width * height) as usize, Option::default);
 
     Self {
       width,
@@ -36,7 +36,7 @@ impl<T> Matrix<T> {
   }
 
   /// Remove the given line, moving all elements above one line down.
-  pub(super) fn remove_line(&mut self, line: u16)
+  pub(super) fn remove_line(&mut self, line: i16)
   where
     T: Copy,
   {
@@ -47,9 +47,8 @@ impl<T> Matrix<T> {
 
     // Now clear the very top line, as everything was copied one line
     // down.
-    let width = usize::from(self.width);
     let src_index = self.calculate_index((0, self.height - 1));
-    let src_range = src_index..src_index + width;
+    let src_range = src_index..src_index + self.width as usize;
     let () = self.matrix.get_mut(src_range).unwrap().fill(None);
   }
 
@@ -64,14 +63,14 @@ impl<T> Matrix<T> {
 
   /// Create an iterator over all present elements, along with their
   /// positions.
-  pub(crate) fn iter_present(&self) -> impl Iterator<Item = (&T, Point<u16>)> {
-    let width = usize::from(self.width);
+  pub(crate) fn iter_present(&self) -> impl Iterator<Item = (&T, Point<i16>)> {
+    let width = self.width as usize;
 
     self.matrix.iter().enumerate().filter_map(move |(i, t)| {
       if let Some(t) = t {
         let x = i % width;
         let y = i / width;
-        Some((t, Point::new(x as u16, y as u16)))
+        Some((t, Point::new(x as i16, y as i16)))
       } else {
         None
       }
@@ -79,52 +78,52 @@ impl<T> Matrix<T> {
   }
 
   /// Create an iterator over all elements in the given line.
-  pub(crate) fn iter_line(&self, line: u16) -> impl Iterator<Item = &Option<T>> {
+  pub(crate) fn iter_line(&self, line: i16) -> impl Iterator<Item = &Option<T>> {
     let index = self.calculate_index((0, line));
-    self.matrix[index..index + usize::from(self.width)].iter()
+    self.matrix[index..index + self.width as usize].iter()
   }
 
   #[inline]
-  pub(crate) fn width(&self) -> u16 {
+  pub(crate) fn width(&self) -> i16 {
     self.width
   }
 
   #[inline]
-  pub(crate) fn height(&self) -> u16 {
+  pub(crate) fn height(&self) -> i16 {
     self.height
   }
 
-  fn calculate_index(&self, (x, y): (u16, u16)) -> usize {
-    usize::from(x) + usize::from(y) * usize::from(self.width)
+  fn calculate_index(&self, (x, y): (i16, i16)) -> usize {
+    (x + y * self.width) as _
   }
 }
 
-impl<T> Index<(u16, u16)> for Matrix<T> {
+impl<T> Index<(i16, i16)> for Matrix<T> {
   type Output = Option<T>;
 
-  fn index(&self, index: (u16, u16)) -> &Self::Output {
+  fn index(&self, index: (i16, i16)) -> &Self::Output {
     let index = self.calculate_index(index);
     &self.matrix[index]
   }
 }
 
-impl<T> Index<Point<u16>> for Matrix<T> {
+impl<T> Index<Point<i16>> for Matrix<T> {
   type Output = Option<T>;
 
-  fn index(&self, index: Point<u16>) -> &Self::Output {
+  fn index(&self, index: Point<i16>) -> &Self::Output {
     self.index((index.x, index.y))
   }
 }
 
-impl<T> IndexMut<(u16, u16)> for Matrix<T> {
-  fn index_mut(&mut self, index: (u16, u16)) -> &mut Self::Output {
+impl<T> IndexMut<(i16, i16)> for Matrix<T> {
+  fn index_mut(&mut self, index: (i16, i16)) -> &mut Self::Output {
     let index = self.calculate_index(index);
     &mut self.matrix[index]
   }
 }
 
-impl<T> IndexMut<Point<u16>> for Matrix<T> {
-  fn index_mut(&mut self, index: Point<u16>) -> &mut Self::Output {
+impl<T> IndexMut<Point<i16>> for Matrix<T> {
+  fn index_mut(&mut self, index: Point<i16>) -> &mut Self::Output {
     self.index_mut((index.x, index.y))
   }
 }

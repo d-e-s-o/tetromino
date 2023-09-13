@@ -45,7 +45,7 @@ fn rotate_point_by(point: Point<f32>, angle: f32) -> Point<f32> {
 /// assumes that the point actually represents the lower left corner of
 /// a 1-unit square, while rotation happens based on the center of said
 /// square.
-fn rotate_point(point: Point<u16>, center: Point<f32>, left: bool) -> Point<u16> {
+fn rotate_point(point: Point<i16>, center: Point<f32>, left: bool) -> Point<i16> {
   let angle = if left { -90.0 } else { 90.0 };
 
   let mut point = point.into_other::<f32>();
@@ -53,7 +53,7 @@ fn rotate_point(point: Point<u16>, center: Point<f32>, left: bool) -> Point<u16>
   point = rotate_point_by(point - center, deg_to_rad(angle)) + center;
   point -= Point::new(0.5, 0.5);
 
-  Point::new(point.x as u16, point.y as u16)
+  Point::new(point.x as i16, point.y as i16)
 }
 
 
@@ -64,11 +64,11 @@ pub(crate) struct Stone {
   piece_texture: Texture,
   /// The individual pieces making up the stone and their locations.
   /// Typically a stone has four pieces, but that's not set in stone.
-  pieces: Vec<(Piece, Point<u16>)>,
+  pieces: Vec<(Piece, Point<i16>)>,
 }
 
 impl Stone {
-  pub(crate) fn new(piece_texture: Texture, template: &[Point<u8>], color: Color) -> Self {
+  pub(crate) fn new(piece_texture: Texture, template: &[Point<i8>], color: Color) -> Self {
     assert!(!template.is_empty(), "provided stone template is empty");
 
     Self {
@@ -89,21 +89,17 @@ impl Stone {
       .for_each(|(piece, location)| piece.render(renderer, *location));
   }
 
-  /// # Notes
-  /// Location manipulation is done in a wrapping manner. If underflow
-  /// (or overflow) is a possibility that should be checked beforehand
-  /// or accommodated afterwards.
   pub(crate) fn move_by(&mut self, x: i16, y: i16) {
     let () = self.pieces.iter_mut().for_each(|(_piece, location)| {
-      location.x = location.x.wrapping_add_signed(x);
-      location.y = location.y.wrapping_add_signed(y);
+      location.x += x;
+      location.y += y;
     });
   }
 
-  pub(crate) fn move_to(&mut self, location: Point<u16>) {
+  pub(crate) fn move_to(&mut self, location: Point<i16>) {
     let bounds = self.bounds();
-    let x = location.x.wrapping_sub(bounds.x) as _;
-    let y = location.y.wrapping_sub(bounds.y) as _;
+    let x = location.x - bounds.x;
+    let y = location.y - bounds.y;
 
     self.move_by(x, y)
   }
@@ -137,7 +133,7 @@ impl Stone {
     });
   }
 
-  pub(crate) fn bounds(&self) -> Rect<u16> {
+  pub(crate) fn bounds(&self) -> Rect<i16> {
     // SANITY: Our stone always has at least one piece.
     let (_piece, location) = self.pieces.first().unwrap();
     let mut x_min = location.x;
@@ -162,13 +158,13 @@ impl Stone {
 
   pub(crate) fn pieces(
     &self,
-  ) -> impl Iterator<Item = Point<u16>> + DoubleEndedIterator + ExactSizeIterator + '_ {
+  ) -> impl Iterator<Item = Point<i16>> + DoubleEndedIterator + ExactSizeIterator + '_ {
     self.pieces.iter().map(|(_piece, location)| *location)
   }
 
   pub(crate) fn into_pieces(
     self,
-  ) -> impl Iterator<Item = (Piece, Point<u16>)> + DoubleEndedIterator + ExactSizeIterator {
+  ) -> impl Iterator<Item = (Piece, Point<i16>)> + DoubleEndedIterator + ExactSizeIterator {
     self.pieces.into_iter()
   }
 }
@@ -179,7 +175,7 @@ mod tests {
   use super::*;
 
 
-  fn new_stone(template: &[Point<u8>]) -> Stone {
+  fn new_stone(template: &[Point<i8>]) -> Stone {
     Stone::new(Texture::invalid(), template, Color::black())
   }
 

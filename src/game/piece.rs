@@ -22,7 +22,7 @@ impl Piece {
   /// # Notes
   /// This method assumes that the piece texture to use is already
   /// bound.
-  pub(crate) fn render(&self, renderer: &Renderer, location: Point<u16>) {
+  pub(crate) fn render(&self, renderer: &Renderer, location: Point<i16>) {
     let _guard = renderer.set_color(self.color);
 
     let () = renderer.render_rect(Rect::new(location.x, location.y, 1, 1));
