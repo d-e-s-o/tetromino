@@ -28,12 +28,13 @@ use std::time::Instant;
 use anyhow::Context as _;
 use anyhow::Result;
 
+use winit::event::DeviceEvent;
 use winit::event::Event;
-use winit::event::KeyEvent;
+use winit::event::RawKeyEvent;
 use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
-use winit::keyboard::Key;
+use winit::keyboard::KeyCode as Key;
 
 use crate::game::Game;
 use crate::keys::maybe_min_instant;
@@ -94,18 +95,6 @@ fn main() -> Result<()> {
           let () = keys.clear();
           State::Unchanged
         },
-        WindowEvent::KeyboardInput {
-          event:
-            KeyEvent {
-              logical_key: key,
-              state,
-              ..
-            },
-          ..
-        } => {
-          let () = keys.on_key_event(now, key, state);
-          State::Unchanged
-        },
         WindowEvent::CloseRequested => {
           let () = control_flow.set_exit();
           return
@@ -122,19 +111,27 @@ fn main() -> Result<()> {
         },
         _ => State::Unchanged,
       },
+      Event::DeviceEvent {
+        event:
+          DeviceEvent::Key(RawKeyEvent {
+            physical_key: key,
+            state,
+          }),
+        ..
+      } => {
+        let () = keys.on_key_event(now, key, state);
+        State::Unchanged
+      },
       Event::MainEventsCleared => {
         let handle_key = |key: &Key| match key {
-          Key::Character(c) => match c.as_str() {
-            "1" => game.on_rotate_left(),
-            "2" => game.on_rotate_right(),
-            "h" => game.on_move_left(),
-            "j" => game.on_move_down(),
-            "l" => game.on_move_right(),
-            "q" => {
-              let () = control_flow.set_exit();
-              State::Unchanged
-            },
-            _ => State::Unchanged,
+          Key::Digit1 => game.on_rotate_left(),
+          Key::Digit2 => game.on_rotate_right(),
+          Key::KeyH => game.on_move_left(),
+          Key::KeyJ => game.on_move_down(),
+          Key::KeyL => game.on_move_right(),
+          Key::KeyQ => {
+            let () = control_flow.set_exit();
+            State::Unchanged
           },
           Key::Enter => game.restart(),
           Key::ArrowDown => game.on_move_down(),

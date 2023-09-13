@@ -15,7 +15,7 @@ use anyhow::Context as _;
 use anyhow::Result;
 
 use winit::event::ElementState;
-use winit::keyboard::Key;
+use winit::keyboard::KeyCode as Key;
 
 use x11_dl::xlib;
 
