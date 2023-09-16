@@ -10,4 +10,8 @@ use super::Stone;
 pub(crate) trait StoneProducer: Debug {
   /// Create a new random Tetris stone.
   fn create_stone(&self) -> Stone;
+
+  /// Retrieve the maximum dimensions (width & height) of all stones
+  /// this producer may create.
+  fn max_dimensions(&self) -> (i16, i16);
 }

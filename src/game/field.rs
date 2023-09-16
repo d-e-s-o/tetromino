@@ -200,13 +200,23 @@ impl Field {
   }
 
   #[inline]
+  pub(super) fn total_width(width: i16) -> i16 {
+    2 * WALL_WIDTH + width
+  }
+
+  #[inline]
+  pub(super) fn total_height(height: i16) -> i16 {
+    WALL_WIDTH + height
+  }
+
+  #[inline]
   pub(super) fn width(&self) -> i16 {
-    2 * WALL_WIDTH + self.pieces.width()
+    Self::total_width(self.pieces.width())
   }
 
   #[inline]
   pub(super) fn height(&self) -> i16 {
-    WALL_WIDTH + self.pieces.height()
+    Self::total_height(self.pieces.height())
   }
 }
 
