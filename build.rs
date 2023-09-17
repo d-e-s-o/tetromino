@@ -1,6 +1,8 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use grev::git_revision_auto;
+
 
 fn main() {
   #[cfg(feature = "generate-opengl-bindings")]
@@ -27,5 +29,16 @@ fn main() {
     Registry::new(Api::Gl, (1, 3), Profile::Core, Fallbacks::All, [])
       .write_bindings(StaticGenerator, &mut file)
       .unwrap();
+  }
+
+  let dir = env!("CARGO_MANIFEST_DIR");
+  if let Some(git_rev) = git_revision_auto(dir).unwrap() {
+    println!(
+      "cargo:rustc-env=VERSION={} (@ {})",
+      env!("CARGO_PKG_VERSION"),
+      git_rev
+    );
+  } else {
+    println!("cargo:rustc-env=VERSION={}", env!("CARGO_PKG_VERSION"));
   }
 }

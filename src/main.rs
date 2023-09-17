@@ -20,11 +20,13 @@ mod point;
 mod rand;
 mod rect;
 
+use std::env::args_os;
 use std::num::NonZeroU32;
 use std::ops::BitOr;
 use std::ops::BitOrAssign;
 use std::time::Instant;
 
+use anyhow::bail;
 use anyhow::Context as _;
 use anyhow::Result;
 
@@ -72,8 +74,7 @@ impl BitOrAssign<State> for State {
   }
 }
 
-
-fn main() -> Result<()> {
+fn run() -> Result<()> {
   let event_loop = EventLoop::new();
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
@@ -174,6 +175,43 @@ fn main() -> Result<()> {
       let () = window.request_redraw();
     }
   });
+}
+
+
+fn main() -> Result<()> {
+  // By convention the 0th argument contains the path to the program;
+  // ignore it.
+  let args = || args_os().skip(1);
+
+  // Slightly ghetto argument parser helps us avoid unnecessary large
+  // dependency on `clap`.
+  match args().len() {
+    0 => run(),
+    _ if args().any(|arg| arg == "--help" || arg == "-h") => {
+      print!(
+        "{name} {version} -- a graphical Tetris clone
+
+USAGE:
+  {name} [OPTIONS]
+
+OPTIONS:
+  -h, --help     Print help information
+  -V, --version  Print version information
+",
+        name = env!("CARGO_CRATE_NAME"),
+        version = env!("VERSION"),
+      );
+      Ok(())
+    },
+    _ if args().any(|arg| arg == "--version" || arg == "-V") => {
+      println!("{} {}", env!("CARGO_CRATE_NAME"), env!("VERSION"));
+      Ok(())
+    },
+    _ => {
+      let arg = args().next().unwrap();
+      bail!("unexpected argument '{}' found", &arg.to_string_lossy())
+    },
+  }
 }
 
 
