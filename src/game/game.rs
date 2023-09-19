@@ -15,6 +15,7 @@ use crate::State;
 use crate::Texture;
 
 use super::data;
+use super::Config;
 use super::Field;
 use super::MoveResult;
 use super::PreviewStones;
@@ -31,10 +32,6 @@ const RIGHT_SPACE: i16 = 1;
 const TOP_SPACE: i16 = 1;
 /// Space between the field and the preview stones.
 const PREVIEW_FIELD_SPACE: i16 = 1;
-
-/// The number of stones to preview.
-// TODO: Make this number configurable.
-const PREVIEW_STONE_COUNT: u8 = 3;
 
 
 /// A type representing a game of Tetris.
@@ -54,8 +51,8 @@ pub(crate) struct Game {
 }
 
 impl Game {
-  /// Instantiate a new game of Tetris.
-  pub(crate) fn new() -> Result<Self> {
+  /// Instantiate a new game of Tetris with the given configuration.
+  pub(crate) fn with_config(config: &Config) -> Result<Self> {
     let reader = Cursor::new(data::TETRIS_FIELD_PIECE_TEXTURE);
     let piece = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::with_image(piece)?;
@@ -63,18 +60,15 @@ impl Game {
     let factory = Rc::new(StoneFactory::with_default_stones(piece.clone()));
 
     let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
-    // TODO: Make dimensions configurable.
-    let field_width = 10;
-    let field_height = 20;
     let preview_location = field_location
       + Point::new(
-        Field::total_width(field_width),
-        Field::total_height(field_height),
+        Field::total_width(config.field_width),
+        Field::total_height(config.field_height),
       )
       + Point::new(RIGHT_SPACE, 0);
     let preview = Rc::new(PreviewStones::new(
       preview_location,
-      PREVIEW_STONE_COUNT,
+      config.preview_stone_count,
       factory,
     ));
 
@@ -83,8 +77,8 @@ impl Game {
     let field_back = Texture::with_image(field_back)?;
     let result = Field::new(
       field_location,
-      field_width,
-      field_height,
+      config.field_width,
+      config.field_height,
       preview.clone(),
       piece,
       field_back,
@@ -93,7 +87,7 @@ impl Game {
       Ok(field) => (field, false),
       Err(field) => (field, true),
     };
-    let score = Score::default();
+    let score = Score::new(config.start_level, config.lines_for_level);
 
     let slf = Self {
       field,
@@ -146,8 +140,7 @@ impl Game {
 
   /// Restart the game.
   pub(crate) fn restart(&mut self) -> State {
-    self.score = Score::default();
-
+    let () = self.score.reset();
     let () = if self.field.reset() {
       self.over = false;
       self.next_tick = Some(Self::next_tick(Instant::now(), self.score.level()));

@@ -4,6 +4,8 @@
 
 /// A type helping with keeping track of score in a Tetris game.
 pub(super) struct Score {
+  /// The starting level.
+  start_level: u16,
   /// The current level.
   level: u16,
   /// The number of points earned so far.
@@ -17,6 +19,17 @@ pub(super) struct Score {
 }
 
 impl Score {
+  pub(super) fn new(start_level: u16, lines_for_level: u16) -> Self {
+    Self {
+      start_level,
+      level: start_level,
+      points: 0,
+      lines: 0,
+      lines_for_level,
+      lines_since_up: 0,
+    }
+  }
+
   /// Add the given number of lines to the score.
   pub fn add(&mut self, lines: u16) {
     let level = self.level;
@@ -46,22 +59,18 @@ impl Score {
     (5 * (lines * lines) * self.level).into()
   }
 
+  /// Reset the `Score`'s state to its initial value.
+  pub fn reset(&mut self) {
+    self.level = self.start_level;
+    self.lines = 0;
+    self.points = 0;
+    self.lines_since_up = 0;
+  }
+
   /// Retrieve the current level.
   #[inline]
   pub fn level(&self) -> u16 {
     self.level
-  }
-}
-
-impl Default for Score {
-  fn default() -> Self {
-    Self {
-      level: 1,
-      points: 0,
-      lines: 0,
-      lines_for_level: 10,
-      lines_since_up: 0,
-    }
   }
 }
 
@@ -74,7 +83,7 @@ mod tests {
   /// Check that we can keep track of scores correctly.
   #[test]
   fn score_counting() {
-    let mut score = Score::default();
+    let mut score = Score::new(1, 10);
     assert_eq!(score.level, 1);
     assert_eq!(score.points, 0);
     assert_eq!(score.lines, 0);

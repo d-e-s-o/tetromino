@@ -1,12 +1,28 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+//! A graphical Tetris clone.
+
 use std::env::args_os;
 
 use anyhow::bail;
 use anyhow::Result;
 
 use tetromino::run;
+use tetromino::Config;
+
+
+fn default_config() -> String {
+  // SANITY: Converting the config object to a string is expected to
+  //         always succeed and any failure would be a bug.
+  let config =
+    toml::to_string_pretty(&Config::default()).expect("failed to serialize Tetris config");
+  let mut lines = config.lines();
+  let indent = lines
+    .next()
+    .map(|first| lines.fold(format!("  {first}"), |s, line| format!("{s}\n  {line}")));
+  indent.unwrap_or_default()
+}
 
 
 fn main() -> Result<()> {
@@ -28,9 +44,18 @@ USAGE:
 OPTIONS:
   -h, --help     Print help information
   -V, --version  Print version information
+
+CONFIG:
+  The game reads the $XDG_CONFIG_DIR/tetromino/config.toml TOML
+  configuration file. The default configuration is:
+
+  ```
+{config}
+  ```
 ",
         name = env!("CARGO_CRATE_NAME"),
         version = env!("VERSION"),
+        config = default_config(),
       );
       Ok(())
     },

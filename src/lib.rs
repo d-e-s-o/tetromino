@@ -20,13 +20,18 @@ mod point;
 mod rand;
 mod rect;
 
+use std::fs::read_to_string;
+use std::io::ErrorKind;
 use std::num::NonZeroU32;
 use std::ops::BitOr;
 use std::ops::BitOrAssign;
+use std::path::PathBuf;
 use std::time::Instant;
 
 use anyhow::Context as _;
 use anyhow::Result;
+
+use dirs::config_dir;
 
 use winit::event::DeviceEvent;
 use winit::event::Event;
@@ -47,6 +52,8 @@ use crate::opengl::Window;
 use crate::point::Point;
 use crate::rand::Rng;
 use crate::rect::Rect;
+
+pub use crate::game::Config;
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -72,12 +79,40 @@ impl BitOrAssign<State> for State {
   }
 }
 
+
+/// Retrieve the default path to the program's configuration file.
+fn default_config_path() -> Result<PathBuf> {
+  let config = config_dir()
+    .context("unable to determine config directory")?
+    .join("tetromino")
+    .join("config.toml");
+
+  Ok(config)
+}
+
+
+fn load_config() -> Result<Config> {
+  let path = default_config_path().context("failed to retrieve program config directory path")?;
+  let contents = match read_to_string(&path) {
+    Ok(contents) => contents,
+    Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Config::default()),
+    e @ Err(..) => {
+      e.with_context(|| format!("failed to load program configuration at {}", path.display()))?
+    },
+  };
+  let config = toml::from_str(&contents)
+    .with_context(|| format!("failed to parse TOML configuration at {}", path.display()))?;
+  Ok(config)
+}
+
+
 pub fn run() -> Result<()> {
+  let config = load_config().context("failed to load program configuration")?;
   let event_loop = EventLoop::new();
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
   let (phys_w, phys_h) = window.size();
-  let mut game = Game::new().context("failed to instantiate game object")?;
+  let mut game = Game::with_config(&config).context("failed to instantiate game object")?;
   let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
   let mut keys =
     Keys::with_system_defaults().context("failed to instantiate auto key repeat manager")?;
@@ -194,7 +229,8 @@ mod tests {
     let mut window = Window::new(&event_loop).unwrap();
 
     let (phys_w, phys_h) = window.size();
-    let game = Game::new().unwrap();
+    let config = Config::default();
+    let game = Game::with_config(&config).unwrap();
     let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
 
     let () = b.iter(|| {
