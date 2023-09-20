@@ -12,6 +12,7 @@
 #[cfg(feature = "nightly")]
 extern crate test;
 
+mod config;
 mod game;
 mod guard;
 mod keys;
@@ -53,7 +54,7 @@ use crate::point::Point;
 use crate::rand::Rng;
 use crate::rect::Rect;
 
-pub use crate::game::Config;
+pub use crate::config::Config;
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -112,10 +113,10 @@ pub fn run() -> Result<()> {
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
   let (phys_w, phys_h) = window.size();
-  let mut game = Game::with_config(&config).context("failed to instantiate game object")?;
+  let mut game = Game::with_config(&config.game).context("failed to instantiate game object")?;
   let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
   let mut keys =
-    Keys::with_system_defaults().context("failed to instantiate auto key repeat manager")?;
+    Keys::with_config(config.keyboard).context("failed to instantiate auto key repeat manager")?;
 
   event_loop.run(move |event, _, control_flow| {
     let now = Instant::now();
@@ -215,6 +216,8 @@ pub fn run() -> Result<()> {
 #[cfg(feature = "nightly")]
 mod tests {
   use super::*;
+
+  use crate::game::Config;
 
   use test::Bencher;
 

@@ -14,6 +14,9 @@ use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
 
+use serde::Deserialize;
+use serde::Serialize;
+
 use winit::event::ElementState;
 use winit::keyboard::KeyCode as Key;
 
@@ -39,6 +42,70 @@ pub(crate) fn maybe_min_instant(
     (Some(instant1), instant2) => Some(min_instant(instant1, instant2)),
     (instant1, Some(instant2)) => Some(min_instant(instant2, instant1)),
     (None, None) => None,
+  }
+}
+
+
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Config {
+  /// The auto-repeat timeout, in milliseconds.
+  auto_repeat_timeout_ms: u32,
+  /// The auto-repeat interval, in milliseconds.
+  auto_repeat_interval_ms: u32,
+}
+
+impl Config {
+  /// Instantiate a `Config` object using system defaults.
+  pub(crate) fn with_system_defaults() -> Result<Self> {
+    let mut timeout = MaybeUninit::<c_uint>::uninit();
+    let mut interval = MaybeUninit::<c_uint>::uninit();
+    // Value XkbUseCoreKbd constant defined somewhere in XKB.h and not
+    // exported anywhere. Gorgeous!
+    let xkb_use_core_kbd = 0x0100;
+
+    let xlib = xlib::Xlib::open().context("failed to open xlib")?;
+    // We could conceivably get the display passed in from our window or
+    // some such, but the reality is that it's a royal mess to convert
+    // one into the other.
+    let display = unsafe { (xlib.XOpenDisplay)(null()) };
+    ensure!(!display.is_null(), "failed to open X display");
+
+    let result = unsafe {
+      (xlib.XkbGetAutoRepeatRate)(
+        display,
+        xkb_use_core_kbd,
+        timeout.as_mut_ptr(),
+        interval.as_mut_ptr(),
+      )
+    };
+    ensure!(result != 0, "failed to query keyboard auto repeat settings");
+
+    let timeout = unsafe { timeout.assume_init() };
+    let interval = unsafe { interval.assume_init() };
+
+    let slf = Self {
+      auto_repeat_timeout_ms: timeout,
+      auto_repeat_interval_ms: interval,
+    };
+    Ok(slf)
+  }
+}
+
+impl Default for Config {
+  fn default() -> Self {
+    match Self::with_system_defaults() {
+      Ok(config) => config,
+      Err(..) => {
+        // We may not be able to query system settings in all cases. For
+        // example, if no display is available we will likely fail.
+        // However, for better user experience we still want to provide
+        // somewhat sensible defaults. So just come up with something.
+        Self {
+          auto_repeat_timeout_ms: 100,
+          auto_repeat_interval_ms: 50,
+        }
+      },
+    }
   }
 }
 
@@ -75,40 +142,14 @@ pub(crate) struct Keys {
 impl Keys {
   /// Instantiate a `Keys` object using system default auto repeat
   /// timeout and interval.
-  pub(crate) fn with_system_defaults() -> Result<Self> {
-    let mut timeout = MaybeUninit::<c_uint>::uninit();
-    let mut interval = MaybeUninit::<c_uint>::uninit();
-    // Value XkbUseCoreKbd constant defined somewhere in XKB.h and not
-    // exported anywhere. Gorgeous!
-    let xkb_use_core_kbd = 0x0100;
+  pub(crate) fn with_config(config: Config) -> Result<Self> {
+    let timeout = Duration::from_millis(config.auto_repeat_timeout_ms.into());
+    let interval = Duration::from_millis(config.auto_repeat_interval_ms.into());
 
-    let xlib = xlib::Xlib::open().context("failed to open xlib")?;
-    // We could conceivably get the display passed in from our window or
-    // some such, but the reality is that it's a royal mess to convert
-    // one into the other.
-    let display = unsafe { (xlib.XOpenDisplay)(null()) };
-    ensure!(!display.is_null(), "failed to open X display");
-
-    let result = unsafe {
-      (xlib.XkbGetAutoRepeatRate)(
-        display,
-        xkb_use_core_kbd,
-        timeout.as_mut_ptr(),
-        interval.as_mut_ptr(),
-      )
-    };
-    ensure!(result != 0, "failed to query keyboard auto repeat settings");
-
-    let timeout = unsafe { timeout.assume_init() };
-    let interval = unsafe { interval.assume_init() };
-
-    let timeout = Duration::from_millis(timeout.into());
-    let interval = Duration::from_millis(interval.into());
-
-    Ok(Self::with_key_repeat(timeout, interval))
+    Ok(Self::new(timeout, interval))
   }
 
-  fn with_key_repeat(timeout: Duration, interval: Duration) -> Self {
+  fn new(timeout: Duration, interval: Duration) -> Self {
     Self {
       timeout,
       interval,
@@ -188,11 +229,11 @@ mod tests {
   const SECOND: Duration = Duration::from_secs(1);
 
 
-  /// Make sure that we can create a `Keys` object using system
+  /// Make sure that we can create a `Config` object using system
   /// defaults.
   #[test]
-  fn keys_instantiation() {
-    let _keys = Keys::with_system_defaults().unwrap();
+  fn config_instantiation() {
+    let _config = Config::with_system_defaults().unwrap();
   }
 
   /// Check that keys are being reported as pressed as expected.
@@ -215,7 +256,7 @@ mod tests {
 
     let timeout = Duration::from_secs(5);
     let interval = Duration::from_secs(1);
-    let mut keys = Keys::with_key_repeat(timeout, interval);
+    let mut keys = Keys::new(timeout, interval);
 
     let now = Instant::now();
     let (state, tick) = keys.tick(now, &mut handler);
