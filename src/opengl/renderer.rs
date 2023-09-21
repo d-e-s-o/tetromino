@@ -321,18 +321,28 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
   /// Render a rectangle.
   pub(crate) fn render_rect(&self, rect: Rect<i16>) {
-    // Texture coordinates for the quad. We always map the complete
-    // texture on it.
-    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
-    let () = self.render_rect_with_tex_coords(rect, coords);
+    let () = self.render_rect_f32(rect.into_other());
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect_with_tex_coords(&self, mut rect: Rect<i16>, coords: Rect<f32>) {
+  pub(crate) fn render_rect_f32(&self, rect: Rect<f32>) {
+    // Texture coordinates for the quad. We always map the complete
+    // texture on it.
+    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
+    let () = self.render_rect_with_tex_coords_f32(rect, coords);
+  }
+
+  /// Render a rectangle.
+  pub(crate) fn render_rect_with_tex_coords(&self, rect: Rect<i16>, coords: Rect<f32>) {
+    self.render_rect_with_tex_coords_f32(rect.into_other(), coords)
+  }
+
+  /// Render a rectangle.
+  pub(crate) fn render_rect_with_tex_coords_f32(&self, mut rect: Rect<f32>, coords: Rect<f32>) {
     const VERTEX_COUNT_QUAD: usize = 4;
 
     let origin = self.origin.get();
-    rect += origin;
+    rect += origin.into_other();
 
     let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
     let color = self.color.get();
@@ -344,8 +354,8 @@ impl<'renderer> ActiveRenderer<'renderer> {
       g: color.g,
       b: color.b,
       a: color.a,
-      x: rect.x.into(),
-      y: rect.y.into(),
+      x: rect.x,
+      y: rect.y,
       z: 0.0,
     };
 
@@ -355,17 +365,17 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
     // lower right
     vertex.u += coords.w;
-    vertex.x += gl::GLfloat::from(rect.w);
+    vertex.x += rect.w;
     vertices[1].write(vertex);
 
     // upper right
     vertex.v += coords.h;
-    vertex.y += gl::GLfloat::from(rect.h);
+    vertex.y += rect.h;
     vertices[2].write(vertex);
 
     // upper left
     vertex.u = coords.x;
-    vertex.x = rect.x.into();
+    vertex.x = rect.x;
     vertices[3].write(vertex);
 
     let len = buffer.len();
