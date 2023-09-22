@@ -414,6 +414,32 @@ impl<'renderer> ActiveRenderer<'renderer> {
       unsafe { buffer.set_len(0) };
     }
   }
+
+  /// Retrieve the physical width of the rendering area, in pixels.
+  #[inline]
+  pub(crate) fn phys_width(&self) -> u32 {
+    self.renderer.phys_w as _
+  }
+
+  /// Retrieve the physical height of the rendering area, in pixels.
+  #[inline]
+  pub(crate) fn phys_height(&self) -> u32 {
+    self.renderer.phys_h as _
+  }
+
+  /// Retrieve the logical width of the rendering area, in game units,
+  /// but already expressed as a floating point value.
+  #[inline]
+  pub(crate) fn logic_width(&self) -> f32 {
+    self.renderer.logic_w as _
+  }
+
+  /// Retrieve the logical height of the rendering area, in game units,
+  /// but already expressed as a floating point value.
+  #[inline]
+  pub(crate) fn logic_height(&self) -> f32 {
+    self.renderer.logic_h as _
+  }
 }
 
 impl Drop for ActiveRenderer<'_> {

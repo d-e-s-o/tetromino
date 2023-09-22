@@ -47,6 +47,7 @@ use crate::keys::maybe_min_instant;
 use crate::keys::Keys;
 use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
+use crate::opengl::Font;
 use crate::opengl::Renderer;
 use crate::opengl::Texture;
 use crate::opengl::Window;
