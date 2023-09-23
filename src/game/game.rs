@@ -10,6 +10,7 @@ use std::time::Instant;
 use anyhow::Result;
 
 use crate::ActiveRenderer as Renderer;
+use crate::Font;
 use crate::Point;
 use crate::State;
 use crate::Texture;
@@ -32,6 +33,8 @@ const RIGHT_SPACE: i16 = 1;
 const TOP_SPACE: i16 = 1;
 /// Space between the field and the preview stones.
 const PREVIEW_FIELD_SPACE: i16 = 1;
+/// Space between the preview stones and the score board.
+const PREVIEW_SCORE_SPACE: i16 = 1;
 
 
 /// A type representing a game of Tetris.
@@ -80,14 +83,22 @@ impl Game {
       config.field_width,
       config.field_height,
       preview.clone(),
-      piece,
+      piece.clone(),
       field_back,
     );
     let (field, over) = match result {
       Ok(field) => (field, false),
       Err(field) => (field, true),
     };
-    let score = Score::new(config.start_level, config.lines_for_level);
+
+    let font = Font::builtin(piece);
+    let score_location = preview_location - Point::new(0, preview.height() + PREVIEW_SCORE_SPACE);
+    let score = Score::new(
+      score_location,
+      config.start_level,
+      config.lines_for_level,
+      font,
+    );
 
     let slf = Self {
       field,
@@ -251,6 +262,7 @@ impl Game {
   pub(crate) fn render(&self, renderer: &Renderer) {
     let () = self.field.render(renderer);
     let () = self.preview.render(renderer);
+    let () = self.score.render(renderer);
   }
 
   /// Retrieve the game surface's width.
