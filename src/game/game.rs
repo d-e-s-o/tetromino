@@ -168,10 +168,10 @@ impl Game {
     self.over = true;
   }
 
-  /// Toggle the game between the running/pause states.
+  /// Pause or unpause the game.
   #[inline]
-  pub(crate) fn toggle_pause(&mut self) {
-    if self.next_tick.is_some() {
+  pub(crate) fn pause(&mut self, pause: bool) {
+    if pause {
       let _next_tick = self.next_tick.take();
     } else {
       if !self.over {
@@ -179,6 +179,16 @@ impl Game {
           .next_tick
           .replace(Self::next_tick(Instant::now(), self.score.level()));
       }
+    }
+  }
+
+  /// Inquire whether the game is currently paused.
+  #[inline]
+  pub(crate) fn is_paused(&self) -> Option<bool> {
+    if self.over {
+      None
+    } else {
+      Some(self.next_tick.is_none())
     }
   }
 

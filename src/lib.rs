@@ -175,7 +175,9 @@ pub fn run() -> Result<()> {
           Key::ArrowRight => game.on_move_right(),
           Key::Space => game.on_drop(),
           Key::F3 => {
-            let () = game.toggle_pause();
+            if let Some(paused) = game.is_paused() {
+              let () = game.pause(!paused);
+            }
             State::Unchanged
           },
           _ => State::Unchanged,
