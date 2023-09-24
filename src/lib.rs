@@ -118,17 +118,35 @@ pub fn run() -> Result<()> {
   let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
   let mut keys =
     Keys::with_config(config.keyboard).context("failed to instantiate auto key repeat manager")?;
+  let mut was_paused = game.is_paused();
 
   event_loop.run(move |event, _, control_flow| {
     let now = Instant::now();
     let event_state = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
-        WindowEvent::Focused(false) => {
-          // We may not get informed about key releases once unfocused.
-          // So just treat such an event as clearing all pressed keys
-          // eagerly.
-          let () = keys.clear();
+        WindowEvent::Focused(focused) => {
+          if focused {
+            if let Some(false) = was_paused {
+              // The game was not paused when we lost focus. That means
+              // we ended up pausing it. Unpause it again.
+              let () = game.pause(false);
+            }
+          } else {
+            was_paused = game.is_paused();
+            if let Some(false) = was_paused {
+              // The game is currently running but we are about to loose
+              // focus. Pause it, as the user will no longer have a
+              // chance to control it and it's not great to have it
+              // actively running in the background.
+              let () = game.pause(true);
+            }
+
+            // We may not get informed about key releases once unfocused.
+            // So just treat such an event as clearing all pressed keys
+            // eagerly.
+            let () = keys.clear();
+          }
           State::Unchanged
         },
         WindowEvent::CloseRequested => {
