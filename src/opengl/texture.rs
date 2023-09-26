@@ -93,7 +93,7 @@ fn create_texture(image: image::DynamicImage) -> Result<()> {
 }
 
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Texture {
   /// The texture ID.
   id: Rc<gl::GLuint>,

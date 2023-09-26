@@ -8,6 +8,7 @@ use std::mem::replace;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 use std::ops::Add;
+use std::ops::DerefMut as _;
 
 use crate::guard::Guard;
 use crate::Point;
@@ -177,30 +178,70 @@ impl Primitive {
 #[derive(Clone, Debug)]
 enum TextureState {
   /// The texture has been bound and will be used when rendering.
-  Bound(Texture),
-  /// The texture has not yet been bound. [`Bind`](Texture::bind) it
-  /// before sending primitives to the graphics device if it is meant to
-  /// be used.
-  Unbound(Texture),
+  Bound { bound: Texture },
+  /// The texture is active but has not yet been bound. The most
+  /// convenient way for ensuring that it is in fact bound once that is
+  /// required is via the [`ensure_bound`][Self::ensure_bound] method.
+  Unbound {
+    unbound: Texture,
+    still_bound: Texture,
+  },
 }
 
 impl TextureState {
-  /// Make sure that the represented texture is bound.
-  fn ensure_bound(&mut self) {
-    if let Self::Unbound(texture) = self {
-      // The clone is reasonably cheap, but also entirely unnecessary at
-      // a conceptual level. We just want to flip the enum variant from
-      // `Unbound` to `Bound`. Thanks Rust...
-      let texture = texture.clone();
-      let () = texture.bind();
-      let _prev = replace(self, Self::Bound(texture));
+  /// Mark the provided texture as active, but don't bind it yet.
+  fn activate(&mut self, texture: Texture) -> Texture {
+    match self {
+      Self::Bound { bound } if texture == *bound => texture,
+      Self::Bound { bound } => {
+        let state = Self::Unbound {
+          unbound: texture,
+          still_bound: bound.clone(),
+        };
+        replace(self, state).into_texture()
+      },
+      Self::Unbound { unbound, .. } => replace(unbound, texture),
     }
   }
 
-  /// Extract the wrapped [`Texture`].
-  fn into_inner(self) -> Texture {
+  /// Make sure that the "active" texture is bound.
+  fn ensure_bound(&mut self) {
     match self {
-      Self::Bound(texture) | Self::Unbound(texture) => texture,
+      Self::Bound { .. } => (),
+      Self::Unbound {
+        unbound,
+        still_bound,
+      } => {
+        if unbound != still_bound {
+          let () = unbound.bind();
+        }
+
+        // The clone is reasonably cheap, but also entirely unnecessary at
+        // a conceptual level. We just want to flip the enum variant from
+        // `Unbound` to `Bound`. Thanks Rust...
+        let bound = unbound.clone();
+        let _prev = replace(self, Self::Bound { bound });
+      },
+    }
+  }
+
+  /// Retrieve the "active" texture.
+  fn texture(&self) -> &Texture {
+    match self {
+      Self::Bound { bound: texture }
+      | Self::Unbound {
+        unbound: texture, ..
+      } => texture,
+    }
+  }
+
+  /// Destruct the object into the "active" texture.
+  fn into_texture(self) -> Texture {
+    match self {
+      Self::Bound { bound: texture }
+      | Self::Unbound {
+        unbound: texture, ..
+      } => texture,
     }
   }
 }
@@ -235,7 +276,9 @@ impl<'renderer> ActiveRenderer<'renderer> {
       // `Renderer::on_pre_render` path and it just cleared a bunch of
       // state. So it's fine for us to claim that an "invalid" texture
       // is bound already.
-      texture: RefCell::new(TextureState::Bound(invalid_texture)),
+      texture: RefCell::new(TextureState::Bound {
+        bound: invalid_texture,
+      }),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
       primitive: Cell::new(Primitive::Quad),
     }
@@ -258,23 +301,22 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
   #[inline]
   pub(crate) fn set_texture(&self, texture: &Texture) -> Guard<'_, impl FnOnce() + '_> {
-    // We are about to change the texture, which means all primitives
-    // referencing the previously set texture should get rendered first.
-    let () = self.flush_vertex_buffer();
-    let () = texture.bind();
-    let prev_texture = self
-      .texture
-      .replace(TextureState::Bound(texture.clone()))
-      .into_inner();
+    fn set(renderer: &ActiveRenderer, texture: Texture) -> Texture {
+      let mut state = renderer.texture.borrow_mut();
+      let state = state.deref_mut();
+
+      if texture != *state.texture() {
+        let () = renderer.flush_vertex_buffer(state);
+      }
+
+      state.activate(texture)
+    }
+
+    let texture = texture.clone();
+    let prev_texture = set(self, texture);
 
     Guard::new(move || {
-      // Make sure that anything relying on the previous texture is
-      // rendered. This can't be postponed anymore, because we are about
-      // to loose any references to said texture.
-      let () = self.flush_vertex_buffer();
-      // No point in binding the texture eagerly. Chances are it won't
-      // actually be used for any primitives.
-      let _unused = self.texture.replace(TextureState::Unbound(prev_texture));
+      let _prev = set(self, prev_texture);
     })
   }
 
@@ -389,17 +431,17 @@ impl<'renderer> ActiveRenderer<'renderer> {
     if primitive != self.primitive.get()
       || self.vertices.borrow_mut().spare_capacity_mut().len() < vertex_cnt
     {
-      let () = self.flush_vertex_buffer();
+      let () = self.flush_vertex_buffer(self.texture.borrow_mut().deref_mut());
       let () = self.primitive.set(primitive);
     }
   }
 
   /// Send the cached data to the graphics device for rendering.
-  fn flush_vertex_buffer(&self) {
+  fn flush_vertex_buffer(&self, texture: &mut TextureState) {
     let mut buffer = self.vertices.borrow_mut();
     let size = buffer.len() as _;
     if size > 0 {
-      let () = self.texture.borrow_mut().ensure_bound();
+      let () = texture.ensure_bound();
 
       unsafe {
         gl::InterleavedArrays(gl::T2F_C4UB_V3F, 0, buffer.as_ptr().cast());
@@ -444,7 +486,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
 impl Drop for ActiveRenderer<'_> {
   fn drop(&mut self) {
-    let () = self.flush_vertex_buffer();
+    let () = self.flush_vertex_buffer(self.texture.borrow_mut().deref_mut());
     let () = self.renderer.on_post_render();
   }
 }
