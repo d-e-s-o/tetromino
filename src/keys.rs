@@ -127,6 +127,14 @@ impl KeyState {
 }
 
 
+/// An enum representing the two possible auto-key-repeat states
+/// supported.
+pub(crate) enum KeyRepeat {
+  Enabled,
+  Disabled,
+}
+
+
 /// A type helping with key press repetitions.
 pub(crate) struct Keys {
   /// The "timeout" after the initial key press after which the first
@@ -136,7 +144,7 @@ pub(crate) struct Keys {
   interval: Duration,
   /// A map from keys that are currently pressed to internally used
   /// key repetition state.
-  pressed: HashMap<Key, KeyState>,
+  pressed: HashMap<Key, Option<KeyState>>,
 }
 
 impl Keys {
@@ -167,7 +175,7 @@ impl Keys {
         let entry = self.pressed.entry(key);
         match entry {
           Entry::Vacant(vacancy) => {
-            let _state = vacancy.insert(KeyState::Pressed { pressed_at: now });
+            let _state = vacancy.insert(Some(KeyState::Pressed { pressed_at: now }));
           },
           // If the key is already pressed we just got an AutoRepeat
           // event. We manage repetitions ourselves, so we skip any
@@ -182,31 +190,51 @@ impl Keys {
   //       one, to reduce the number of event loop wake ups.
   pub(crate) fn tick<F>(&mut self, now: Instant, mut handler: F) -> (State, Option<Instant>)
   where
-    F: FnMut(&Key) -> State,
+    F: FnMut(&Key, &mut KeyRepeat) -> State,
   {
     let mut state = State::Unchanged;
     let mut next_tick = None;
+    let mut remove = None;
 
-    for (key, key_state) in self.pressed.iter_mut() {
-      while now >= key_state.next_tick() {
-        state |= handler(key);
+    'next_key: for (key, key_state_opt) in self.pressed.iter_mut() {
+      if let Some(key_state) = key_state_opt {
+        while now >= key_state.next_tick() {
+          let mut repeat = KeyRepeat::Enabled;
+          state |= handler(key, &mut repeat);
 
-        match key_state {
-          KeyState::Pressed { pressed_at } => {
-            let first_repeat = *pressed_at + self.timeout;
-            *key_state = KeyState::Repeated {
-              next_repeat: first_repeat,
-            };
-          },
-          KeyState::Repeated { next_repeat } => {
-            let next_repeat = *next_repeat + self.interval;
-            *key_state = KeyState::Repeated { next_repeat };
-          },
+          match repeat {
+            KeyRepeat::Disabled => {
+              *key_state_opt = None;
+              remove = Some(*key);
+              continue 'next_key
+            },
+            KeyRepeat::Enabled => match key_state {
+              KeyState::Pressed { pressed_at } => {
+                let first_repeat = *pressed_at + self.timeout;
+                *key_state = KeyState::Repeated {
+                  next_repeat: first_repeat,
+                };
+              },
+              KeyState::Repeated { next_repeat } => {
+                let next_repeat = *next_repeat + self.interval;
+                *key_state = KeyState::Repeated { next_repeat };
+              },
+            },
+          }
         }
-      }
 
-      next_tick = Some(min_instant(key_state.next_tick(), next_tick));
+        next_tick = Some(min_instant(key_state.next_tick(), next_tick));
+      }
     }
+
+    if let Some(key) = remove {
+      // We only ever remove one key at a time to not have to allocate.
+      // It won't take many invocations of this function to clear all
+      // keys for which the "user" wants to disable auto-repeat, though.
+      let _state = self.pressed.remove(&key);
+      debug_assert!(_state.is_some());
+    }
+
     (state, next_tick)
   }
 
@@ -241,14 +269,20 @@ mod tests {
   fn key_pressing() {
     let enter_pressed = Cell::new(0);
     let space_pressed = Cell::new(0);
+    let f3_pressed = Cell::new(0);
 
-    let mut handler = |key: &Key| match key {
+    let mut handler = |key: &Key, repeat: &mut KeyRepeat| match key {
       Key::Enter => {
         enter_pressed.set(enter_pressed.get() + 1);
         State::Changed
       },
       Key::Space => {
         space_pressed.set(space_pressed.get() + 1);
+        State::Changed
+      },
+      Key::F3 => {
+        f3_pressed.set(f3_pressed.get() + 1);
+        *repeat = KeyRepeat::Disabled;
         State::Changed
       },
       _ => State::Unchanged,
@@ -290,10 +324,16 @@ mod tests {
     assert_eq!(state, State::Changed);
     assert_eq!(tick.unwrap(), now + 6 * SECOND);
 
+    // Press F3 as well. That should be a one-time thing only, as the
+    // handler disabled auto-repeat.
+    let () = keys.on_key_event(now + 5 * SECOND, Key::F3, ElementState::Pressed);
+    assert_eq!(f3_pressed.get(), 0);
+
     // We skipped a couple of ticks and at t+8s we should see three
     // additional repeats.
     let (state, tick) = keys.tick(now + 8 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 5);
+    assert_eq!(f3_pressed.get(), 1);
     assert_eq!(state, State::Changed);
     assert_eq!(tick.unwrap(), now + 9 * SECOND);
 
@@ -304,6 +344,7 @@ mod tests {
     let (state, tick) = keys.tick(now + 10 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 7);
     assert_eq!(space_pressed.get(), 1);
+    assert_eq!(f3_pressed.get(), 1);
     assert_eq!(state, State::Changed);
     assert_eq!(tick.unwrap(), now + 11 * SECOND);
 
@@ -312,6 +353,7 @@ mod tests {
     let (state, tick) = keys.tick(now + 15 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 12);
     assert_eq!(space_pressed.get(), 3);
+    assert_eq!(f3_pressed.get(), 1);
     assert_eq!(state, State::Changed);
     assert_eq!(tick.unwrap(), now + 16 * SECOND);
 
@@ -322,6 +364,7 @@ mod tests {
     let (state, tick) = keys.tick(now + 16 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 13);
     assert_eq!(space_pressed.get(), 3);
+    assert_eq!(f3_pressed.get(), 1);
     assert_eq!(state, State::Changed);
     assert_eq!(tick.unwrap(), now + 17 * SECOND);
 
@@ -330,6 +373,7 @@ mod tests {
     let (state, tick) = keys.tick(now + 17 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 13);
     assert_eq!(space_pressed.get(), 3);
+    assert_eq!(f3_pressed.get(), 1);
     assert_eq!(state, State::Unchanged);
     assert_eq!(tick, None);
   }

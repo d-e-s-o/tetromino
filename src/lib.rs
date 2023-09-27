@@ -44,6 +44,7 @@ use winit::keyboard::KeyCode as Key;
 
 use crate::game::Game;
 use crate::keys::maybe_min_instant;
+use crate::keys::KeyRepeat;
 use crate::keys::Keys;
 use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
@@ -177,7 +178,7 @@ pub fn run() -> Result<()> {
         State::Unchanged
       },
       Event::MainEventsCleared => {
-        let handle_key = |key: &Key| match key {
+        let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
           Key::Digit1 => game.on_rotate_left(),
           Key::Digit2 => game.on_rotate_right(),
           Key::KeyH => game.on_move_left(),
@@ -187,15 +188,22 @@ pub fn run() -> Result<()> {
             let () = control_flow.set_exit();
             State::Unchanged
           },
-          Key::Enter => game.restart(),
+          Key::Enter => {
+            *repeat = KeyRepeat::Disabled;
+            game.restart()
+          },
           Key::ArrowDown => game.on_move_down(),
           Key::ArrowLeft => game.on_move_left(),
           Key::ArrowRight => game.on_move_right(),
-          Key::Space => game.on_drop(),
+          Key::Space => {
+            *repeat = KeyRepeat::Disabled;
+            game.on_drop()
+          },
           Key::F3 => {
             if let Some(paused) = game.is_paused() {
               let () = game.pause(!paused);
             }
+            *repeat = KeyRepeat::Disabled;
             State::Unchanged
           },
           _ => State::Unchanged,
