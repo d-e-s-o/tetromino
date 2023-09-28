@@ -132,7 +132,7 @@ impl Game {
         match result.1 {
           MoveResult::Moved => (),
           MoveResult::Merged(lines) => {
-            let () = self.score.add(lines);
+            let () = Self::handle_merged_lines(&mut self.score, lines);
           },
           MoveResult::Conflict => {
             let () = self.end();
@@ -166,6 +166,13 @@ impl Game {
   fn end(&mut self) {
     self.next_tick = None;
     self.over = true;
+
+    println!(
+      "{} points @ level {}; total {} lines cleared (game over)",
+      self.score.points(),
+      self.score.level(),
+      self.score.lines()
+    );
   }
 
   /// Pause or unpause the game.
@@ -192,6 +199,20 @@ impl Game {
     }
   }
 
+  fn handle_merged_lines(score: &mut Score, lines: u16) {
+    let level = score.level();
+    let () = score.add(lines);
+    let new_level = score.level();
+
+    // While we actually render the score in real-time, we also print to
+    // stdout on level up, just to have a history in a slightly more
+    // persistent location (still visible after the main window got
+    // closed).
+    if new_level != level {
+      println!("{} points @ level {}", score.points(), new_level);
+    }
+  }
+
   #[inline]
   pub(crate) fn on_move_down(&mut self) -> State {
     if self.next_tick.is_some() {
@@ -199,7 +220,7 @@ impl Game {
       match result {
         MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
-          let () = self.score.add(lines);
+          let () = Self::handle_merged_lines(&mut self.score, lines);
         },
         MoveResult::Conflict => {
           let () = self.end();
@@ -219,7 +240,7 @@ impl Game {
       match result {
         MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
-          let () = self.score.add(lines);
+          let () = Self::handle_merged_lines(&mut self.score, lines);
         },
         MoveResult::Conflict => {
           let () = self.end();

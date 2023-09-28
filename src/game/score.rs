@@ -172,7 +172,6 @@ impl Score {
 
   /// Add the given number of lines to the score.
   pub fn add(&mut self, lines: u16) {
-    let level = self.level;
     // Strictly speaking the point calculation is wrong: if
     // `lines_for_level_` is a low value (e.g. 1) then the points will
     // be calculated based only on the current level -- though the level
@@ -186,14 +185,6 @@ impl Score {
     self.lines_since_up += lines;
     self.level += self.lines_since_up / self.lines_for_level;
     self.lines_since_up %= self.lines_for_level;
-
-    // While we actually render the score in real-time, we also print to
-    // stdout on level up, just to have a history in a slightly more
-    // persistent location (still visible after the main window got
-    // closed).
-    if self.level != level {
-      println!("{} points @ level {level}", self.points);
-    }
   }
 
   /// This method is used to calculate the number of points for the
@@ -215,6 +206,18 @@ impl Score {
   #[inline]
   pub fn level(&self) -> u16 {
     self.level
+  }
+
+  /// Retrieve the current points.
+  #[inline]
+  pub fn points(&self) -> u64 {
+    self.points
+  }
+
+  /// Retrieve the number of lines cleared to far.
+  #[inline]
+  pub fn lines(&self) -> u32 {
+    self.lines
   }
 }
 
