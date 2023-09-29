@@ -62,6 +62,7 @@ pub use crate::config::Config;
 #[derive(Clone, Copy, Debug, PartialEq)]
 enum State {
   Changed,
+  Quit,
   Unchanged,
 }
 
@@ -70,6 +71,7 @@ impl BitOr<State> for State {
 
   fn bitor(self, rhs: State) -> Self::Output {
     match (self, rhs) {
+      (Self::Quit, _) | (_, Self::Quit) => Self::Quit,
       (Self::Changed, _) | (_, Self::Changed) => Self::Changed,
       (Self::Unchanged, Self::Unchanged) => Self::Unchanged,
     }
@@ -123,7 +125,7 @@ pub fn run() -> Result<()> {
 
   event_loop.run(move |event, _, control_flow| {
     let now = Instant::now();
-    let event_state = match event {
+    let state = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
         WindowEvent::Focused(focused) => {
@@ -184,10 +186,7 @@ pub fn run() -> Result<()> {
           Key::KeyH => game.on_move_left(),
           Key::KeyJ => game.on_move_down(),
           Key::KeyL => game.on_move_right(),
-          Key::KeyQ => {
-            let () = control_flow.set_exit();
-            State::Unchanged
-          },
+          Key::KeyQ => State::Quit,
           Key::Enter => {
             *repeat = KeyRepeat::Disabled;
             game.restart()
@@ -212,14 +211,10 @@ pub fn run() -> Result<()> {
         let (keys_state, keys_wait) = keys.tick(now, handle_key);
         let (game_state, game_wait) = game.tick(now);
 
-        // A key handler may have indicated a desire to exit. Don't
-        // overwrite that.
-        if !matches!(control_flow, ControlFlow::ExitWithCode(_)) {
-          if let Some(wait_until) = maybe_min_instant(game_wait, keys_wait) {
-            *control_flow = ControlFlow::WaitUntil(wait_until);
-          } else {
-            *control_flow = ControlFlow::Wait;
-          }
+        if let Some(wait_until) = maybe_min_instant(game_wait, keys_wait) {
+          *control_flow = ControlFlow::WaitUntil(wait_until);
+        } else {
+          *control_flow = ControlFlow::Wait;
         }
 
         keys_state | game_state
@@ -234,8 +229,10 @@ pub fn run() -> Result<()> {
       _ => State::Unchanged,
     };
 
-    if let State::Changed = event_state {
-      let () = window.request_redraw();
+    match state {
+      State::Changed => window.request_redraw(),
+      State::Quit => control_flow.set_exit(),
+      State::Unchanged => (),
     }
   });
 }
