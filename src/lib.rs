@@ -21,6 +21,8 @@ mod point;
 mod rand;
 mod rect;
 
+use std::cmp::min;
+use std::cmp::Ordering;
 use std::fs::read_to_string;
 use std::io::ErrorKind;
 use std::num::NonZeroU32;
@@ -43,7 +45,6 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode as Key;
 
 use crate::game::Game;
-use crate::keys::maybe_min_instant;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
 use crate::opengl::ActiveRenderer;
@@ -81,6 +82,32 @@ impl BitOr<State> for State {
 impl BitOrAssign<State> for State {
   fn bitor_assign(&mut self, rhs: State) {
     *self = *self | rhs;
+  }
+}
+
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Tick {
+  At(Instant),
+  None,
+}
+
+impl PartialOrd<Tick> for Tick {
+  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+    let order = match (self, other) {
+      (Self::None, Self::None) => Ordering::Equal,
+      (Self::At(_instant), Self::None) => Ordering::Less,
+      (Self::None, Self::At(_instant)) => Ordering::Greater,
+      (Self::At(instant1), Self::At(instant2)) => instant1.cmp(instant2),
+    };
+    Some(order)
+  }
+}
+
+impl Ord for Tick {
+  fn cmp(&self, other: &Self) -> Ordering {
+    // SANITY: Our `PartialOrd` impl always returns a `Some`.
+    self.partial_cmp(other).unwrap()
   }
 }
 
@@ -211,11 +238,10 @@ pub fn run() -> Result<()> {
         let (keys_state, keys_wait) = keys.tick(now, handle_key);
         let (game_state, game_wait) = game.tick(now);
 
-        if let Some(wait_until) = maybe_min_instant(game_wait, keys_wait) {
-          *control_flow = ControlFlow::WaitUntil(wait_until);
-        } else {
-          *control_flow = ControlFlow::Wait;
-        }
+        *control_flow = match min(game_wait, keys_wait) {
+          Tick::None => ControlFlow::Wait,
+          Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
+        };
 
         keys_state | game_state
       },

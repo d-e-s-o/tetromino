@@ -14,6 +14,7 @@ use crate::Font;
 use crate::Point;
 use crate::State;
 use crate::Texture;
+use crate::Tick;
 
 use super::data;
 use super::Config;
@@ -121,7 +122,7 @@ impl Game {
   ///
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
-  pub(crate) fn tick(&mut self, now: Instant) -> (State, Option<Instant>) {
+  pub(crate) fn tick(&mut self, now: Instant) -> (State, Tick) {
     let mut state = State::Unchanged;
 
     while let Some(next_tick) = &mut self.next_tick {
@@ -146,7 +147,12 @@ impl Game {
       }
     }
 
-    (state, self.next_tick)
+    let tick = match self.next_tick {
+      None => Tick::None,
+      Some(next_tick) => Tick::At(next_tick),
+    };
+
+    (state, tick)
   }
 
   /// Restart the game.
