@@ -36,15 +36,27 @@ pub(super) enum MoveResult {
 }
 
 
+/// An enumeration of the possible states that the field can be in.
+enum State {
+  Moving {
+    /// The currently active stone.
+    stone: Stone,
+  },
+  /// The last move has resulted in a collision. No further stone
+  /// movement is possible.
+  Colliding,
+}
+
+
 pub(crate) struct Field {
   /// The location of the lower left corner of the field, in game units.
   location: Point<i16>,
   /// The inner field area, containing dropped pieces.
   pieces: PieceField,
+  /// The field's current state.
+  state: State,
   /// The producer we use for creating new stones.
   producer: Rc<dyn StoneProducer>,
-  /// The currently active stone.
-  stone: Stone,
   /// The texture to use for one unit of wall.
   wall: Texture,
 }
@@ -61,11 +73,16 @@ impl Field {
     let pieces = PieceField::new(width, height, back, piece.clone());
     let mut stone = producer.create_stone();
     let result = pieces.reset_stone(&mut stone);
+    let state = if result {
+      State::Moving { stone }
+    } else {
+      State::Colliding
+    };
 
     let slf = Self {
       location,
+      state,
       producer,
-      stone,
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
@@ -82,30 +99,40 @@ impl Field {
   /// and a stone at its initial position.
   pub(super) fn reset(&mut self) -> bool {
     let () = self.pieces.clear();
-    self.stone = self.producer.create_stone();
-    self.pieces.reset_stone(&mut self.stone)
+    let mut stone = self.producer.create_stone();
+    if self.pieces.reset_stone(&mut stone) {
+      self.state = State::Moving { stone };
+      true
+    } else {
+      self.state = State::Colliding;
+      false
+    }
   }
 
   /// Move the stone down.
   fn move_stone_down_impl(&mut self) -> MoveResult {
-    debug_assert!(!self.pieces.collides(&self.stone));
+    match &mut self.state {
+      State::Moving { stone } => {
+        debug_assert!(!self.pieces.collides(stone));
+        let () = stone.move_by(0, -1);
 
-    let () = self.stone.move_by(0, -1);
+        if self.pieces.collides(stone) {
+          let () = stone.move_by(0, 1);
 
-    if self.pieces.collides(&self.stone) {
-      let () = self.stone.move_by(0, 1);
+          let new_stone = self.producer.create_stone();
+          let old_stone = replace(stone, new_stone);
 
-      let new_stone = self.producer.create_stone();
-      let old_stone = replace(&mut self.stone, new_stone);
-
-      let cleared = self.pieces.merge_stone(old_stone);
-      if !self.pieces.reset_stone(&mut self.stone) {
-        MoveResult::Conflict
-      } else {
-        MoveResult::Merged(cleared)
-      }
-    } else {
-      MoveResult::Moved
+          let cleared = self.pieces.merge_stone(old_stone);
+          if !self.pieces.reset_stone(stone) {
+            MoveResult::Conflict
+          } else {
+            MoveResult::Merged(cleared)
+          }
+        } else {
+          MoveResult::Moved
+        }
+      },
+      State::Colliding => MoveResult::Conflict,
     }
   }
 
@@ -124,13 +151,18 @@ impl Field {
   }
 
   fn move_stone_by(&mut self, x: i16, y: i16) -> Change {
-    let () = self.stone.move_by(x, y);
+    match &mut self.state {
+      State::Moving { stone } => {
+        let () = stone.move_by(x, y);
 
-    if self.pieces.collides(&self.stone) {
-      let () = self.stone.move_by(-x, -y);
-      Change::Unchanged
-    } else {
-      Change::Changed
+        if self.pieces.collides(stone) {
+          let () = stone.move_by(-x, -y);
+          Change::Unchanged
+        } else {
+          Change::Changed
+        }
+      },
+      State::Colliding => Change::Unchanged,
     }
   }
 
@@ -143,13 +175,18 @@ impl Field {
   }
 
   fn rotate_stone(&mut self, left: bool) -> Change {
-    let () = self.stone.rotate(left);
+    match &mut self.state {
+      State::Moving { stone } => {
+        let () = stone.rotate(left);
 
-    if self.pieces.collides(&self.stone) {
-      let () = self.stone.rotate(!left);
-      Change::Unchanged
-    } else {
-      Change::Changed
+        if self.pieces.collides(stone) {
+          let () = stone.rotate(!left);
+          Change::Unchanged
+        } else {
+          Change::Changed
+        }
+      },
+      State::Colliding => Change::Unchanged,
     }
   }
 
@@ -183,7 +220,10 @@ impl Field {
 
   /// Render the currently active stone (if any).
   fn render_stone(&self, renderer: &Renderer) {
-    let () = self.stone.render(renderer);
+    match &self.state {
+      State::Moving { stone } => stone.render(renderer),
+      State::Colliding => (),
+    }
   }
 
   /// Render the Tetris field.
