@@ -10,9 +10,9 @@ use std::time::Instant;
 use anyhow::Result;
 
 use crate::ActiveRenderer as Renderer;
+use crate::Change;
 use crate::Font;
 use crate::Point;
-use crate::State;
 use crate::Texture;
 use crate::Tick;
 
@@ -122,13 +122,13 @@ impl Game {
   ///
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
-  pub(crate) fn tick(&mut self, now: Instant) -> (State, Tick) {
-    let mut state = State::Unchanged;
+  pub(crate) fn tick(&mut self, now: Instant) -> (Change, Tick) {
+    let mut change = Change::Unchanged;
 
     while let Some(next_tick) = &mut self.next_tick {
       if now >= *next_tick {
         let result = self.field.move_stone_down();
-        state |= result.0;
+        change |= result.0;
 
         match result.1 {
           MoveResult::Moved => (),
@@ -152,11 +152,11 @@ impl Game {
       Some(next_tick) => Tick::At(next_tick),
     };
 
-    (state, tick)
+    (change, tick)
   }
 
   /// Restart the game.
-  pub(crate) fn restart(&mut self) -> State {
+  pub(crate) fn restart(&mut self) -> Change {
     let () = self.score.reset();
     let () = if self.field.reset() {
       self.over = false;
@@ -165,7 +165,7 @@ impl Game {
       self.end()
     };
 
-    State::Changed
+    Change::Changed
   }
 
   /// End the current game.
@@ -220,9 +220,9 @@ impl Game {
   }
 
   #[inline]
-  pub(crate) fn on_move_down(&mut self) -> State {
+  pub(crate) fn on_move_down(&mut self) -> Change {
     if self.next_tick.is_some() {
-      let (state, result) = self.field.move_stone_down();
+      let (change, result) = self.field.move_stone_down();
       match result {
         MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
@@ -233,16 +233,16 @@ impl Game {
         },
       }
 
-      state
+      change
     } else {
-      State::Unchanged
+      Change::Unchanged
     }
   }
 
   #[inline]
-  pub(crate) fn on_drop(&mut self) -> State {
+  pub(crate) fn on_drop(&mut self) -> Change {
     if self.next_tick.is_some() {
-      let (state, result) = self.field.drop_stone();
+      let (change, result) = self.field.drop_stone();
       match result {
         MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
@@ -253,45 +253,45 @@ impl Game {
         },
       }
 
-      state
+      change
     } else {
-      State::Unchanged
+      Change::Unchanged
     }
   }
 
   #[inline]
-  pub(crate) fn on_move_left(&mut self) -> State {
+  pub(crate) fn on_move_left(&mut self) -> Change {
     if self.next_tick.is_some() {
       self.field.move_stone_left()
     } else {
-      State::Unchanged
+      Change::Unchanged
     }
   }
 
   #[inline]
-  pub(crate) fn on_move_right(&mut self) -> State {
+  pub(crate) fn on_move_right(&mut self) -> Change {
     if self.next_tick.is_some() {
       self.field.move_stone_right()
     } else {
-      State::Unchanged
+      Change::Unchanged
     }
   }
 
   #[inline]
-  pub(crate) fn on_rotate_left(&mut self) -> State {
+  pub(crate) fn on_rotate_left(&mut self) -> Change {
     if self.next_tick.is_some() {
       self.field.rotate_stone_left()
     } else {
-      State::Unchanged
+      Change::Unchanged
     }
   }
 
   #[inline]
-  pub(crate) fn on_rotate_right(&mut self) -> State {
+  pub(crate) fn on_rotate_right(&mut self) -> Change {
     if self.next_tick.is_some() {
       self.field.rotate_stone_right()
     } else {
-      State::Unchanged
+      Change::Unchanged
     }
   }
 

@@ -5,10 +5,10 @@ use std::mem::replace;
 use std::rc::Rc;
 
 use crate::ActiveRenderer as Renderer;
+use crate::Change;
 use crate::Color;
 use crate::Point;
 use crate::Rect;
-use crate::State;
 use crate::Texture;
 
 use super::Matrix;
@@ -109,55 +109,55 @@ impl Field {
     }
   }
 
-  pub(super) fn drop_stone(&mut self) -> (State, MoveResult) {
+  pub(super) fn drop_stone(&mut self) -> (Change, MoveResult) {
     loop {
       let result = self.move_stone_down_impl();
       if !matches!(result, MoveResult::Moved) {
-        break (State::Changed, result)
+        break (Change::Changed, result)
       }
     }
   }
 
-  pub(super) fn move_stone_down(&mut self) -> (State, MoveResult) {
+  pub(super) fn move_stone_down(&mut self) -> (Change, MoveResult) {
     let result = self.move_stone_down_impl();
-    (State::Changed, result)
+    (Change::Changed, result)
   }
 
-  fn move_stone_by(&mut self, x: i16, y: i16) -> State {
+  fn move_stone_by(&mut self, x: i16, y: i16) -> Change {
     let () = self.stone.move_by(x, y);
 
     if self.pieces.collides(&self.stone) {
       let () = self.stone.move_by(-x, -y);
-      State::Unchanged
+      Change::Unchanged
     } else {
-      State::Changed
+      Change::Changed
     }
   }
 
-  pub(super) fn move_stone_left(&mut self) -> State {
+  pub(super) fn move_stone_left(&mut self) -> Change {
     self.move_stone_by(-1, 0)
   }
 
-  pub(super) fn move_stone_right(&mut self) -> State {
+  pub(super) fn move_stone_right(&mut self) -> Change {
     self.move_stone_by(1, 0)
   }
 
-  fn rotate_stone(&mut self, left: bool) -> State {
+  fn rotate_stone(&mut self, left: bool) -> Change {
     let () = self.stone.rotate(left);
 
     if self.pieces.collides(&self.stone) {
       let () = self.stone.rotate(!left);
-      State::Unchanged
+      Change::Unchanged
     } else {
-      State::Changed
+      Change::Changed
     }
   }
 
-  pub(super) fn rotate_stone_left(&mut self) -> State {
+  pub(super) fn rotate_stone_left(&mut self) -> Change {
     self.rotate_stone(true)
   }
 
-  pub(super) fn rotate_stone_right(&mut self) -> State {
+  pub(super) fn rotate_stone_right(&mut self) -> Change {
     self.rotate_stone(false)
   }
 

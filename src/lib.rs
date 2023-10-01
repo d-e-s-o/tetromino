@@ -61,16 +61,16 @@ pub use crate::config::Config;
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum State {
+enum Change {
   Changed,
   Quit,
   Unchanged,
 }
 
-impl BitOr<State> for State {
-  type Output = State;
+impl BitOr<Change> for Change {
+  type Output = Change;
 
-  fn bitor(self, rhs: State) -> Self::Output {
+  fn bitor(self, rhs: Change) -> Self::Output {
     match (self, rhs) {
       (Self::Quit, _) | (_, Self::Quit) => Self::Quit,
       (Self::Changed, _) | (_, Self::Changed) => Self::Changed,
@@ -79,8 +79,8 @@ impl BitOr<State> for State {
   }
 }
 
-impl BitOrAssign<State> for State {
-  fn bitor_assign(&mut self, rhs: State) {
+impl BitOrAssign<Change> for Change {
+  fn bitor_assign(&mut self, rhs: Change) {
     *self = *self | rhs;
   }
 }
@@ -152,7 +152,7 @@ pub fn run() -> Result<()> {
 
   event_loop.run(move |event, _, control_flow| {
     let now = Instant::now();
-    let state = match event {
+    let change = match event {
       Event::LoopDestroyed => return,
       Event::WindowEvent { event, .. } => match event {
         WindowEvent::Focused(focused) => {
@@ -177,7 +177,7 @@ pub fn run() -> Result<()> {
             // eagerly.
             let () = keys.clear();
           }
-          State::Unchanged
+          Change::Unchanged
         },
         WindowEvent::CloseRequested => {
           let () = control_flow.set_exit();
@@ -191,9 +191,9 @@ pub fn run() -> Result<()> {
 
           let () = window.on_resize(phys_w, phys_h);
           let () = renderer.update_view(phys_w, phys_h, game.width(), game.height());
-          State::Changed
+          Change::Changed
         },
-        _ => State::Unchanged,
+        _ => Change::Unchanged,
       },
       Event::DeviceEvent {
         event:
@@ -204,7 +204,7 @@ pub fn run() -> Result<()> {
         ..
       } => {
         let () = keys.on_key_event(now, key, state);
-        State::Unchanged
+        Change::Unchanged
       },
       Event::MainEventsCleared => {
         let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
@@ -213,7 +213,7 @@ pub fn run() -> Result<()> {
           Key::KeyH => game.on_move_left(),
           Key::KeyJ => game.on_move_down(),
           Key::KeyL => game.on_move_right(),
-          Key::KeyQ => State::Quit,
+          Key::KeyQ => Change::Quit,
           Key::Enter => {
             *repeat = KeyRepeat::Disabled;
             game.restart()
@@ -230,35 +230,35 @@ pub fn run() -> Result<()> {
               let () = game.pause(!paused);
             }
             *repeat = KeyRepeat::Disabled;
-            State::Unchanged
+            Change::Unchanged
           },
-          _ => State::Unchanged,
+          _ => Change::Unchanged,
         };
 
-        let (keys_state, keys_wait) = keys.tick(now, handle_key);
-        let (game_state, game_wait) = game.tick(now);
+        let (keys_change, keys_wait) = keys.tick(now, handle_key);
+        let (game_change, game_wait) = game.tick(now);
 
         *control_flow = match min(game_wait, keys_wait) {
           Tick::None => ControlFlow::Wait,
           Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
         };
 
-        keys_state | game_state
+        keys_change | game_change
       },
       Event::RedrawRequested(_) => {
         let renderer = renderer.on_pre_render(&mut window);
         let () = game.render(&renderer);
         let () = drop(renderer);
         let () = window.swap_buffers();
-        State::Unchanged
+        Change::Unchanged
       },
-      _ => State::Unchanged,
+      _ => Change::Unchanged,
     };
 
-    match state {
-      State::Changed => window.request_redraw(),
-      State::Quit => control_flow.set_exit(),
-      State::Unchanged => (),
+    match change {
+      Change::Changed => window.request_redraw(),
+      Change::Quit => control_flow.set_exit(),
+      Change::Unchanged => (),
     }
   });
 }
