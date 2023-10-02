@@ -17,6 +17,7 @@ use crate::Texture;
 use crate::Tick;
 
 use super::data;
+use super::field::State;
 use super::Config;
 use super::Field;
 use super::MoveResult;
@@ -50,8 +51,6 @@ pub(crate) struct Game {
   ///
   /// The attribute is `None` if the game is not running (e.g., paused).
   next_tick: Option<Instant>,
-  /// A flag indicating whether the game has ended.
-  over: bool,
 }
 
 impl Game {
@@ -79,7 +78,7 @@ impl Game {
     let reader = Cursor::new(data::TETRIS_FIELD_BACK_TEXTURE);
     let field_back = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
     let field_back = Texture::with_image(field_back)?;
-    let result = Field::new(
+    let field = Field::new(
       field_location,
       config.field_width,
       config.field_height,
@@ -87,10 +86,6 @@ impl Game {
       piece.clone(),
       field_back,
     );
-    let (field, over) = match result {
-      Ok(field) => (field, false),
-      Err(field) => (field, true),
-    };
 
     let font = Font::builtin(piece);
     let score_location = preview_location - Point::new(0, preview.height() + PREVIEW_SCORE_SPACE);
@@ -106,7 +101,6 @@ impl Game {
       preview,
       next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
-      over,
     };
     Ok(slf)
   }
@@ -159,7 +153,6 @@ impl Game {
   pub(crate) fn restart(&mut self) -> Change {
     let () = self.score.reset();
     let () = if self.field.reset() {
-      self.over = false;
       self.next_tick = Some(Self::next_tick(Instant::now(), self.score.level()));
     } else {
       self.end()
@@ -171,7 +164,6 @@ impl Game {
   /// End the current game.
   fn end(&mut self) {
     self.next_tick = None;
-    self.over = true;
 
     println!(
       "{} points @ level {}; total {} lines cleared (game over)",
@@ -187,7 +179,7 @@ impl Game {
     if pause {
       let _next_tick = self.next_tick.take();
     } else {
-      if !self.over {
+      if !matches!(self.field.state(), State::Colliding) {
         let _next_tick = self
           .next_tick
           .replace(Self::next_tick(Instant::now(), self.score.level()));
@@ -198,7 +190,7 @@ impl Game {
   /// Inquire whether the game is currently paused.
   #[inline]
   pub(crate) fn is_paused(&self) -> Option<bool> {
-    if self.over {
+    if matches!(self.field.state(), State::Colliding) {
       None
     } else {
       Some(self.next_tick.is_none())

@@ -37,7 +37,7 @@ pub(super) enum MoveResult {
 
 
 /// An enumeration of the possible states that the field can be in.
-enum State {
+pub(super) enum State {
   Moving {
     /// The currently active stone.
     stone: Stone,
@@ -69,29 +69,22 @@ impl Field {
     producer: Rc<dyn StoneProducer>,
     piece: Texture,
     back: Texture,
-  ) -> Result<Self, Self> {
+  ) -> Self {
     let pieces = PieceField::new(width, height, back, piece.clone());
     let mut stone = producer.create_stone();
-    let result = pieces.reset_stone(&mut stone);
-    let state = if result {
+    let state = if pieces.reset_stone(&mut stone) {
       State::Moving { stone }
     } else {
       State::Colliding
     };
 
-    let slf = Self {
+    Self {
       location,
       state,
       producer,
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
-    };
-
-    if result {
-      Ok(slf)
-    } else {
-      Err(slf)
     }
   }
 
@@ -237,6 +230,11 @@ impl Field {
     }
 
     let () = self.render_walls(renderer);
+  }
+
+  #[inline]
+  pub(super) fn state(&self) -> &State {
+    &self.state
   }
 
   #[inline]
