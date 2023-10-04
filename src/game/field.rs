@@ -24,6 +24,8 @@ const WALL_WIDTH: i16 = 1;
 /// The result of a stone downward movement.
 #[derive(Debug)]
 pub(super) enum MoveResult {
+  /// Nothing was moved.
+  None,
   /// The stone was moved down successfully and without a collision.
   Moved,
   /// The stone got merged into the field. Reported are the number of

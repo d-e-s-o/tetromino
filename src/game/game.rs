@@ -125,7 +125,7 @@ impl Game {
         change |= result.0;
 
         match result.1 {
-          MoveResult::Moved => (),
+          MoveResult::None | MoveResult::Moved => (),
           MoveResult::Merged(lines) => {
             let () = Self::handle_merged_lines(&mut self.score, lines);
           },
@@ -216,7 +216,7 @@ impl Game {
     if self.next_tick.is_some() {
       let (change, result) = self.field.move_stone_down();
       match result {
-        MoveResult::Moved => (),
+        MoveResult::None | MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
           let () = Self::handle_merged_lines(&mut self.score, lines);
         },
@@ -236,7 +236,7 @@ impl Game {
     if self.next_tick.is_some() {
       let (change, result) = self.field.drop_stone();
       match result {
-        MoveResult::Moved => (),
+        MoveResult::None | MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
           let () = Self::handle_merged_lines(&mut self.score, lines);
         },
