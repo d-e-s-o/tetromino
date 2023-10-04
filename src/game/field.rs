@@ -105,7 +105,7 @@ impl Field {
   }
 
   /// Move the stone down.
-  fn move_stone_down_impl(&mut self) -> MoveResult {
+  fn move_stone_down_impl(&mut self) -> (Change, MoveResult) {
     match &mut self.state {
       State::Moving { stone } => {
         debug_assert!(!self.pieces.collides(stone));
@@ -119,30 +119,29 @@ impl Field {
 
           let cleared = self.pieces.merge_stone(old_stone);
           if !self.pieces.reset_stone(stone) {
-            MoveResult::Conflict
+            (Change::Changed, MoveResult::Conflict)
           } else {
-            MoveResult::Merged(cleared)
+            (Change::Changed, MoveResult::Merged(cleared))
           }
         } else {
-          MoveResult::Moved
+          (Change::Changed, MoveResult::Moved)
         }
       },
-      State::Colliding => MoveResult::Conflict,
+      State::Colliding => (Change::Unchanged, MoveResult::Conflict),
     }
   }
 
   pub(super) fn drop_stone(&mut self) -> (Change, MoveResult) {
     loop {
-      let result = self.move_stone_down_impl();
+      let (change, result) = self.move_stone_down_impl();
       if !matches!(result, MoveResult::Moved) {
-        break (Change::Changed, result)
+        break (change, result)
       }
     }
   }
 
   pub(super) fn move_stone_down(&mut self) -> (Change, MoveResult) {
-    let result = self.move_stone_down_impl();
-    (Change::Changed, result)
+    self.move_stone_down_impl()
   }
 
   fn move_stone_by(&mut self, x: i16, y: i16) -> Change {
