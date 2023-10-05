@@ -4,6 +4,7 @@
 use std::cmp::max;
 use std::cmp::min;
 use std::f32::consts::PI;
+use std::mem::take;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Color;
@@ -153,6 +154,17 @@ impl Stone {
       y: y_min,
       w: x_max + 1 - x_min,
       h: y_max + 1 - y_min,
+    }
+  }
+
+  /// Rip out the object's guts, creating a new stone and leaving this
+  /// one effectively empty.
+  // This method is a convenience helper for `Stone` usage in enums
+  // allowing us to omit unnecessary clones due to limitations of Rust.
+  pub(crate) fn take(&mut self) -> Self {
+    Self {
+      piece_texture: self.piece_texture.clone(),
+      pieces: take(&mut self.pieces),
     }
   }
 

@@ -37,6 +37,10 @@ const TOP_SPACE: i16 = 1;
 const PREVIEW_FIELD_SPACE: i16 = 1;
 /// Space between the preview stones and the score board.
 const PREVIEW_SCORE_SPACE: i16 = 1;
+/// The time for which we highlight any completed lines while not
+/// responding to any input.
+// TODO: Make configurable.
+const CLEAR_TIME: Duration = Duration::from_millis(200);
 
 
 /// A type representing a game of Tetris.
@@ -82,6 +86,7 @@ impl Game {
       field_location,
       config.field_width,
       config.field_height,
+      CLEAR_TIME,
       preview.clone(),
       piece.clone(),
       field_back,
@@ -118,6 +123,24 @@ impl Game {
   /// elapsed time since the last update.
   pub(crate) fn tick(&mut self, now: Instant) -> (Change, Tick) {
     let mut change = Change::Unchanged;
+
+    match self.field.state() {
+      State::Moving { .. } => (),
+      State::Clearing { until, .. } => {
+        if now > *until {
+          self.next_tick = Some(Self::next_tick(*until, self.score.level()));
+          let () = self.field.clear_complete_lines();
+
+          change = Change::Changed;
+        } else {
+          return (change, Tick::At(*until))
+        }
+      },
+      State::Colliding => {
+        debug_assert_eq!(self.next_tick, None);
+        self.next_tick = None
+      },
+    }
 
     while let Some(next_tick) = &mut self.next_tick {
       if now >= *next_tick {

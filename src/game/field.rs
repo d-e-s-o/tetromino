@@ -3,6 +3,8 @@
 
 use std::mem::replace;
 use std::rc::Rc;
+use std::time::Duration;
+use std::time::Instant;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
@@ -44,6 +46,8 @@ pub(super) enum State {
     /// The currently active stone.
     stone: Stone,
   },
+  /// Completed lines are currently being cleared.
+  Clearing { next_stone: Stone, until: Instant },
   /// The last move has resulted in a collision. No further stone
   /// movement is possible.
   Colliding,
@@ -53,6 +57,8 @@ pub(super) enum State {
 pub(crate) struct Field {
   /// The location of the lower left corner of the field, in game units.
   location: Point<i16>,
+  /// The time we take for clearing completed lines.
+  clear_time: Duration,
   /// The inner field area, containing dropped pieces.
   pieces: PieceField,
   /// The field's current state.
@@ -68,6 +74,7 @@ impl Field {
     location: Point<i16>,
     width: i16,
     height: i16,
+    clear_time: Duration,
     producer: Rc<dyn StoneProducer>,
     piece: Texture,
     back: Texture,
@@ -82,11 +89,26 @@ impl Field {
 
     Self {
       location,
+      clear_time,
       state,
       producer,
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
+    }
+  }
+
+  /// Remove all completed lines from the field.
+  pub(super) fn clear_complete_lines(&mut self) {
+    match &mut self.state {
+      State::Clearing { next_stone, until } => {
+        debug_assert!(Instant::now() > *until);
+        let () = self.pieces.remove_complete_lines();
+        self.state = State::Moving {
+          stone: next_stone.take(),
+        };
+      },
+      State::Moving { .. } | State::Colliding => (),
     }
   }
 
@@ -121,12 +143,19 @@ impl Field {
           if !self.pieces.reset_stone(stone) {
             (Change::Changed, MoveResult::Conflict)
           } else {
+            if cleared > 0 {
+              self.state = State::Clearing {
+                next_stone: stone.take(),
+                until: Instant::now() + self.clear_time,
+              };
+            }
             (Change::Changed, MoveResult::Merged(cleared))
           }
         } else {
           (Change::Changed, MoveResult::Moved)
         }
       },
+      State::Clearing { .. } => (Change::Unchanged, MoveResult::None),
       State::Colliding => (Change::Unchanged, MoveResult::Conflict),
     }
   }
@@ -156,7 +185,7 @@ impl Field {
           Change::Changed
         }
       },
-      State::Colliding => Change::Unchanged,
+      State::Clearing { .. } | State::Colliding => Change::Unchanged,
     }
   }
 
@@ -180,7 +209,7 @@ impl Field {
           Change::Changed
         }
       },
-      State::Colliding => Change::Unchanged,
+      State::Clearing { .. } | State::Colliding => Change::Unchanged,
     }
   }
 
@@ -215,7 +244,10 @@ impl Field {
   /// Render the currently active stone (if any).
   fn render_stone(&self, renderer: &Renderer) {
     match &self.state {
-      State::Moving { stone } => stone.render(renderer),
+      State::Moving { stone }
+      | State::Clearing {
+        next_stone: stone, ..
+      } => stone.render(renderer),
       State::Colliding => (),
     }
   }
@@ -319,16 +351,23 @@ impl PieceField {
     });
 
     let mut cleared = 0;
-    // Remove all completed lines; from top to bottom so that we are
-    // unaffected by changes of index to lower lines caused by the
-    // removal.
     for line in (bounds.y..bounds.y + bounds.h).rev() {
       if self.line_complete(line) {
-        let () = self.matrix.remove_line(line);
         cleared += 1;
       }
     }
     cleared
+  }
+
+  fn remove_complete_lines(&mut self) {
+    // Remove all completed lines; from top to bottom so that we are
+    // unaffected by changes of index to lower lines caused by the
+    // removal.
+    for line in (0..self.height()).rev() {
+      if self.line_complete(line) {
+        let () = self.matrix.remove_line(line);
+      }
+    }
   }
 
   /// Checker whether the line at the given y position is complete.
