@@ -23,7 +23,19 @@ impl Piece {
   /// This method assumes that the piece texture to use is already
   /// bound.
   pub(crate) fn render(&self, renderer: &Renderer, location: Point<i16>) {
-    let _guard = renderer.set_color(self.color);
+    // Perhaps counter-intuitively, the color black acts as a neutral
+    // component here.
+    self.render_with_overlay(renderer, location, Color::black())
+  }
+
+  /// Render the piece with the provided color as "overlay".
+  pub(crate) fn render_with_overlay(
+    &self,
+    renderer: &Renderer,
+    location: Point<i16>,
+    overlay: Color,
+  ) {
+    let _guard = renderer.set_color(self.color + overlay);
 
     let () = renderer.render_rect(Rect::new(location.x, location.y, 1, 1));
   }

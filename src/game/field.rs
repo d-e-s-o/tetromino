@@ -408,8 +408,22 @@ impl PieceField {
   fn render_pieces(&self, renderer: &Renderer) {
     let _guard = renderer.set_texture(&self.piece);
 
+    let mut complete = (-1, false);
+    // By overlaying the piece's color with white we effectively force
+    // it to be white altogether, because adding white to anything
+    // always results in white.
+    let overlay = Color::white();
+
     self.matrix.iter_present().for_each(|(piece, location)| {
-      let () = piece.render(renderer, location);
+      if complete.0 != location.y {
+        complete = (location.y, self.line_complete(location.y));
+      }
+
+      if complete.1 {
+        let () = piece.render_with_overlay(renderer, location, overlay);
+      } else {
+        let () = piece.render(renderer, location);
+      }
     })
   }
 
