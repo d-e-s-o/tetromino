@@ -241,7 +241,14 @@ mod tests {
   /// defaults.
   #[test]
   fn config_instantiation() {
-    let _config = Config::with_system_defaults().unwrap();
+    match Config::with_system_defaults() {
+      Ok(_config) => (),
+      // In something like a CI environment we may not have an X
+      // display. Let's just ignore those rare setups for the time
+      // being...
+      Err(err) if err.to_string() == "failed to open X display" => (),
+      Err(err) => panic!("{}", err),
+    }
   }
 
   /// Check that keys are being reported as pressed as expected.
