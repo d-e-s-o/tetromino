@@ -1,8 +1,28 @@
 [package]
 name = "tetromino"
-version = "0.0.0"
+version = "0.1.0"
+authors = ["Daniel Mueller <deso@posteo.net>"]
 edition = "2021"
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/d-e-s-o/tetromino"
+repository = "https://github.com/d-e-s-o/tetromino.git"
 readme = "README.md"
+categories = [
+  "games",
+  "graphics",
+  "gui",
+  "rendering",
+]
+keywords = [
+  "2d",
+  "game",
+  "graphics",
+  "linux",
+  "opengl",
+]
+description = """
+A graphical Tetris clone.
+"""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
