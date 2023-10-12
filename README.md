@@ -4,6 +4,8 @@
 tetromino
 =========
 
+- [Changelog](CHANGELOG.md)
+
 **tetromino** is a graphical Tetris clone. It is also a rewrite of a
 previous C++ based [Tetris clone][tetris] that improves on a few
 shortcomings.

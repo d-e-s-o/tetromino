@@ -175,7 +175,10 @@ impl Field {
 
   fn move_stone_by(&mut self, x: i16, y: i16) -> Change {
     match &mut self.state {
-      State::Moving { stone } => {
+      State::Moving { stone }
+      | State::Clearing {
+        next_stone: stone, ..
+      } => {
         let () = stone.move_by(x, y);
 
         if self.pieces.collides(stone) {
@@ -185,7 +188,7 @@ impl Field {
           Change::Changed
         }
       },
-      State::Clearing { .. } | State::Colliding => Change::Unchanged,
+      State::Colliding => Change::Unchanged,
     }
   }
 
@@ -199,7 +202,10 @@ impl Field {
 
   fn rotate_stone(&mut self, left: bool) -> Change {
     match &mut self.state {
-      State::Moving { stone } => {
+      State::Moving { stone }
+      | State::Clearing {
+        next_stone: stone, ..
+      } => {
         let () = stone.rotate(left);
 
         if self.pieces.collides(stone) {
@@ -209,7 +215,7 @@ impl Field {
           Change::Changed
         }
       },
-      State::Clearing { .. } | State::Colliding => Change::Unchanged,
+      State::Colliding => Change::Unchanged,
     }
   }
 
