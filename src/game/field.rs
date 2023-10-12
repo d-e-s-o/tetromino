@@ -173,12 +173,14 @@ impl Field {
     self.move_stone_down_impl()
   }
 
-  fn move_stone_by(&mut self, x: i16, y: i16) -> Change {
+  /// Move the stone horizontally by the given amount.
+  fn move_stone_by(&mut self, x: i16) -> Change {
     match &mut self.state {
       State::Moving { stone }
       | State::Clearing {
         next_stone: stone, ..
       } => {
+        let y = 0;
         let () = stone.move_by(x, y);
 
         if self.pieces.collides(stone) {
@@ -193,11 +195,11 @@ impl Field {
   }
 
   pub(super) fn move_stone_left(&mut self) -> Change {
-    self.move_stone_by(-1, 0)
+    self.move_stone_by(-1)
   }
 
   pub(super) fn move_stone_right(&mut self) -> Change {
-    self.move_stone_by(1, 0)
+    self.move_stone_by(1)
   }
 
   fn rotate_stone(&mut self, left: bool) -> Change {
