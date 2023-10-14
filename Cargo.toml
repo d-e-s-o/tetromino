@@ -26,6 +26,9 @@ A graphical Tetris clone.
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[lib]
+doc = false
+
 [features]
 default = []
 # Enable this feature to re-generate the OpenGL bindings. This is
