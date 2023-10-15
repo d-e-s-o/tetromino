@@ -214,7 +214,7 @@ pub fn run() -> Result<()> {
           Key::KeyJ => game.on_move_down(),
           Key::KeyL => game.on_move_right(),
           Key::KeyQ => Change::Quit,
-          Key::Enter => {
+          Key::Backspace => {
             *repeat = KeyRepeat::Disabled;
             game.restart()
           },

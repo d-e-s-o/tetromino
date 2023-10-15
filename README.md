@@ -16,17 +16,17 @@ Usage
 
 **tetromino** uses the following key bindings:
 
-| Key(s) | Function                                 |
-|--------|------------------------------------------|
-| 1      | Rotate stone left                        |
-| 2      | Rotate stone right                       |
-| h      | Move stone left                          |
-| l      | Move stone right                         |
-| j      | Move stone down                          |
-| Space  | Drop the stone immediately               |
-| q      | Quit the game                            |
-| Return | Restart the game                         |
-| F3     | Pause (and resume) the game              |
+| Key(s)    | Function                                 |
+|-----------|------------------------------------------|
+| 1         | Rotate stone left                        |
+| 2         | Rotate stone right                       |
+| h         | Move stone left                          |
+| l         | Move stone right                         |
+| j         | Move stone down                          |
+| Space     | Drop the stone immediately               |
+| q         | Quit the game                            |
+| Backspace | Restart the game                         |
+| F3        | Pause (and resume) the game              |
 
 
 Certain aspects of the game can be configured via its configuration
