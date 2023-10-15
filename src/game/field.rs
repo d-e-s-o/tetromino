@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::replace;
+use std::ops::Range;
 use std::rc::Rc;
 use std::time::Duration;
 use std::time::Instant;
@@ -47,7 +48,14 @@ pub(super) enum State {
     stone: Stone,
   },
   /// Completed lines are currently being cleared.
-  Clearing { next_stone: Stone, until: Instant },
+  Clearing {
+    /// The next stone to be controlled by the user.
+    next_stone: Stone,
+    /// The instant at which we are done clearing completed lines.
+    until: Instant,
+    /// The y-range containing completed lines.
+    y_range: Range<i16>,
+  },
   /// The last move has resulted in a collision. No further stone
   /// movement is possible.
   Colliding,
@@ -101,9 +109,13 @@ impl Field {
   /// Remove all completed lines from the field.
   pub(super) fn clear_complete_lines(&mut self) {
     match &mut self.state {
-      State::Clearing { next_stone, until } => {
+      State::Clearing {
+        next_stone,
+        until,
+        y_range,
+      } => {
         debug_assert!(Instant::now() > *until);
-        let () = self.pieces.remove_complete_lines();
+        let () = self.pieces.remove_complete_lines(y_range.clone());
         self.state = State::Moving {
           stone: next_stone.take(),
         };
@@ -138,6 +150,8 @@ impl Field {
 
           let new_stone = self.producer.create_stone();
           let old_stone = replace(stone, new_stone);
+          let bounds = old_stone.bounds();
+          let y_range = bounds.y..bounds.y + bounds.h;
 
           let cleared = self.pieces.merge_stone(old_stone);
           if !self.pieces.reset_stone(stone) {
@@ -147,6 +161,7 @@ impl Field {
               self.state = State::Clearing {
                 next_stone: stone.take(),
                 until: Instant::now() + self.clear_time,
+                y_range,
               };
             }
             (Change::Changed, MoveResult::Merged(cleared))
@@ -367,11 +382,14 @@ impl PieceField {
     cleared
   }
 
-  fn remove_complete_lines(&mut self) {
+  /// Remove completed lines in the provided y-range.
+  fn remove_complete_lines(&mut self, range: Range<i16>) {
+    debug_assert!(range.start >= 0 && range.end < self.height(), "{range:?}");
+
     // Remove all completed lines; from top to bottom so that we are
     // unaffected by changes of index to lower lines caused by the
     // removal.
-    for line in (0..self.height()).rev() {
+    for line in range.rev() {
       if self.line_complete(line) {
         let () = self.matrix.remove_line(line);
       }
