@@ -65,7 +65,7 @@ pub(crate) struct Stone {
   piece_texture: Texture,
   /// The individual pieces making up the stone and their locations.
   /// Typically a stone has four pieces, but that's not set in stone.
-  pieces: Vec<(Piece, Point<i16>)>,
+  pieces: Box<[(Piece, Point<i16>)]>,
 }
 
 impl Stone {
@@ -177,7 +177,7 @@ impl Stone {
   pub(crate) fn into_pieces(
     self,
   ) -> impl Iterator<Item = (Piece, Point<i16>)> + DoubleEndedIterator + ExactSizeIterator {
-    self.pieces.into_iter()
+    Vec::from(self.pieces).into_iter()
   }
 }
 

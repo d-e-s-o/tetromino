@@ -3,6 +3,7 @@
 
 use std::cmp::max;
 use std::cmp::min;
+use std::ops::Deref;
 
 use crate::Color;
 use crate::Point;
@@ -13,7 +14,7 @@ use super::Stone;
 use super::StoneProducer;
 
 
-type StoneTemplate = Vec<Point<i8>>;
+type StoneTemplate = Box<[Point<i8>]>;
 
 
 /// The set of colors we use for stones.
@@ -33,7 +34,7 @@ pub(super) struct StoneFactory {
   /// The texture to use for each piece.
   piece_texture: Texture,
   /// The known stone types.
-  templates: Vec<StoneTemplate>,
+  templates: Box<[StoneTemplate]>,
   /// The random number generator we use when creating new stones.
   rng: Rng,
 }
@@ -41,15 +42,15 @@ pub(super) struct StoneFactory {
 impl StoneFactory {
   pub(super) fn with_default_stones(piece_texture: Texture) -> Self {
     #[rustfmt::skip]
-    let templates = vec![
-      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(0, 1)], // O
-      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(2, 1)], // S
-      vec![Point::new(0, 1), Point::new(1, 1), Point::new(1, 0), Point::new(2, 0)], // Z
-      vec![Point::new(0, 0), Point::new(0, 1), Point::new(0, 2), Point::new(0, 3)], // I
-      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(2, 0)], // T
-      vec![Point::new(0, 0), Point::new(1, 0), Point::new(0, 1), Point::new(0, 2)], // J
-      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(1, 2)], // L
-    ];
+    let templates = Box::new([
+      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(0, 1)].into_boxed_slice(), // O
+      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(2, 1)].into_boxed_slice(), // S
+      vec![Point::new(0, 1), Point::new(1, 1), Point::new(1, 0), Point::new(2, 0)].into_boxed_slice(), // Z
+      vec![Point::new(0, 0), Point::new(0, 1), Point::new(0, 2), Point::new(0, 3)].into_boxed_slice(), // I
+      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(2, 0)].into_boxed_slice(), // T
+      vec![Point::new(0, 0), Point::new(1, 0), Point::new(0, 1), Point::new(0, 2)].into_boxed_slice(), // J
+      vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(1, 2)].into_boxed_slice(), // L
+    ]);
 
     Self {
       templates,
@@ -71,7 +72,7 @@ impl StoneProducer for StoneFactory {
 
   // TODO: Loose copy of logic from `Stone`. Should think about deduplicating.
   fn max_dimensions(&self) -> (i16, i16) {
-    let mut locations = self.templates.iter().flatten();
+    let mut locations = self.templates.deref().iter().flat_map(Deref::deref);
     // SANITY: Our stone always has at least one template.
     let location = locations.next().unwrap();
     let mut x_min = location.x;

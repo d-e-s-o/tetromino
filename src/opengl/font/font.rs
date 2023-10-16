@@ -1,6 +1,8 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::ops::Deref as _;
+
 use crate::ActiveRenderer as Renderer;
 use crate::Point;
 use crate::Rect;
@@ -8,11 +10,13 @@ use crate::Texture;
 
 use super::raster;
 
+/// The coordinates of the "pixels" making up a single glyph including
+/// the space to advance on the x-axis.
+type Glyph = (Box<[Point<u8>]>, u8);
 
 pub(crate) struct Font {
-  /// The coordinates of the "pixels" making up the glyphs, along with
-  /// the space to advance on the x-axis.
-  glyphs: Vec<(Vec<Point<u8>>, u8)>,
+  /// The list of glyphs making up the font.
+  glyphs: Box<[Glyph]>,
   /// The point size of each glyph.
   point_size: u8,
   /// The offset at which glyphs start in the ASCII alphabet. E.g., pass
@@ -56,11 +60,11 @@ impl Font {
         }
       }
 
-      let () = glyph_coords.push((coords, *space));
+      let () = glyph_coords.push((coords.into_boxed_slice(), *space));
     }
 
     Self {
-      glyphs: glyph_coords,
+      glyphs: glyph_coords.into_boxed_slice(),
       point_size: SIZE as u8,
       offset: ascii_offset,
       invalid: invalid_idx,
@@ -101,7 +105,7 @@ impl Font {
         .or_else(|| self.glyphs.get(self.invalid))
         .unwrap();
 
-      for coord in glyph {
+      for coord in glyph.deref() {
         let () = renderer.render_rect_f32(Rect::new(
           location.x + f32::from(coord.x) * x_factor,
           location.y + f32::from(coord.y) * y_factor,
@@ -137,7 +141,7 @@ mod tests {
     // Apostrophe.
     let (glyph, space) = &font.glyphs[7];
     assert_eq!(
-      glyph,
+      glyph.deref(),
       &[Point::new(0, 8), Point::new(0, 9), Point::new(0, 10)],
     );
     assert_eq!(*space, 2);
