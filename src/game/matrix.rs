@@ -11,7 +11,7 @@ use crate::Point;
 #[derive(Debug)]
 pub(crate) struct Matrix<T> {
   /// The actual matrix.
-  matrix: Box<[Option<T>]>,
+  matrix: Box<[T]>,
   /// The width of the matrix.
   width: i16,
   /// The height of the matrix.
@@ -21,12 +21,15 @@ pub(crate) struct Matrix<T> {
 impl<T> Matrix<T> {
   /// # Panics
   /// This constructor panics if either dimension is 0.
-  pub(crate) fn new(width: i16, height: i16) -> Self {
+  pub(crate) fn new(width: i16, height: i16) -> Self
+  where
+    T: Default,
+  {
     assert!(width > 0);
     assert!(height > 0);
 
     let mut matrix = Vec::new();
-    let () = matrix.resize_with((width * height) as usize, Option::default);
+    let () = matrix.resize_with((width * height) as usize, T::default);
 
     Self {
       width,
@@ -38,7 +41,7 @@ impl<T> Matrix<T> {
   /// Remove the given line, moving all elements above one line down.
   pub(super) fn remove_line(&mut self, line: i16)
   where
-    T: Copy,
+    T: Copy + Default,
   {
     let src_index = self.calculate_index((0, line + 1));
     let dst_index = self.calculate_index((0, line));
@@ -49,36 +52,32 @@ impl<T> Matrix<T> {
     // down.
     let src_index = self.calculate_index((0, self.height - 1));
     let src_range = src_index..src_index + self.width as usize;
-    let () = self.matrix.get_mut(src_range).unwrap().fill(None);
+    let () = self.matrix.get_mut(src_range).unwrap().fill(T::default());
   }
 
   /// Clear the matrix, removing all elements from it.
   #[inline]
   pub(super) fn clear(&mut self)
   where
-    T: Clone,
+    T: Clone + Default,
   {
-    let () = self.matrix.fill(None);
+    let () = self.matrix.fill(T::default());
   }
 
   /// Create an iterator over all present elements, along with their
   /// positions.
-  pub(crate) fn iter_present(&self) -> impl Iterator<Item = (&T, Point<i16>)> {
+  pub(crate) fn iter(&self) -> impl Iterator<Item = (&T, Point<i16>)> {
     let width = self.width as usize;
 
-    self.matrix.iter().enumerate().filter_map(move |(i, t)| {
-      if let Some(t) = t {
-        let x = i % width;
-        let y = i / width;
-        Some((t, Point::new(x as i16, y as i16)))
-      } else {
-        None
-      }
+    self.matrix.iter().enumerate().map(move |(i, t)| {
+      let x = i % width;
+      let y = i / width;
+      (t, Point::new(x as i16, y as i16))
     })
   }
 
   /// Create an iterator over all elements in the given line.
-  pub(crate) fn iter_line(&self, line: i16) -> impl Iterator<Item = &Option<T>> {
+  pub(crate) fn iter_line(&self, line: i16) -> impl Iterator<Item = &T> {
     let index = self.calculate_index((0, line));
     self.matrix[index..index + self.width as usize].iter()
   }
@@ -99,7 +98,7 @@ impl<T> Matrix<T> {
 }
 
 impl<T> Index<(i16, i16)> for Matrix<T> {
-  type Output = Option<T>;
+  type Output = T;
 
   fn index(&self, index: (i16, i16)) -> &Self::Output {
     let index = self.calculate_index(index);
@@ -108,7 +107,7 @@ impl<T> Index<(i16, i16)> for Matrix<T> {
 }
 
 impl<T> Index<Point<i16>> for Matrix<T> {
-  type Output = Option<T>;
+  type Output = T;
 
   fn index(&self, index: Point<i16>) -> &Self::Output {
     self.index((index.x, index.y))
@@ -137,7 +136,7 @@ mod tests {
   /// Check that indexing into a `Matrix` object works as it should.
   #[test]
   fn index_access() {
-    let mut matrix = Matrix::<usize>::new(3, 6);
+    let mut matrix = Matrix::<Option<usize>>::new(3, 6);
     assert_eq!(matrix.width(), 3);
     assert_eq!(matrix.height(), 6);
 
@@ -162,7 +161,7 @@ mod tests {
   /// Make sure that we can remove a line from the matrix.
   #[test]
   fn line_removal() {
-    let mut matrix = Matrix::<usize>::new(2, 4);
+    let mut matrix = Matrix::<Option<usize>>::new(2, 4);
     let mut x = 0;
     let () = matrix.matrix.fill_with(|| {
       x += 1;

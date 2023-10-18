@@ -317,7 +317,7 @@ impl Field {
 
 struct PieceField {
   /// The matrix (2D array) of pieces.
-  matrix: Matrix<Piece>,
+  matrix: Matrix<Option<Piece>>,
   /// The texture to use for the entire inner back area.
   back: Texture,
   /// The texture to use for pieces.
@@ -440,17 +440,21 @@ impl PieceField {
     // always results in white.
     let overlay = Color::white();
 
-    self.matrix.iter_present().for_each(|(piece, location)| {
-      if complete.0 != location.y {
-        complete = (location.y, self.line_complete(location.y));
-      }
+    self
+      .matrix
+      .iter()
+      .filter_map(|(piece, location)| piece.map(|piece| (piece, location)))
+      .for_each(|(piece, location)| {
+        if complete.0 != location.y {
+          complete = (location.y, self.line_complete(location.y));
+        }
 
-      if complete.1 {
-        let () = piece.render_with_overlay(renderer, location, overlay);
-      } else {
-        let () = piece.render(renderer, location);
-      }
-    })
+        if complete.1 {
+          let () = piece.render_with_overlay(renderer, location, overlay);
+        } else {
+          let () = piece.render(renderer, location);
+        }
+      })
   }
 
   fn render(&self, renderer: &Renderer) {
