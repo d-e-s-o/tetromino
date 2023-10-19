@@ -94,20 +94,18 @@ enum Tick {
 
 impl PartialOrd<Tick> for Tick {
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-    let order = match (self, other) {
-      (Self::None, Self::None) => Ordering::Equal,
-      (Self::At(_instant), Self::None) => Ordering::Less,
-      (Self::None, Self::At(_instant)) => Ordering::Greater,
-      (Self::At(instant1), Self::At(instant2)) => instant1.cmp(instant2),
-    };
-    Some(order)
+    Some(self.cmp(other))
   }
 }
 
 impl Ord for Tick {
   fn cmp(&self, other: &Self) -> Ordering {
-    // SANITY: Our `PartialOrd` impl always returns a `Some`.
-    self.partial_cmp(other).unwrap()
+    match (self, other) {
+      (Self::None, Self::None) => Ordering::Equal,
+      (Self::At(_instant), Self::None) => Ordering::Less,
+      (Self::None, Self::At(_instant)) => Ordering::Greater,
+      (Self::At(instant1), Self::At(instant2)) => instant1.cmp(instant2),
+    }
   }
 }
 
