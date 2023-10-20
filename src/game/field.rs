@@ -155,6 +155,7 @@ impl Field {
 
           let cleared = self.pieces.merge_stone(old_stone);
           if !self.pieces.reset_stone(stone) {
+            self.state = State::Colliding;
             (Change::Changed, MoveResult::Conflict)
           } else {
             if cleared > 0 {

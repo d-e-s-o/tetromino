@@ -1,3 +1,9 @@
+Unreleased
+----------
+- Fixed update of internal field state on final stone collision to
+  prevent potential invariant violation
+
+
 0.1.1
 -----
 - Handle stone rotation and horizontal stone movements while pausing to
