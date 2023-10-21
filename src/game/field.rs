@@ -177,10 +177,13 @@ impl Field {
   }
 
   pub(super) fn drop_stone(&mut self) -> (Change, MoveResult) {
+    let mut change = Change::Unchanged;
     loop {
-      let (change, result) = self.move_stone_down_impl();
-      if !matches!(result, MoveResult::Moved) {
-        break (change, result)
+      let result = self.move_stone_down_impl();
+      change |= result.0;
+
+      if !matches!(result.1, MoveResult::Moved) {
+        break (change, result.1)
       }
     }
   }
