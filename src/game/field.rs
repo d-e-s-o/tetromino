@@ -58,7 +58,10 @@ pub(super) enum State {
   },
   /// The last move has resulted in a collision. No further stone
   /// movement is possible.
-  Colliding,
+  Colliding {
+    /// The colliding stone.
+    stone: Stone,
+  },
 }
 
 
@@ -92,7 +95,7 @@ impl Field {
     let state = if pieces.reset_stone(&mut stone) {
       State::Moving { stone }
     } else {
-      State::Colliding
+      State::Colliding { stone }
     };
 
     Self {
@@ -120,7 +123,7 @@ impl Field {
           stone: next_stone.take(),
         };
       },
-      State::Moving { .. } | State::Colliding => (),
+      State::Moving { .. } | State::Colliding { .. } => (),
     }
   }
 
@@ -133,7 +136,7 @@ impl Field {
       self.state = State::Moving { stone };
       true
     } else {
-      self.state = State::Colliding;
+      self.state = State::Colliding { stone };
       false
     }
   }
@@ -155,7 +158,9 @@ impl Field {
 
           let cleared = self.pieces.merge_stone(old_stone);
           if !self.pieces.reset_stone(stone) {
-            self.state = State::Colliding;
+            self.state = State::Colliding {
+              stone: stone.take(),
+            };
             (Change::Changed, MoveResult::Conflict)
           } else {
             if cleared > 0 {
@@ -172,7 +177,7 @@ impl Field {
         }
       },
       State::Clearing { .. } => (Change::Unchanged, MoveResult::None),
-      State::Colliding => (Change::Unchanged, MoveResult::Conflict),
+      State::Colliding { .. } => (Change::Unchanged, MoveResult::Conflict),
     }
   }
 
@@ -209,7 +214,7 @@ impl Field {
           Change::Changed
         }
       },
-      State::Colliding => Change::Unchanged,
+      State::Colliding { .. } => Change::Unchanged,
     }
   }
 
@@ -236,7 +241,7 @@ impl Field {
           Change::Changed
         }
       },
-      State::Colliding => Change::Unchanged,
+      State::Colliding { .. } => Change::Unchanged,
     }
   }
 
@@ -274,8 +279,8 @@ impl Field {
       State::Moving { stone }
       | State::Clearing {
         next_stone: stone, ..
-      } => stone.render(renderer),
-      State::Colliding => (),
+      }
+      | State::Colliding { stone } => stone.render(renderer),
     }
   }
 

@@ -136,7 +136,7 @@ impl Game {
           return (change, Tick::At(*until))
         }
       },
-      State::Colliding => {
+      State::Colliding { .. } => {
         debug_assert_eq!(self.next_tick, None);
         self.next_tick = None
       },
@@ -202,7 +202,7 @@ impl Game {
     if pause {
       let _next_tick = self.next_tick.take();
     } else {
-      if !matches!(self.field.state(), State::Colliding) {
+      if !matches!(self.field.state(), State::Colliding { .. }) {
         let _next_tick = self
           .next_tick
           .replace(Self::next_tick(Instant::now(), self.score.level()));
@@ -213,7 +213,7 @@ impl Game {
   /// Inquire whether the game is currently paused.
   #[inline]
   pub(crate) fn is_paused(&self) -> Option<bool> {
-    if matches!(self.field.state(), State::Colliding) {
+    if matches!(self.field.state(), State::Colliding { .. }) {
       None
     } else {
       Some(self.next_tick.is_none())
