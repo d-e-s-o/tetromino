@@ -82,12 +82,16 @@ impl Stone {
   }
 
   pub(crate) fn render(&self, renderer: &Renderer) {
+    self.render_with_overlay(renderer, Color::black())
+  }
+
+  pub(crate) fn render_with_overlay(&self, renderer: &Renderer, overlay: Color) {
     let _guard = renderer.set_texture(&self.piece_texture);
 
     let () = self
       .pieces
       .iter()
-      .for_each(|(piece, location)| piece.render(renderer, *location));
+      .for_each(|(piece, location)| piece.render_with_overlay(renderer, *location, overlay));
   }
 
   pub(crate) fn move_by(&mut self, x: i16, y: i16) {

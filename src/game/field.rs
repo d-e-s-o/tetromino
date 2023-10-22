@@ -279,8 +279,8 @@ impl Field {
       State::Moving { stone }
       | State::Clearing {
         next_stone: stone, ..
-      }
-      | State::Colliding { stone } => stone.render(renderer),
+      } => stone.render(renderer),
+      State::Colliding { stone } => stone.render_with_overlay(renderer, Color::white()),
     }
   }
 
