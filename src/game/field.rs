@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::replace;
+use std::ops::Index;
+use std::ops::IndexMut;
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::Duration;
@@ -14,6 +16,7 @@ use crate::Point;
 use crate::Rect;
 use crate::Texture;
 
+use super::Fieldlike;
 use super::Matrix;
 use super::Piece;
 use super::Stone;
@@ -342,75 +345,6 @@ impl PieceField {
     }
   }
 
-  /// Move the stone to its initial position.
-  ///
-  /// # Returns
-  /// This method returns `true` when the stone could be positioned and
-  /// `false` if it immediately collided with already merged pieces.
-  fn reset_stone(&self, stone: &mut Stone) -> bool {
-    let stone_bounds = stone.bounds();
-    let x = self.width() / 2 - stone_bounds.w / 2;
-    let y = self.height() - stone_bounds.h;
-    let () = stone.move_to(Point::new(x, y));
-
-    !self.collides(stone)
-  }
-
-  /// Check whether the provided stone collides with any of the pieces.
-  fn collides(&self, stone: &Stone) -> bool {
-    stone.pieces().any(|location| {
-      if location.x < 0 || location.x >= self.matrix.width() {
-        return true
-      }
-
-      if location.y < 0 || location.y >= self.matrix.height() {
-        return true
-      }
-
-      self.matrix[location].is_some()
-    })
-  }
-
-  fn merge_stone(&mut self, stone: Stone) -> u16 {
-    // We should not have a current collision so that there is no
-    // overlap of pieces in any shape or form.
-    debug_assert!(!self.collides(&stone));
-
-    let bounds = stone.bounds();
-    let () = stone.into_pieces().for_each(|(piece, location)| {
-      let _prev = self.matrix[location].replace(piece);
-      debug_assert!(_prev.is_none(), "{location:?}");
-    });
-
-    let mut cleared = 0;
-    for line in (bounds.y..bounds.y + bounds.h).rev() {
-      if self.line_complete(line) {
-        cleared += 1;
-      }
-    }
-    cleared
-  }
-
-  /// Remove completed lines in the provided y-range.
-  fn remove_complete_lines(&mut self, range: Range<i16>) {
-    debug_assert!(range.start >= 0 && range.end < self.height(), "{range:?}");
-
-    // Remove all completed lines; from top to bottom so that we are
-    // unaffected by changes of index to lower lines caused by the
-    // removal.
-    for line in range.rev() {
-      if self.line_complete(line) {
-        let () = self.matrix.remove_line(line);
-      }
-    }
-  }
-
-  /// Checker whether the line at the given y position is complete.
-  #[inline]
-  fn line_complete(&self, line: i16) -> bool {
-    self.matrix.iter_line(line).all(|elem| elem.is_some())
-  }
-
   /// Clear all pieces from the field.
   #[inline]
   fn clear(&mut self) {
@@ -470,7 +404,23 @@ impl PieceField {
     let () = self.render_back(renderer);
     let () = self.render_pieces(renderer);
   }
+}
 
+impl Index<Point<i16>> for PieceField {
+  type Output = Option<Piece>;
+
+  fn index(&self, index: Point<i16>) -> &Self::Output {
+    &self.matrix[(index.x, index.y)]
+  }
+}
+
+impl IndexMut<Point<i16>> for PieceField {
+  fn index_mut(&mut self, index: Point<i16>) -> &mut Self::Output {
+    &mut self.matrix[(index.x, index.y)]
+  }
+}
+
+impl Fieldlike<Stone> for PieceField {
   #[inline]
   fn width(&self) -> i16 {
     self.matrix.width()
@@ -479,5 +429,15 @@ impl PieceField {
   #[inline]
   fn height(&self) -> i16 {
     self.matrix.height()
+  }
+
+  #[inline]
+  fn line_complete(&self, line: i16) -> bool {
+    self.matrix.iter_line(line).all(|elem| elem.is_some())
+  }
+
+  #[inline]
+  fn remove_line(&mut self, line: i16) {
+    self.matrix.remove_line(line)
   }
 }
