@@ -12,6 +12,7 @@ mod preview;
 mod producer;
 mod score;
 mod stone;
+mod stonelike;
 
 use factory::StoneFactory;
 use field::Field;
@@ -22,6 +23,7 @@ use preview::PreviewStones;
 use producer::StoneProducer;
 use score::Score;
 use stone::Stone;
+use stonelike::Stonelike;
 
 pub use config::Config;
 pub(crate) use game::Game;

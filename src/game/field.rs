@@ -18,6 +18,7 @@ use super::Matrix;
 use super::Piece;
 use super::Stone;
 use super::StoneProducer;
+use super::Stonelike as _;
 
 
 /// The width of each wall.
@@ -146,7 +147,7 @@ impl Field {
     match &mut self.state {
       State::Moving { stone } => {
         debug_assert!(!self.pieces.collides(stone));
-        let () = stone.move_by(0, -1);
+        let () = stone.move_down();
 
         if self.pieces.collides(stone) {
           let () = stone.move_by(0, 1);
@@ -204,11 +205,10 @@ impl Field {
       | State::Clearing {
         next_stone: stone, ..
       } => {
-        let y = 0;
-        let () = stone.move_by(x, y);
+        let () = stone.move_by(x, 0);
 
         if self.pieces.collides(stone) {
-          let () = stone.move_by(-x, -y);
+          let () = stone.move_by(-x, 0);
           Change::Unchanged
         } else {
           Change::Changed

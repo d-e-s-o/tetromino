@@ -11,6 +11,7 @@ use crate::Point;
 
 use super::Stone;
 use super::StoneProducer;
+use super::Stonelike as _;
 
 
 /// The space between each stone in pieces.

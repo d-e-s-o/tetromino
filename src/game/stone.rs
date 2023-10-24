@@ -1,61 +1,18 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::cmp::max;
-use std::cmp::min;
-use std::f32::consts::PI;
+use std::iter;
 use std::mem::take;
+use std::slice;
+use std::vec;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Color;
 use crate::Point;
-use crate::Rect;
 use crate::Texture;
 
 use super::Piece;
-
-
-#[inline]
-fn deg_to_rad(x: f32) -> f32 {
-  x * PI * 1.0 / 180.0
-}
-
-fn rotate_point_by(point: Point<f32>, angle: f32) -> Point<f32> {
-  // Get the distance from origin.
-  let distance = (point.x * point.x + point.y * point.y).sqrt();
-
-  if distance > 0.0 {
-    // Calculate the angle the stone has currently and add the angle to
-    // rotate to the old one.
-    let new_angle = if point.x < 0.0 { -1.0 } else { 1.0 } * (point.y / distance).acos() + angle;
-
-    let x = new_angle.sin() * distance;
-    let y = new_angle.cos() * distance;
-
-    Point::new(x, y)
-  } else {
-    point
-  }
-}
-
-/// Rotate a point around a center.
-///
-/// This function rotates a given point around a center by 90°, either
-/// left or right. The provided point has integer coordinates that are
-/// understood to be in game dimensions. The function furthermore
-/// assumes that the point actually represents the lower left corner of
-/// a 1-unit square, while rotation happens based on the center of said
-/// square.
-fn rotate_point(point: Point<i16>, center: Point<f32>, left: bool) -> Point<i16> {
-  let angle = if left { -90.0 } else { 90.0 };
-
-  let mut point = point.into_other::<f32>();
-  point += Point::new(0.5, 0.5);
-  point = rotate_point_by(point - center, deg_to_rad(angle)) + center;
-  point -= Point::new(0.5, 0.5);
-
-  Point::new(point.x as i16, point.y as i16)
-}
+use super::Stonelike;
 
 
 /// The representation of a Tetris stone.
@@ -94,73 +51,6 @@ impl Stone {
       .for_each(|(piece, location)| piece.render_with_overlay(renderer, *location, overlay));
   }
 
-  pub(crate) fn move_by(&mut self, x: i16, y: i16) {
-    let () = self.pieces.iter_mut().for_each(|(_piece, location)| {
-      location.x += x;
-      location.y += y;
-    });
-  }
-
-  pub(crate) fn move_to(&mut self, location: Point<i16>) {
-    let bounds = self.bounds();
-    let x = location.x - bounds.x;
-    let y = location.y - bounds.y;
-
-    self.move_by(x, y)
-  }
-
-  pub(crate) fn rotate(&mut self, left: bool) {
-    let center_x;
-    let center_y;
-
-    let bounds = self.bounds();
-    let w = bounds.w;
-    let h = bounds.h;
-    let bounds = bounds.into_other::<f32>();
-
-    if left {
-      center_x = 0.5 * bounds.w;
-      center_y = 0.5 * bounds.h + if h & 1 == 0 { 0.0 } else { 0.5 };
-    } else {
-      center_x = 0.5 * bounds.w + if w & 1 == 0 { 0.5 } else { 0.0 };
-      center_y = 0.5 * bounds.h;
-    }
-
-    // TODO: For now we need to add a constant value here before we
-    //       rotate -- this is necessary because the rotation code is
-    //       somewhat broken for values close to zero -- fix this!
-    let center = Point::new(bounds.x + center_x + 10.0, bounds.y + center_y + 10.0);
-
-    let () = self.pieces.iter_mut().for_each(|(_piece, location)| {
-      *location += Point::new(10, 10);
-      *location = rotate_point(*location, center, left);
-      *location -= Point::new(10, 10);
-    });
-  }
-
-  pub(crate) fn bounds(&self) -> Rect<i16> {
-    // SANITY: Our stone always has at least one piece.
-    let (_piece, location) = self.pieces.first().unwrap();
-    let mut x_min = location.x;
-    let mut x_max = location.x;
-    let mut y_min = location.y;
-    let mut y_max = location.y;
-
-    for (_piece, location) in self.pieces.iter().skip(1) {
-      x_min = min(x_min, location.x);
-      x_max = max(x_max, location.x);
-      y_min = min(y_min, location.y);
-      y_max = max(y_max, location.y);
-    }
-
-    Rect {
-      x: x_min,
-      y: y_min,
-      w: x_max + 1 - x_min,
-      h: y_max + 1 - y_min,
-    }
-  }
-
   /// Rip out the object's guts, creating a new stone and leaving this
   /// one effectively empty.
   // This method is a convenience helper for `Stone` usage in enums
@@ -171,16 +61,30 @@ impl Stone {
       pieces: take(&mut self.pieces),
     }
   }
+}
 
-  pub(crate) fn pieces(
-    &self,
-  ) -> impl Iterator<Item = Point<i16>> + DoubleEndedIterator + ExactSizeIterator + '_ {
+impl Stonelike for Stone {
+  type Piece = Piece;
+  type PieceIter<'slf> =
+    iter::Map<slice::Iter<'slf, (Piece, Point<i16>)>, fn(&'slf (Piece, Point<i16>)) -> Point<i16>>;
+  type PieceIterMut<'slf> = iter::Map<
+    slice::IterMut<'slf, (Piece, Point<i16>)>,
+    fn(&'slf mut (Piece, Point<i16>)) -> &'slf mut Point<i16>,
+  >;
+  type IntoPiecesIter = vec::IntoIter<(Piece, Point<i16>)>;
+
+  #[inline]
+  fn pieces(&self) -> Self::PieceIter<'_> {
     self.pieces.iter().map(|(_piece, location)| *location)
   }
 
-  pub(crate) fn into_pieces(
-    self,
-  ) -> impl Iterator<Item = (Piece, Point<i16>)> + DoubleEndedIterator + ExactSizeIterator {
+  #[inline]
+  fn pieces_mut(&mut self) -> Self::PieceIterMut<'_> {
+    self.pieces.iter_mut().map(|(_piece, location)| location)
+  }
+
+  #[inline]
+  fn into_pieces(self) -> Self::IntoPiecesIter {
     Vec::from(self.pieces).into_iter()
   }
 }
@@ -270,7 +174,7 @@ mod tests {
     let mut stone = new_stone(&template);
     let () = stone.move_to(Point::new(6, 4));
     let before = stone.pieces().collect::<Vec<_>>();
-    let () = stone.rotate(true);
+    let () = stone.rotate_left();
     let after = stone.pieces().collect::<Vec<_>>();
 
     assert_ne!(before, after);
