@@ -8,6 +8,7 @@ use std::mem::transmute;
 use std::num::NonZeroU32;
 use std::os::raw::c_char;
 use std::ptr;
+use std::ptr::NonNull;
 use std::time::Instant;
 
 use raw_window_handle::XlibDisplayHandle;
@@ -89,19 +90,20 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     //       the associated OpenGL context). We may not *have to*
     //       recreate it, conceptually. If we do, we may need to
     //       serialize the game and restore it to keep the state.
-    let mut display = XlibDisplayHandle::empty();
-    display.display = mode_info.windowinfo.display.cast();
-    display.screen = mode_info.windowinfo.screen;
+    let display = NonNull::new(mode_info.windowinfo.display.cast());
+    let screen = mode_info.windowinfo.screen;
+    let display_handle = XlibDisplayHandle::new(display, screen);
 
-    let mut window_handle = XlibWindowHandle::empty();
-    window_handle.window = mode_info.windowinfo.window;
+    let window = mode_info.windowinfo.window;
+    let mut window_handle = XlibWindowHandle::new(window);
     window_handle.visual_id = unsafe { (*(*mode_info.screeninfo).visual).visualid };
 
     let phys_w = NonZeroU32::new(u32::try_from(mode_info.windowinfo.width).unwrap_or_default())
       .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
     let phys_h = NonZeroU32::new(u32::try_from(mode_info.windowinfo.height).unwrap_or_default())
       .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
-    let context = Context::from_xlib_data(display, window_handle as _, phys_w, phys_h).unwrap();
+    let context =
+      Context::from_xlib_data(display_handle, window_handle as _, phys_w, phys_h).unwrap();
 
     let mut config = GameConfig::default();
     config.start_level = 200;

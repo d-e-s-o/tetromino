@@ -23,15 +23,15 @@ use glutin::surface::SurfaceAttributesBuilder;
 use glutin::surface::SwapInterval;
 use glutin::surface::WindowSurface;
 
-use raw_window_handle::HasRawWindowHandle as _;
-use raw_window_handle::RawDisplayHandle;
-use raw_window_handle::RawWindowHandle;
-use raw_window_handle::XlibDisplayHandle;
-use raw_window_handle::XlibWindowHandle;
-
 use winit::error::OsError;
 use winit::platform::x11::register_xlib_error_hook;
 use winit::platform::x11::WindowAttributesExtX11 as _;
+use winit::raw_window_handle::DisplayHandle;
+use winit::raw_window_handle::HasWindowHandle as _;
+use winit::raw_window_handle::RawDisplayHandle;
+use winit::raw_window_handle::RawWindowHandle;
+use winit::raw_window_handle::XlibDisplayHandle;
+use winit::raw_window_handle::XlibWindowHandle;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowAttributes;
 
@@ -93,7 +93,10 @@ impl Context {
 
   /// Create a new OpenGL context on the given window.
   pub fn new(display: &Display, config: &Config, window: &WinitWindow) -> Result<Self> {
-    let raw_window_handle = window.raw_window_handle();
+    let window_handle = window
+      .window_handle()
+      .context("failed to retrieve window handle")?;
+    let raw_window_handle = window_handle.into();
     let (phys_w, phys_h) = window_size(window);
 
     Self::new_impl(display, config, raw_window_handle, phys_w, phys_h)
@@ -179,10 +182,11 @@ pub struct Window {
 
 impl Window {
   /// Create a new window using the provided event loop.
-  pub(crate) fn new<F>(raw_display_handle: RawDisplayHandle, create_window_fn: F) -> Result<Self>
+  pub(crate) fn new<F>(display_handle: DisplayHandle<'_>, create_window_fn: F) -> Result<Self>
   where
     F: FnOnce(WindowAttributes) -> Result<WinitWindow, OsError>,
   {
+    let raw_display_handle = display_handle.into();
     let (display, config) = Context::create_display_and_config(raw_display_handle)?;
 
     let visual = config.x11_visual().map(|visual| visual.visual_id());

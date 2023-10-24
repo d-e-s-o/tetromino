@@ -44,8 +44,6 @@ use anyhow::Result;
 
 use dirs::config_dir;
 
-use raw_window_handle::HasRawDisplayHandle as _;
-
 use winit::application::ApplicationHandler;
 use winit::event::DeviceEvent;
 use winit::event::DeviceId;
@@ -56,6 +54,7 @@ use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode as Key;
 use winit::keyboard::PhysicalKey;
+use winit::raw_window_handle::HasDisplayHandle as _;
 use winit::window::WindowId;
 
 use crate::keys::KeyRepeat;
@@ -192,7 +191,9 @@ impl ApplicationHandler for App {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
     fn create_state(event_loop: &ActiveEventLoop) -> Result<State> {
       let config = load_config().context("failed to load program configuration")?;
-      let display_handle = event_loop.raw_display_handle();
+      let display_handle = event_loop
+        .display_handle()
+        .context("failed to retrieve display handle")?;
       let create_window_fn = |attrs| event_loop.create_window(attrs);
       let window =
         Window::new(display_handle, create_window_fn).context("failed to create OpenGL window")?;
@@ -414,9 +415,10 @@ mod tests {
   #[bench]
   fn bench_render(b: &mut Bencher) {
     let event_loop = EventLoop::builder().with_any_thread(true).build().unwrap();
-    let display_handle = event_loop.raw_display_handle();
+    let display_handle = event_loop.display_handle().unwrap();
+    let raw_display_handle = display_handle.into();
     let create_window_fn = |attrs| event_loop.create_window(attrs);
-    let mut window = Window::new(display_handle, create_window_fn).unwrap();
+    let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
 
     let (phys_w, phys_h) = window.size();
     let config = Config::default();

@@ -63,10 +63,9 @@ grev = {version = "0.1.3", default-features = false}
 [dependencies]
 anyhow = {version = "1.0.72", default-features = false, features = ["std"]}
 dirs = {version = "5.0", default-features = false}
-glutin = {version = "0.31", default-features = false, features = ["glx", "x11"]}
+glutin = {version = "0.32", default-features = false, features = ["glx", "x11"]}
 image = {version = "0.25", default-features = false, features = ["png"]}
-raw-window-handle = {version = "0.5.2", default-features = false}
 serde = {version = "1.0.182", default-features = false, features = ["derive", "std"]}
-winit = {version = "0.30", default-features = false, features = ["rwh_05", "x11"]}
+winit = {version = "0.30", default-features = false, features = ["rwh_06", "x11"]}
 x11-dl = {version = "2.21.0", default-features = false}
 toml = {version = "0.8.13", default-features = false, features = ["display", "parse"]}
