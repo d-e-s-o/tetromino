@@ -76,16 +76,19 @@ where
   fn remove_line(&mut self, line: i16);
 
   /// Remove completed lines in the provided y-range.
-  fn remove_complete_lines(&mut self, range: Range<i16>) {
+  fn remove_complete_lines(&mut self, range: Range<i16>) -> u16 {
     debug_assert!(0 <= range.start && range.end <= self.height(), "{range:?}");
 
+    let mut removed = 0;
     // Remove all completed lines; from top to bottom so that we are
     // unaffected by changes of index to lower lines caused by the
     // removal.
     for line in range.rev() {
       if self.line_complete(line) {
         let () = self.remove_line(line);
+        removed += 1;
       }
     }
+    removed
   }
 }

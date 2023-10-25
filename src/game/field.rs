@@ -122,7 +122,7 @@ impl Field {
         y_range,
       } => {
         debug_assert!(Instant::now() > *until);
-        let () = self.pieces.remove_complete_lines(y_range.clone());
+        let _removed = self.pieces.remove_complete_lines(y_range.clone());
         self.state = State::Moving {
           stone: next_stone.take(),
         };
