@@ -52,7 +52,7 @@ fn rotate_point(point: Point<i16>, center: Point<f32>, left: bool) -> Point<i16>
 }
 
 
-fn rotate<S>(stone: &mut S, left: bool)
+pub(super) fn rotate<S>(stone: &mut S, left: bool)
 where
   S: ?Sized + Stonelike,
 {

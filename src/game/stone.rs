@@ -161,7 +161,7 @@ mod tests {
     assert_eq!(bounds.h, 2);
   }
 
-  /// Check that we can move a `Stone` object as expected.
+  /// Check that we can rotate a `Stone` object as expected.
   #[test]
   fn stone_rotation() {
     // T stone
