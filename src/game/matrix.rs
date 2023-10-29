@@ -8,7 +8,7 @@ use crate::Point;
 
 
 /// A 2D matrix.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Matrix<T> {
   /// The actual matrix.
   matrix: Box<[T]>,
@@ -64,8 +64,7 @@ impl<T> Matrix<T> {
     let () = self.matrix.fill(T::default());
   }
 
-  /// Create an iterator over all present elements, along with their
-  /// positions.
+  /// Create an iterator over all elements, along with their positions.
   pub(crate) fn iter(&self) -> impl Iterator<Item = (&T, Point<i16>)> {
     let width = self.width as usize;
 
@@ -80,6 +79,19 @@ impl<T> Matrix<T> {
   pub(crate) fn iter_line(&self, line: i16) -> impl Iterator<Item = &T> {
     let index = self.calculate_index((0, line));
     self.matrix[index..index + self.width as usize].iter()
+  }
+
+  /// Convert the `Matrix` into one with a different `T`, using the
+  /// provided function, `f`, to to convert individual items.
+  pub(crate) fn to_other<U, F>(&self, f: F) -> Matrix<U>
+  where
+    F: Fn(&T) -> U,
+  {
+    Matrix {
+      width: self.width,
+      height: self.height,
+      matrix: self.matrix.iter().map(f).collect(),
+    }
   }
 
   #[inline]
