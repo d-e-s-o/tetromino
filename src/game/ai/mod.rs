@@ -4,6 +4,8 @@
 mod field;
 mod orientation;
 mod stone;
+#[cfg(test)]
+mod util;
 
 use field::Field;
 use orientation::Orientation;

@@ -7,7 +7,7 @@ use std::ops::Sub;
 use std::ops::SubAssign;
 
 
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub(crate) struct Point<T> {
   pub x: T,
   pub y: T,

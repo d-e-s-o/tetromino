@@ -85,3 +85,92 @@ impl Stonelike for Stone {
     rotate(self, left)
   }
 }
+
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use super::super::util::assert_stones_eq;
+  use super::super::util::stone;
+
+
+  /// Check that stone rotation works as expected.
+  #[test]
+  fn rotation_left() {
+    let mut stone = stone! {"
+      #.
+      #.
+      ##
+    "};
+
+    let () = stone.rotate_left();
+    let expected = stone! {"
+      ..#
+      ###
+      ...
+    "};
+    assert_stones_eq(&stone, &expected);
+
+    let () = stone.rotate_left();
+    let expected = stone! {"
+      ##
+      .#
+      .#
+    "};
+    assert_stones_eq(&stone, &expected);
+
+    let () = stone.rotate_left();
+    let expected = stone! {"
+      ###
+      #..
+      ...
+    "};
+    assert_stones_eq(&stone, &expected);
+
+    let () = stone.rotate_left();
+    let expected = stone! {"
+      #.
+      #.
+      ##
+    "};
+    assert_stones_eq(&stone, &expected);
+  }
+
+
+  /// Check that stone rotation works as expected.
+  #[test]
+  fn rotation_right() {
+    // We need to position the stone at (0,1) here because rotation
+    // makes one of the pieces have a negative y-coordinate.
+    let mut stone = stone! {"
+      .##
+      ##.
+      ...
+    "};
+
+    let () = stone.rotate_right();
+    let expected = stone! {"
+      #.
+      ##
+      .#
+    "};
+    assert_stones_eq(&stone, &expected);
+
+    let () = stone.rotate_right();
+    let expected = stone! {"
+      .##
+      ##.
+      ...
+    "};
+    assert_stones_eq(&stone, &expected);
+
+    let () = stone.rotate_right();
+    let expected = stone! {"
+      #.
+      ##
+      .#
+    "};
+    assert_stones_eq(&stone, &expected);
+  }
+}

@@ -86,3 +86,91 @@ impl Debug for Field {
     Ok(())
   }
 }
+
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use super::super::super::Stonelike as _;
+  use super::super::util::field;
+  use super::super::util::stone;
+
+
+  /// Check that we can properly "reset" a stone's position within a
+  /// [`Field`].
+  #[test]
+  fn stone_reset() {
+    let mut stone = stone! {"
+      .#.
+      ###
+    "};
+    let field = field! {"
+      .......
+      #......
+      ##.....
+      ##...##
+    "};
+
+    assert!(field.reset_stone(&mut stone));
+
+    let bounds = stone.bounds();
+    assert_eq!(bounds.x, 2);
+    assert_eq!(bounds.y, 2);
+  }
+
+
+  /// Test that we can merge a stone with a field.
+  #[test]
+  fn stone_merge() {
+    let stone = stone! {"
+      ...#.
+      ..###
+    "};
+    let mut field = field! {"
+      .......
+      #......
+      ##.....
+      ##...##
+    "};
+
+    let complete = field.merge_stone(stone);
+    assert_eq!(complete, 1);
+
+    let expected = field! {"
+      .......
+      #......
+      ##.#...
+      #######
+    "};
+    assert_eq!(field, expected);
+  }
+
+
+  /// Make sure that removal of completed lines works as it should.
+  #[test]
+  fn line_clearing() {
+    let mut field = field! {"
+      .......
+      #......
+      #######
+      ##...##
+    "};
+
+    // No lines should get removed because the range does not cover the
+    // completed line.
+    let removed = field.remove_complete_lines(0..1);
+    assert_eq!(removed, 0);
+
+    let removed = field.remove_complete_lines(1..4);
+    assert_eq!(removed, 1);
+
+    let expected = field! {"
+      .......
+      .......
+      #......
+      ##...##
+    "};
+    assert_eq!(field, expected);
+  }
+}
