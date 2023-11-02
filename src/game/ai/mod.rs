@@ -8,6 +8,7 @@ mod orientation;
 mod stone;
 #[cfg(test)]
 mod util;
+mod visited;
 
 use action::Action;
 use cost::Cost;
@@ -15,3 +16,4 @@ use field::Field;
 use orientation::Orientation;
 use orientation::Orientations;
 use stone::Stone;
+use visited::VisitedStones;
