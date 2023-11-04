@@ -5,6 +5,7 @@ mod action;
 mod cost;
 mod field;
 mod orientation;
+mod search;
 mod state;
 mod stone;
 #[cfg(test)]
@@ -16,6 +17,8 @@ use cost::Cost;
 use field::Field;
 use orientation::Orientation;
 use orientation::Orientations;
+use search::actions;
+use search::search;
 use state::State;
 use stone::Stone;
 use visited::VisitedStones;
