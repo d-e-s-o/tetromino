@@ -16,6 +16,7 @@ use crate::Point;
 use crate::Rect;
 use crate::Texture;
 
+use super::ai;
 use super::Fieldlike;
 use super::Matrix;
 use super::Piece;
@@ -298,6 +299,35 @@ impl Field {
     }
 
     let () = self.render_walls(renderer);
+  }
+
+  /// Convert this `Field` into an `ai::Field` together with an
+  /// `ai::Stone` representing the currently active stone.
+  ///
+  /// This method returns `None` if there is a collision.
+  #[inline]
+  pub(super) fn to_ai_data(&self) -> Option<(ai::Field, ai::Stone)> {
+    match &self.state {
+      State::Moving { stone } => {
+        let field = ai::Field::from_matrix(&self.pieces.matrix);
+        let stone = stone.to_ai_stone();
+        Some((field, stone))
+      },
+      State::Clearing {
+        next_stone: stone,
+        y_range,
+        ..
+      } => {
+        // If we are still clearing completed lines we haven't yet
+        // updated the piece data, but the AI certainly should only see
+        // the state with cleared lines. So clear them after conversion.
+        let mut field = ai::Field::from_matrix(&self.pieces.matrix);
+        let _removed = field.remove_complete_lines(y_range.clone());
+        let stone = stone.to_ai_stone();
+        Some((field, stone))
+      },
+      State::Colliding { .. } => None,
+    }
   }
 
   #[inline]

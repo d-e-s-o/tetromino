@@ -26,6 +26,7 @@ Usage
 | Space     | Drop the stone immediately               |
 | q         | Quit the game                            |
 | Backspace | Restart the game                         |
+| F2        | Enable (and disable) auto-playing AI     |
 | F3        | Pause (and resume) the game              |
 
 

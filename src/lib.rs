@@ -223,11 +223,20 @@ pub fn run() -> Result<()> {
             *repeat = KeyRepeat::Disabled;
             game.on_drop()
           },
+          Key::F2 => {
+            let () = game.auto_play(!game.is_auto_playing());
+            Change::Unchanged
+          },
           Key::F3 => {
             if let Some(paused) = game.is_paused() {
               let () = game.pause(!paused);
             }
             *repeat = KeyRepeat::Disabled;
+            Change::Unchanged
+          },
+          #[cfg(debug_assertions)]
+          Key::F11 => {
+            let () = game.dump_state();
             Change::Unchanged
           },
           _ => Change::Unchanged,

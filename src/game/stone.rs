@@ -11,6 +11,7 @@ use crate::Color;
 use crate::Point;
 use crate::Texture;
 
+use super::ai;
 use super::Piece;
 use super::Stonelike;
 
@@ -60,6 +61,12 @@ impl Stone {
       piece_texture: self.piece_texture.clone(),
       pieces: take(&mut self.pieces),
     }
+  }
+
+  /// Convert this stone into an [`ai::Stone`].
+  #[inline]
+  pub(super) fn to_ai_stone(&self) -> ai::Stone {
+    ai::Stone::from_pieces(self.pieces())
   }
 }
 

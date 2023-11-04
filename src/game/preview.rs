@@ -3,8 +3,10 @@
 
 use std::cell::Cell;
 use std::cell::RefCell;
+use std::iter;
 use std::mem::replace;
 use std::rc::Rc;
+use std::slice;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Point;
@@ -84,6 +86,17 @@ impl PreviewStones {
     for stone in self.stones.borrow().iter() {
       let () = stone.render(renderer);
     }
+  }
+
+  /// Perform an operation on the preview stones.
+  #[inline]
+  pub(super) fn with_stones<F, R>(&self, f: F) -> R
+  where
+    F: FnOnce(iter::Chain<slice::Iter<Stone>, slice::Iter<Stone>>) -> R,
+  {
+    let stones = self.stones.borrow();
+    let (front, back) = stones.split_at(self.index.get().into());
+    f(back.iter().chain(front))
   }
 
   /// Retrieve the maximum width of the preview stones.

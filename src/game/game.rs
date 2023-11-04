@@ -16,6 +16,7 @@ use crate::Point;
 use crate::Texture;
 use crate::Tick;
 
+use super::ai;
 use super::data;
 use super::field::State;
 use super::Config;
@@ -23,6 +24,7 @@ use super::Field;
 use super::MoveResult;
 use super::PreviewStones;
 use super::Score;
+use super::Stone;
 use super::StoneFactory;
 
 /// Space between the left screen side and the field.
@@ -51,6 +53,8 @@ pub(crate) struct Game {
   preview: Rc<PreviewStones>,
   /// The current score.
   score: Score,
+  /// The AI playing the game, if any.
+  ai: Option<ai::AI>,
   /// The time of the next tick, i.e., the next downward movement.
   ///
   /// The attribute is `None` if the game is not running (e.g., paused).
@@ -104,10 +108,81 @@ impl Game {
     let slf = Self {
       field,
       preview,
+      ai: None,
       next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
     };
     Ok(slf)
+  }
+
+  fn with_ai_data<F, R>(field: &Field, preview: &PreviewStones, f: F) -> Option<R>
+  where
+    F: FnOnce(&ai::Field, &ai::Stone, &[ai::Stone]) -> R,
+  {
+    if let Some((field, stone)) = field.to_ai_data() {
+      // TODO: Ideally we should use all preview stones (perhaps even
+      //       more). But right now our search algorithm is too compute
+      //       intensive to make that happen.
+      // TODO: Ideally we would not have to allocate here.
+      let stones = preview
+        .with_stones(move |stones| stones.take(1).map(Stone::to_ai_stone).collect::<Vec<_>>());
+
+      let result = f(&field, &stone, &stones);
+      Some(result)
+    } else {
+      None
+    }
+  }
+
+  fn advance_ai(ai: &mut ai::AI, field: &Field, preview: &PreviewStones) {
+    let _result = Self::with_ai_data(field, preview, |field, stone, next_stones| {
+      let () = ai.advance_stone(field, stone, next_stones);
+    });
+  }
+
+  fn create_ai(field: &Field, preview: &PreviewStones) -> Option<ai::AI> {
+    Self::with_ai_data(field, preview, |field, stone, next_stones| {
+      ai::AI::new(field, stone, next_stones)
+    })
+  }
+
+  fn ai_handle_regular_move(ai: &mut Option<ai::AI>, field: &mut Field) -> Change {
+    let mut change = Change::Unchanged;
+
+    if let Some(ai) = ai.as_mut() {
+      while let Some(action) = ai.peek() {
+        change |= match action {
+          ai::Action::MoveLeft => field.move_stone_left(),
+          ai::Action::MoveRight => field.move_stone_right(),
+          ai::Action::RotateLeft => field.rotate_stone_left(),
+          ai::Action::RotateRight => field.rotate_stone_right(),
+          ai::Action::Merge | ai::Action::MoveDown => return change,
+        };
+
+        let _ = ai.next();
+      }
+    }
+
+    change
+  }
+
+  fn ai_remove_down_move(ai: &mut Option<ai::AI>) {
+    if let Some(ai) = ai.as_mut() {
+      if let Some(ai::Action::MoveDown) = ai.peek() {
+        let _ = ai.next();
+      }
+    }
+  }
+
+  fn ai_remove_stone_merge(ai: &mut Option<ai::AI>, field: &Field, preview: &PreviewStones) {
+    if let Some(ai) = ai.as_mut() {
+      if let Some(ai::Action::Merge) = ai.peek() {
+        let _merge = ai.next();
+        debug_assert_eq!(ai.next(), None);
+
+        let () = Self::advance_ai(ai, field, preview);
+      }
+    }
   }
 
   /// Calculate the time of the next tick, given the current one.
@@ -143,14 +218,21 @@ impl Game {
     }
 
     while let Some(next_tick) = &mut self.next_tick {
+      change |= Self::ai_handle_regular_move(&mut self.ai, &mut self.field);
+
       if now >= *next_tick {
         let result = self.field.move_stone_down();
         change |= result.0;
 
         match result.1 {
-          MoveResult::None | MoveResult::Moved => (),
+          MoveResult::None => (),
+          MoveResult::Moved => {
+            let () = Self::ai_remove_down_move(&mut self.ai);
+          },
           MoveResult::Merged(lines) => {
             let () = Self::handle_merged_lines(&mut self.score, lines);
+            let () = Self::ai_remove_down_move(&mut self.ai);
+            let () = Self::ai_remove_stone_merge(&mut self.ai, &self.field, &self.preview);
           },
           MoveResult::Conflict => {
             let () = self.end();
@@ -176,6 +258,9 @@ impl Game {
   pub(crate) fn restart(&mut self) -> Change {
     let () = self.score.reset();
     let () = if self.field.reset() {
+      if self.ai.is_some() {
+        self.ai = Self::create_ai(&self.field, &self.preview);
+      }
       self.next_tick = Some(Self::next_tick(Instant::now(), self.score.level()));
     } else {
       self.end()
@@ -220,6 +305,24 @@ impl Game {
     }
   }
 
+  /// Enable or disable auto-playing of the game.
+  pub(crate) fn auto_play(&mut self, auto_play: bool) {
+    if auto_play {
+      if self.ai.is_none() {
+        self.ai = Self::create_ai(&self.field, &self.preview);
+      }
+    } else {
+      self.ai = None;
+    }
+  }
+
+  /// Check whether the game is currently controlled by an auto-playing
+  /// AI.
+  #[inline]
+  pub(crate) fn is_auto_playing(&self) -> bool {
+    self.ai.is_some()
+  }
+
   fn handle_merged_lines(score: &mut Score, lines: u16) {
     let level = score.level();
     let () = score.add(lines);
@@ -234,9 +337,19 @@ impl Game {
     }
   }
 
+  /// Check whether the game in its current state accepts and reacts to
+  /// input.
+  ///
+  /// It won't accept input if it's currently paused or if the AI is
+  /// playing.
+  #[inline]
+  fn accepts_input(&self) -> bool {
+    self.next_tick.is_some() && !self.is_auto_playing()
+  }
+
   #[inline]
   pub(crate) fn on_move_down(&mut self) -> Change {
-    if self.next_tick.is_some() {
+    if self.accepts_input() {
       let (change, result) = self.field.move_stone_down();
       match result {
         MoveResult::None | MoveResult::Moved => (),
@@ -256,7 +369,7 @@ impl Game {
 
   #[inline]
   pub(crate) fn on_drop(&mut self) -> Change {
-    if self.next_tick.is_some() {
+    if self.accepts_input() {
       let (change, result) = self.field.drop_stone();
       match result {
         MoveResult::None | MoveResult::Moved => (),
@@ -276,7 +389,7 @@ impl Game {
 
   #[inline]
   pub(crate) fn on_move_left(&mut self) -> Change {
-    if self.next_tick.is_some() {
+    if self.accepts_input() {
       self.field.move_stone_left()
     } else {
       Change::Unchanged
@@ -285,7 +398,7 @@ impl Game {
 
   #[inline]
   pub(crate) fn on_move_right(&mut self) -> Change {
-    if self.next_tick.is_some() {
+    if self.accepts_input() {
       self.field.move_stone_right()
     } else {
       Change::Unchanged
@@ -294,7 +407,7 @@ impl Game {
 
   #[inline]
   pub(crate) fn on_rotate_left(&mut self) -> Change {
-    if self.next_tick.is_some() {
+    if self.accepts_input() {
       self.field.rotate_stone_left()
     } else {
       Change::Unchanged
@@ -303,7 +416,7 @@ impl Game {
 
   #[inline]
   pub(crate) fn on_rotate_right(&mut self) -> Change {
-    if self.next_tick.is_some() {
+    if self.accepts_input() {
       self.field.rotate_stone_right()
     } else {
       Change::Unchanged
@@ -315,6 +428,17 @@ impl Game {
     let () = self.field.render(renderer);
     let () = self.preview.render(renderer);
     let () = self.score.render(renderer);
+  }
+
+  #[cfg(debug_assertions)]
+  pub(crate) fn dump_state(&self) {
+    if let Some((stone, field)) = self.field.to_ai_data() {
+      if let Some(ai) = self.ai.as_ref() {
+        println!("{ai:#?}");
+      }
+      println!("{stone:?}");
+      println!("{field:?}");
+    }
   }
 
   /// Retrieve the game surface's width.
