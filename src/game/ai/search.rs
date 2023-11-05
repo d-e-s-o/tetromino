@@ -851,4 +851,238 @@ mod tests {
     // didn't trigger any unexpected code paths throughout.
     let _field = evaluate_multi(field, &stone, &next);
   }
+
+  fn stone_factory(seed: u64) -> impl Iterator<Item = Stone> {
+    let templates = {
+      let o = stone! {"
+        ##
+        ##
+        "};
+      let s = stone! {"
+        .##
+        ##.
+        "};
+      let z = stone! {"
+        ##.
+        .##
+      "};
+      let i = stone! {"
+        #
+        #
+        #
+        #
+      "};
+      let t = stone! {"
+        .#.
+        ###
+      "};
+      let j = stone! {"
+        .#
+        .#
+        ##
+      "};
+      let l = stone! {"
+        #.
+        #.
+        ##
+      "};
+      [o, s, z, i, t, j, l]
+    };
+    let rng = Rng::with_seed(seed);
+
+    from_fn(move || {
+      let index = rng.rand_u32() as usize % templates.len();
+      templates.get(index).cloned()
+    })
+  }
+
+
+  fn play(mut field: Field) {
+    let mut count = 0;
+    let mut factory = stone_factory(1337);
+    let mut next_stones = factory.by_ref().take(1).collect::<VecDeque<_>>();
+
+    loop {
+      let mut stone = next_stones.pop_front().unwrap();
+      let () = next_stones.push_back(factory.next().unwrap());
+
+      let result = field.reset_stone(&mut stone);
+      if !result {
+        break
+      }
+
+      let best = search(&field, &stone, next_stones.make_contiguous());
+      let (actions, expected_field) = actions(best);
+      field = replay(field, stone, actions);
+      println!("{field:?}");
+
+      if let Some(expected_field) = expected_field {
+        assert_eq!(field, *expected_field);
+      }
+
+      count += 1;
+    }
+
+    println!("merged {count} stones");
+  }
+
+  /// "Stress-test" playing a game from start to finish.
+  #[test]
+  #[ignore = "stress test; may take excessive time"]
+  fn play_until_over() {
+    let field = Field::from_matrix(&Matrix::<Option<()>>::new(20, 40));
+    play(field)
+  }
+
+
+  /// "Stress-test" playing the game from a pretty bad state.
+  ///
+  /// This test is mostly interesting to see whether the AI is capable
+  /// of recovering.
+  #[test]
+  #[ignore = "stress test; may take excessive time"]
+  fn play_to_fix_mess1() {
+    let field = field! {"
+      ....................
+      ....................
+      ....................
+      ....................
+      ........####........
+      .......########...##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      .#....###########.##
+      .##...###########.##
+      .##...##############
+      .##...###########.##
+      .##...##############
+      .##...##############
+      .####..#############
+      .####.##############
+      .##.#.###########.##
+      .####.##############
+      .####.##############
+      .####.##########.###
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+      .####.##############
+    "};
+
+    play(field)
+  }
+
+  #[test]
+  #[ignore = "stress test; may take excessive time"]
+  fn play_to_fix_mess2() {
+    let field = field! {"
+      ..........
+      ..........
+      ..........
+      ..........
+      ..........
+      ..........
+      ..........
+      ..........
+      ..........
+      #....#....
+      ###.###...
+      #######...
+      ########..
+      #####.###.
+      ##.#####..
+      ######.#..
+      #########.
+      ####.#..#.
+      ####....#.
+      #######.#.
+      .##.#####.
+      ##.....##.
+      #.......#.
+      #.......#.
+      ##...#..##
+      ##...#..##
+      .##..####.
+      .#..##.##.
+      ###..####.
+      ##....##..
+      ##.####...
+      ##..##....
+      .##..#....
+      .#...#....
+      ###..#....
+      .#...#....
+      .#..##....
+      ##..###...
+      ##..#...##
+      ##..##..##
+    "};
+
+    play(field)
+  }
+
+  #[test]
+  #[ignore = "stress test; may take excessive time"]
+  fn play_to_fix_mess3() {
+    let field = field! {"
+      ..........
+      ........#.
+      ........##
+      ........##
+      ........#.
+      ........##
+      ........##
+      ........##
+      ........##
+      ....##..##
+      ....##..##
+      ....##..##
+      ....##..##
+      .#..##..##
+      .##.##..##
+      .##..#..##
+      .##.##..#.
+      .##.##..#.
+      .##..#..##
+      .##.##..##
+      .##..#..##
+      .##.##..##
+      .#..##..##
+      .##.##.###
+      .##.##.###
+      .##.##.###
+      .##.##.###
+      .##.##.###
+      .##.##.###
+      .##.##.###
+      ###.##.###
+      ###.##.###
+      .##.##.###
+      .#..##.###
+      ###.##.###
+      .#..##.###
+      .##.##.###
+      ###.######
+      ###.#..###
+      ###.##.###
+    "};
+
+    play(field)
+  }
 }
