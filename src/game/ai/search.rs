@@ -278,7 +278,12 @@ mod tests {
   use super::*;
 
   use std::collections::VecDeque;
+  #[cfg(feature = "nightly")]
+  use std::hint::black_box;
   use std::iter::from_fn;
+
+  #[cfg(feature = "nightly")]
+  use test::Bencher;
 
   use crate::Rng;
 
@@ -1084,5 +1089,75 @@ mod tests {
     "};
 
     play(field)
+  }
+
+
+  /// Benchmark the [`estimate_cost`] function.
+  #[cfg(feature = "nightly")]
+  #[bench]
+  fn bench_estimate_cost(b: &mut Bencher) {
+    let field = field! {"
+      ....................
+      ....................
+      ....................
+      ....................
+      ........####........
+      .......########...##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......###.....##..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......##########..##
+      ......####.#####..##
+      ......####.#####..##
+      .#....####.######.##
+      .##...###########.##
+      .##...##############
+      .##...###########.##
+      .##...##############
+      .##...##############
+      .####..###.#########
+      .####.####..########
+      .##.#.####..#####.##
+      .####.##############
+      .####.##############
+      .####.##########.###
+      .####.##############
+      .####.##############
+      .####.#####..#######
+      .####.####.....#####
+      .####.####.....#####
+      .####.##.......#####
+      .####.##.##.########
+      .####.##############
+      .####.#########...##
+      .####.#########.####
+      .####.###....#######
+    "};
+
+    let () = b.iter(|| {
+      let _cost = estimate_cost(black_box(&field));
+      black_box(_cost);
+    });
+  }
+
+  /// Benchmark the [`search`] function.
+  #[cfg(feature = "nightly")]
+  #[bench]
+  fn bench_search(b: &mut Bencher) {
+    let mut factory = stone_factory(1337);
+    let field = Field::from_matrix(&Matrix::<Option<()>>::new(20, 40));
+    let mut stone = factory.next().unwrap();
+    let result = field.reset_stone(&mut stone);
+    assert!(result);
+
+    let () = b.iter(|| {
+      let _actions = search(black_box(&field), black_box(&stone), black_box(&[]));
+      black_box(_actions);
+    });
   }
 }

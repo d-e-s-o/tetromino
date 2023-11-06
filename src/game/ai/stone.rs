@@ -91,6 +91,12 @@ impl Stonelike for Stone {
 mod tests {
   use super::*;
 
+  #[cfg(feature = "nightly")]
+  use std::hint::black_box;
+
+  #[cfg(feature = "nightly")]
+  use test::Bencher;
+
   use super::super::util::assert_stones_eq;
   use super::super::util::stone;
 
@@ -172,5 +178,23 @@ mod tests {
       .#
     "};
     assert_stones_eq(&stone, &expected);
+  }
+
+
+  /// Benchmark rotation of a stone.
+  #[cfg(feature = "nightly")]
+  #[bench]
+  fn bench_stone_rotation(b: &mut Bencher) {
+    let pieces = [
+      Point::new(0, 0),
+      Point::new(0, 1),
+      Point::new(0, 2),
+      Point::new(0, 3),
+    ];
+    let mut stone = Stone::from_pieces(pieces.into_iter());
+
+    let () = b.iter(|| {
+      let () = black_box(&mut stone).rotate(black_box(false));
+    });
   }
 }

@@ -27,6 +27,7 @@ A graphical Tetris clone.
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
+name = "tetromino_impl"
 doc = false
 
 [features]
@@ -45,6 +46,9 @@ lto = true
 codegen-units = 1
 incremental = false
 panic = "abort"
+
+[profile.bench]
+debug = true
 
 [build-dependencies]
 gl_generator = {version = "0.14", optional = true, default-features = false}
