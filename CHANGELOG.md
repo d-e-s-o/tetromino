@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.1.2
+-----
 - Fixed update of internal field state on final stone collision to
   prevent potential invariant violation
 - Added auto-playing AI
