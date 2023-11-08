@@ -69,9 +69,9 @@ impl Color {
   #[inline]
   pub(crate) const fn black() -> Self {
     Self {
-      r: 0,
-      g: 0,
-      b: 0,
+      r: gl::GLubyte::MIN,
+      g: gl::GLubyte::MIN,
+      b: gl::GLubyte::MIN,
       a: gl::GLubyte::MAX,
     }
   }
