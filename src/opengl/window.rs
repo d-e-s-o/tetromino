@@ -69,7 +69,7 @@ impl Window {
 
     let window = WindowBuilder::new().with_transparent(false);
     let window = if let Some(x11_visual) = config.x11_visual() {
-      window.with_x11_visual(x11_visual.into_raw())
+      window.with_x11_visual(x11_visual.visual_id() as _)
     } else {
       window
     };

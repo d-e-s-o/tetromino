@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Updated `winit` dependency to `0.29.2`
+
+
 0.1.2
 -----
 - Fixed update of internal field state on final stone collision to

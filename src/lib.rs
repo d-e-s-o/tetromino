@@ -43,6 +43,7 @@ use winit::event::WindowEvent;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode as Key;
+use winit::keyboard::PhysicalKey;
 
 use crate::game::Game;
 use crate::keys::KeyRepeat;
@@ -138,7 +139,7 @@ fn load_config() -> Result<Config> {
 
 pub fn run() -> Result<()> {
   let config = load_config().context("failed to load program configuration")?;
-  let event_loop = EventLoop::new();
+  let event_loop = EventLoop::new().context("failed to create event loop")?;
   let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
 
   let (phys_w, phys_h) = window.size();
@@ -148,10 +149,10 @@ pub fn run() -> Result<()> {
     Keys::with_config(config.keyboard).context("failed to instantiate auto key repeat manager")?;
   let mut was_paused = game.is_paused();
 
-  event_loop.run(move |event, _, control_flow| {
+  let () = event_loop.run(move |event, target| {
     let now = Instant::now();
     let change = match event {
-      Event::LoopDestroyed => return,
+      Event::LoopExiting => return,
       Event::WindowEvent { event, .. } => match event {
         WindowEvent::Focused(focused) => {
           if focused {
@@ -178,8 +179,15 @@ pub fn run() -> Result<()> {
           Change::Unchanged
         },
         WindowEvent::CloseRequested => {
-          let () = control_flow.set_exit();
+          let () = target.exit();
           return
+        },
+        WindowEvent::RedrawRequested => {
+          let renderer = renderer.on_pre_render(&mut window);
+          let () = game.render(&renderer);
+          let () = drop(renderer);
+          let () = window.swap_buffers();
+          Change::Unchanged
         },
         WindowEvent::Resized(phys_size) => {
           let phys_w = NonZeroU32::new(phys_size.width)
@@ -196,7 +204,7 @@ pub fn run() -> Result<()> {
       Event::DeviceEvent {
         event:
           DeviceEvent::Key(RawKeyEvent {
-            physical_key: key,
+            physical_key: PhysicalKey::Code(key),
             state,
           }),
         ..
@@ -204,7 +212,7 @@ pub fn run() -> Result<()> {
         let () = keys.on_key_event(now, key, state);
         Change::Unchanged
       },
-      Event::MainEventsCleared => {
+      Event::AboutToWait => {
         let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
           Key::Digit1 => game.on_rotate_left(),
           Key::Digit2 => game.on_rotate_right(),
@@ -245,29 +253,25 @@ pub fn run() -> Result<()> {
         let (keys_change, keys_wait) = keys.tick(now, handle_key);
         let (game_change, game_wait) = game.tick(now);
 
-        *control_flow = match min(game_wait, keys_wait) {
+        let control_flow = match min(game_wait, keys_wait) {
           Tick::None => ControlFlow::Wait,
           Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
         };
+        let () = target.set_control_flow(control_flow);
 
         keys_change | game_change
-      },
-      Event::RedrawRequested(_) => {
-        let renderer = renderer.on_pre_render(&mut window);
-        let () = game.render(&renderer);
-        let () = drop(renderer);
-        let () = window.swap_buffers();
-        Change::Unchanged
       },
       _ => Change::Unchanged,
     };
 
     match change {
       Change::Changed => window.request_redraw(),
-      Change::Quit => control_flow.set_exit(),
+      Change::Quit => target.exit(),
       Change::Unchanged => (),
     }
-  });
+  })?;
+
+  Ok(())
 }
 
 
