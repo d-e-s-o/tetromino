@@ -21,15 +21,17 @@ env:
 
 jobs:
   build:
-    name: Build [${{ matrix.profile }}, ${{ matrix.args }}]
+    name: Build [${{ matrix.toolchain }}, ${{ matrix.profile }}, ${{ matrix.args }}]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
+        toolchain: [stable]
         profile: [dev, release]
         args: ['']
         include:
-        - profile: dev
+        - toolchain: stable
+          profile: dev
           args: --features=generate-opengl-bindings
     steps:
     - uses: actions/checkout@v4
@@ -37,7 +39,7 @@ jobs:
       run: sudo apt-get install libgl-dev
     - uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: ${{ matrix.toolchain }}
         profile: minimal
         override: true
     - name: Build ${{ matrix.profile }}
