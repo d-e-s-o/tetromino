@@ -291,7 +291,10 @@ mod tests {
   /// Benchmark the performance of the rendering path.
   #[bench]
   fn bench_render(b: &mut Bencher) {
-    let event_loop = EventLoopBuilder::new().with_any_thread(true).build();
+    let event_loop = EventLoopBuilder::new()
+      .with_any_thread(true)
+      .build()
+      .unwrap();
     let mut window = Window::new(&event_loop).unwrap();
 
     let (phys_w, phys_h) = window.size();

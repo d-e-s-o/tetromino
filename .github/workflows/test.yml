@@ -33,6 +33,9 @@ jobs:
         - toolchain: stable
           profile: dev
           args: --features=generate-opengl-bindings
+        - toolchain: nightly
+          profile: dev
+          args: --features=nightly
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies
