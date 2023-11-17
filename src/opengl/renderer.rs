@@ -514,7 +514,7 @@ impl Renderer {
 
     Self {
       phys_w: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
-      phys_h: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
+      phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
     }
