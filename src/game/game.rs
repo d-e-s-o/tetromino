@@ -105,10 +105,16 @@ impl Game {
       font,
     );
 
+    let ai = if config.enable_ai {
+      Self::create_ai(&field, &preview)
+    } else {
+      None
+    };
+
     let slf = Self {
       field,
       preview,
-      ai: None,
+      ai,
       next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
     };

@@ -1,5 +1,6 @@
 Unreleased
 ----------
+- Made initial AI state configurable via configuration
 - Updated `winit` dependency to `0.29.2`
 
 

@@ -17,6 +17,8 @@ pub struct Config {
   pub field_height: i16,
   /// The number of upcoming stones to show.
   pub preview_stone_count: u8,
+  /// Whether or not the AI is enabled initially.
+  pub enable_ai: bool,
 }
 
 impl Default for Config {
@@ -27,6 +29,7 @@ impl Default for Config {
       field_width: 10,
       field_height: 20,
       preview_stone_count: 1,
+      enable_ai: false,
     }
   }
 }
