@@ -27,6 +27,7 @@ use crate::Tick;
 
 
 #[derive(Debug, Deserialize, Serialize)]
+#[non_exhaustive]
 pub struct Config {
   /// The auto-repeat timeout, in milliseconds.
   auto_repeat_timeout_ms: u32,

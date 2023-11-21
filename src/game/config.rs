@@ -27,6 +27,7 @@ fn default_preview_stone_count() -> u8 {
 
 
 #[derive(Debug, Deserialize, Serialize)]
+#[non_exhaustive]
 pub struct Config {
   /// The level the game starts at.
   #[serde(default = "default_start_level")]

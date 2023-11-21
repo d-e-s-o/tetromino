@@ -9,6 +9,7 @@ use crate::keys;
 
 
 #[derive(Default, Debug, Deserialize, Serialize)]
+#[non_exhaustive]
 pub struct Config {
   /// Settings pertaining keyboard handling.
   #[serde(default)]
