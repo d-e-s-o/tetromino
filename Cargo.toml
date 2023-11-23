@@ -28,7 +28,6 @@ A graphical Tetris clone.
 
 [lib]
 name = "tetromino_impl"
-doc = false
 
 [features]
 default = []
