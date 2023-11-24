@@ -9,7 +9,7 @@ use anyhow::Result;
 use glutin::config::ConfigTemplateBuilder;
 use glutin::context::ContextApi;
 use glutin::context::ContextAttributesBuilder;
-use glutin::context::NotCurrentGlContextSurfaceAccessor as _;
+use glutin::context::NotCurrentGlContext as _;
 use glutin::context::PossiblyCurrentContext;
 use glutin::context::Version;
 use glutin::display::Display;
