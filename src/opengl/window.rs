@@ -42,12 +42,26 @@ fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
 }
 
 /// The Tetris window.
+///
+/// # Notes
+/// Please note that currently the creation of multiple windows (at the
+/// same time) is not a supported workflow.
 pub(crate) struct Window {
   /// The underlying `winit` window.
   window: WinitWindow,
   /// The OpenGL surface that is used for rendering.
   surface: Surface<WindowSurface>,
   /// The OpenGL context used for double buffering.
+  // TODO: It may be wrong to keep the context current: when creating
+  //       multiple windows we end up with confusion surrounding created
+  //       textures, for example, where destruction of the first window
+  //       may invalidate textures in the second (because the second
+  //       window's context is what is active).
+  //       We may need it stored as deactivated and the only activate it
+  //       for various operations (including rendering). However, this
+  //       likely requires a larger API redesign, because texture
+  //       creation and similar would need to be somehow tied to the
+  //       window with an active context.
   context: PossiblyCurrentContext,
 }
 
@@ -86,7 +100,6 @@ impl Window {
       SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
     let surface = unsafe { display.create_window_surface(&config, &attrs) }
       .context("failed to create window surface")?;
-    // It is essential to make the context current before calling `gl::load_with`.
     let context = unsafe { display.create_context(&config, &context_attributes) }
       .context("failed to create context")?
       .make_current(&surface)
