@@ -32,7 +32,7 @@ jobs:
         include:
         - toolchain: stable
           profile: dev
-          args: --features=generate-opengl-bindings
+          args: --workspace --features=generate-opengl-bindings,download-xlock-source,generate-xlock-bindings
         - toolchain: nightly
           profile: dev
           args: --features=nightly

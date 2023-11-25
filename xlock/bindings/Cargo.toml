@@ -1,0 +1,30 @@
+[package]
+name = "tetromino-xlock-bindings"
+version = "0.0.0+v5.73"
+edition = "2021"
+authors = ["Daniel Mueller <deso@posteo.net>"]
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/d-e-s-o/tetromino"
+repository = "https://github.com/d-e-s-o/tetromino.git"
+readme = "README.md"
+description = """
+Rust bindings for xlock, suitable for writing a custom "mode".
+"""
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[features]
+# Download the xlock(more) source code archive to make it available for
+# binding creation.
+download-xlock-source = ["reqwest", "tar", "tempfile", "xz2"]
+# Enable this feature to re-generate the xlock bindings. This may be
+# necessary if your targeted xlock version has changed API/ABI compared
+# to the included bindings.
+generate-xlock-bindings = ["bindgen"]
+
+[build-dependencies]
+bindgen = {version = "0.68", optional = true}
+reqwest = {version = "0.11.18", optional = true, features = ["blocking"]}
+tar = {version = "0.4.40", default-features = false, optional = true}
+tempfile = {version = "3.4", optional = true}
+xz2 = {version = "0.1.7", default-features = false, optional = true}
