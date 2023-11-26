@@ -46,7 +46,8 @@ const CLEAR_TIME: Duration = Duration::from_millis(200);
 
 
 /// A type representing a game of Tetris.
-pub(crate) struct Game {
+#[derive(Debug)]
+pub struct Game {
   /// The Tetris field.
   field: Field,
   /// The preview stones.
@@ -63,7 +64,7 @@ pub(crate) struct Game {
 
 impl Game {
   /// Instantiate a new game of Tetris with the given configuration.
-  pub(crate) fn with_config(config: &Config) -> Result<Self> {
+  pub fn with_config(config: &Config) -> Result<Self> {
     let reader = Cursor::new(data::TETRIS_FIELD_PIECE_TEXTURE);
     let piece = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::with_image(piece)?;
@@ -202,7 +203,7 @@ impl Game {
   ///
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
-  pub(crate) fn tick(&mut self, now: Instant) -> (Change, Tick) {
+  pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
     let mut change = Change::Unchanged;
 
     match self.field.state() {
@@ -261,7 +262,7 @@ impl Game {
   }
 
   /// Restart the game.
-  pub(crate) fn restart(&mut self) -> Change {
+  pub fn restart(&mut self) -> Change {
     let () = self.score.reset();
     let () = if self.field.reset() {
       if self.ai.is_some() {
@@ -430,7 +431,7 @@ impl Game {
   }
 
   /// Render the game and its components.
-  pub(crate) fn render(&self, renderer: &Renderer) {
+  pub fn render(&self, renderer: &Renderer) {
     let () = self.field.render(renderer);
     let () = self.preview.render(renderer);
     let () = self.score.render(renderer);
@@ -448,7 +449,7 @@ impl Game {
   }
 
   /// Retrieve the game surface's width.
-  pub(crate) fn width(&self) -> NonZeroU16 {
+  pub fn width(&self) -> NonZeroU16 {
     let width =
       LEFT_SPACE + self.field.width() + PREVIEW_FIELD_SPACE + self.preview.width() + RIGHT_SPACE;
     // SAFETY: The provided height is guaranteed to be greater than zero.
@@ -456,7 +457,7 @@ impl Game {
   }
 
   /// Retrieve the game surface's height.
-  pub(crate) fn height(&self) -> NonZeroU16 {
+  pub fn height(&self) -> NonZeroU16 {
     let height = BOTTOM_SPACE + self.field.height() + TOP_SPACE;
     // SAFETY: The provided height is guaranteed to be greater than zero.
     unsafe { NonZeroU16::new_unchecked(height as u16) }

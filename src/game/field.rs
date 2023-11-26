@@ -47,6 +47,7 @@ pub(super) enum MoveResult {
 
 
 /// An enumeration of the possible states that the field can be in.
+#[derive(Debug)]
 pub(super) enum State {
   Moving {
     /// The currently active stone.
@@ -70,6 +71,7 @@ pub(super) enum State {
 }
 
 
+#[derive(Debug)]
 pub(crate) struct Field {
   /// The location of the lower left corner of the field, in game units.
   location: Point<i16>,
@@ -357,6 +359,7 @@ impl Field {
 }
 
 
+#[derive(Debug)]
 struct PieceField {
   /// The matrix (2D array) of pieces.
   matrix: Matrix<Option<Piece>>,

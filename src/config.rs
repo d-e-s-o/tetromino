@@ -8,6 +8,7 @@ use crate::game;
 use crate::keys;
 
 
+/// A type representing the configuration of the program.
 #[derive(Default, Debug, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct Config {

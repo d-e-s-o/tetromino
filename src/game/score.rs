@@ -68,6 +68,7 @@ impl<const N: usize> Write for StackWriter<'_, N> {
 
 
 /// A type helping with keeping track of score in a Tetris game.
+#[derive(Debug)]
 pub(super) struct Score {
   /// The location of the upper left corner of the score board.
   location: Point<i16>,

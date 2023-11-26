@@ -12,9 +12,11 @@ mod window;
 pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Color;
-pub(crate) use renderer::Renderer;
 pub(crate) use texture::Texture;
-pub(crate) use window::Window;
+
+pub use renderer::Renderer;
+pub use window::Window;
+
 
 #[allow(clippy::all)]
 mod gl {

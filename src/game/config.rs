@@ -26,13 +26,14 @@ fn default_preview_stone_count() -> u8 {
 }
 
 
+/// The configuration for a [`Game`][super::Game].
 #[derive(Debug, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct Config {
   /// The level the game starts at.
   #[serde(default = "default_start_level")]
   pub start_level: u16,
-  /// The number of lines required to level up.
+  /// The number of lines cleared required to level up.
   #[serde(default = "default_lines_for_level")]
   pub lines_for_level: u16,
   /// The width of the tetris field.

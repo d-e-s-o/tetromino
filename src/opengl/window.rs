@@ -46,7 +46,8 @@ fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
 /// # Notes
 /// Please note that currently the creation of multiple windows (at the
 /// same time) is not a supported workflow.
-pub(crate) struct Window {
+#[derive(Debug)]
+pub struct Window {
   /// The underlying `winit` window.
   window: WinitWindow,
   /// The OpenGL surface that is used for rendering.
@@ -122,13 +123,13 @@ impl Window {
 
   /// Retrieve the window's inner size (i.e., the size of the drawable
   /// area).
-  pub(crate) fn size(&self) -> (NonZeroU32, NonZeroU32) {
+  pub fn size(&self) -> (NonZeroU32, NonZeroU32) {
     window_size(&self.window)
   }
 
   /// Inform the window that it has been resized.
   #[inline]
-  pub(crate) fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
+  pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
     let () = self.surface.resize(&self.context, phys_w, phys_h);
   }
 
@@ -138,7 +139,7 @@ impl Window {
   // renderer is active, because an active renderer already has an
   // exclusive reference to the window.
   #[inline]
-  pub(crate) fn swap_buffers(&mut self) {
+  pub fn swap_buffers(&mut self) {
     let () = self
       .surface
       .swap_buffers(&self.context)

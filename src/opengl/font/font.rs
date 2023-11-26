@@ -14,6 +14,8 @@ use super::raster;
 /// the space to advance on the x-axis.
 type Glyph = (Box<[Point<u8>]>, u8);
 
+
+#[derive(Debug)]
 pub(crate) struct Font {
   /// The list of glyphs making up the font.
   glyphs: Box<[Glyph]>,

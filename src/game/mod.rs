@@ -29,4 +29,4 @@ use stone::Stone;
 use stonelike::Stonelike;
 
 pub use config::Config;
-pub(crate) use game::Game;
+pub use game::Game;

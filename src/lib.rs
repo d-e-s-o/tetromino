@@ -1,11 +1,19 @@
 // Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+//! A graphical Tetris clone.
+
 #![allow(
   clippy::collapsible_else_if,
   clippy::let_and_return,
   clippy::let_unit_value,
   clippy::module_inception
+)]
+#![warn(
+  missing_debug_implementations,
+  missing_docs,
+  private_in_public,
+  rustdoc::broken_intra_doc_links
 )]
 #![cfg_attr(feature = "nightly", feature(test))]
 
@@ -45,26 +53,33 @@ use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode as Key;
 use winit::keyboard::PhysicalKey;
 
-use crate::game::Game;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
 use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
 use crate::opengl::Font;
-use crate::opengl::Renderer;
 use crate::opengl::Texture;
-use crate::opengl::Window;
 use crate::point::Point;
 use crate::rand::Rng;
 use crate::rect::Rect;
 
+#[doc(hidden)]
 pub use crate::config::Config;
+pub use crate::game::Config as GameConfig;
+pub use crate::game::Game;
+pub use crate::opengl::Renderer;
+pub use crate::opengl::Window;
 
 
+/// An enumeration of possible state changes performed/desired by lower
+/// level parts of the program.
 #[derive(Clone, Copy, Debug, PartialEq)]
-enum Change {
+pub enum Change {
+  /// Some state was changed that necessitates a redraw.
   Changed,
+  /// A desire to quite the program has been made.
   Quit,
+  /// No visible state has changed.
   Unchanged,
 }
 
@@ -87,9 +102,12 @@ impl BitOrAssign<Change> for Change {
 }
 
 
+/// An enumeration describing when the next program "tick" should occur.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-enum Tick {
+pub enum Tick {
+  /// The next tick should happen at the given instant.
   At(Instant),
+  /// No additional tick is necessary at this point.
   None,
 }
 
@@ -137,6 +155,8 @@ fn load_config() -> Result<Config> {
 }
 
 
+// This function is really only meant to be used by the main program.
+#[doc(hidden)]
 pub fn run() -> Result<()> {
   let config = load_config().context("failed to load program configuration")?;
   let event_loop = EventLoop::new().context("failed to create event loop")?;

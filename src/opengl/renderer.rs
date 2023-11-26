@@ -247,7 +247,9 @@ impl TextureState {
 }
 
 
-pub(crate) struct ActiveRenderer<'renderer> {
+/// A type directly usable to render graphics primitives.
+#[derive(Debug)]
+pub struct ActiveRenderer<'renderer> {
   /// The `Renderer` this object belongs to.
   renderer: &'renderer Renderer,
   /// An invalid texture.
@@ -492,7 +494,9 @@ impl Drop for ActiveRenderer<'_> {
 }
 
 
-pub(crate) struct Renderer {
+/// A type enabling the rendering of graphics.
+#[derive(Debug)]
+pub struct Renderer {
   /// The physical width of the window to which this renderer belongs.
   phys_w: gl::GLsizei,
   /// The physical height of the window to which this renderer belongs.
@@ -504,7 +508,9 @@ pub(crate) struct Renderer {
 }
 
 impl Renderer {
-  pub(crate) fn new(
+  /// Create a new [`Renderer`] object assuming the provide "physical"
+  /// and logical view dimensions.
+  pub fn new(
     phys_w: NonZeroU32,
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
@@ -553,7 +559,9 @@ impl Renderer {
     (width, height)
   }
 
-  pub(crate) fn update_view(
+  /// Update the view after the containing window or contained logical
+  /// dimensions have changed.
+  pub fn update_view(
     &mut self,
     phys_w: NonZeroU32,
     phys_h: NonZeroU32,
@@ -658,10 +666,12 @@ impl Renderer {
     }
   }
 
+  /// Activate the renderer with the given [`Window`] in preparation for
+  /// rendering to take place.
   // This method requires an exclusive `Window` reference do ensure that
   // while a renderer is active the window can't swap buffers, for
   // example.
-  pub(crate) fn on_pre_render<'win>(&'win self, window: &'win mut Window) -> ActiveRenderer<'win> {
+  pub fn on_pre_render<'win>(&'win self, window: &'win mut Window) -> ActiveRenderer<'win> {
     let _ = window;
     let () = self.push_states();
     let () = self.push_matrizes();
