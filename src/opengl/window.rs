@@ -24,6 +24,10 @@ use glutin::surface::WindowSurface;
 
 use raw_window_handle::HasRawDisplayHandle as _;
 use raw_window_handle::HasRawWindowHandle as _;
+use raw_window_handle::RawDisplayHandle;
+use raw_window_handle::RawWindowHandle;
+use raw_window_handle::XlibDisplayHandle;
+use raw_window_handle::XlibWindowHandle;
 
 use winit::event_loop::EventLoop;
 use winit::platform::x11::register_xlib_error_hook;
@@ -69,8 +73,31 @@ pub struct Window {
 impl Window {
   /// Create a new window using the provided `EventLoop`.
   pub(crate) fn new(event_loop: &EventLoop<()>) -> Result<Self> {
+    Self::new_int(event_loop, None, None)
+  }
+
+  /// Create a new window using the provided `EventLoop` as well as Xlib
+  /// display and window information.
+  pub fn from_xlib_data(
+    event_loop: &EventLoop<()>,
+    display_handle: XlibDisplayHandle,
+    window_handle: XlibWindowHandle,
+  ) -> Result<Self> {
+    Self::new_int(event_loop, Some(display_handle), Some(window_handle))
+  }
+
+  /// Create a new window using the provided `EventLoop` and optional
+  /// "raw" Xlib information, if available.
+  fn new_int(
+    event_loop: &EventLoop<()>,
+    display_handle: Option<XlibDisplayHandle>,
+    window_handle: Option<XlibWindowHandle>,
+  ) -> Result<Self> {
     let preference = DisplayApiPreference::Glx(Box::new(register_xlib_error_hook));
-    let display = unsafe { Display::new(event_loop.raw_display_handle(), preference) }
+    let display_handle = display_handle
+      .map(RawDisplayHandle::Xlib)
+      .unwrap_or_else(|| event_loop.raw_display_handle());
+    let display = unsafe { Display::new(display_handle, preference) }
       .context("failed to create display object")?;
     let template = ConfigTemplateBuilder::new()
       .with_alpha_size(8)
@@ -82,9 +109,12 @@ impl Window {
       .next()
       .context("failed to find any OpenGL configuration")?;
 
+    let visual = window_handle
+      .map(|handle| handle.visual_id)
+      .or_else(|| config.x11_visual().map(|visual| visual.visual_id()));
     let window = WindowBuilder::new().with_transparent(false);
-    let window = if let Some(x11_visual) = config.x11_visual() {
-      window.with_x11_visual(x11_visual.visual_id() as _)
+    let window = if let Some(x11_visual) = visual {
+      window.with_x11_visual(x11_visual as _)
     } else {
       window
     };
@@ -92,7 +122,9 @@ impl Window {
       .build(event_loop)
       .context("failed to build window object")?;
 
-    let raw_window_handle = window.raw_window_handle();
+    let raw_window_handle = window_handle
+      .map(RawWindowHandle::Xlib)
+      .unwrap_or_else(|| window.raw_window_handle());
     let context_attributes = ContextAttributesBuilder::new()
       .with_context_api(ContextApi::OpenGl(Some(Version::new(1, 3))))
       .build(Some(raw_window_handle));
