@@ -130,17 +130,8 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
   }
 }
 
-/// Handler for the "render" callback.
-#[no_mangle]
-extern "C" fn render_tetromino(mode_info: *const xlock::ModeInfo) {
-  // SAFETY: The hook is always called with a valid `ModeInfo` object.
-  let mode_info = unsafe { &*mode_info };
-  // SAFETY: The hook is always called with a valid `lockstruct` object.
-  let lock_struct = unsafe { &mut *mode_info.lockstruct };
-  // SAFETY The "render" callback is only ever invoked after "init", so
-  //         we are sure we have a `State` object set.
-  let state = unsafe { lock_struct.userdata.cast::<State>().as_mut().unwrap() };
-
+/// "Tick" the game.
+fn tick(state: &mut State) {
   if let Some((window, game, renderer)) = &mut state.data {
     let now = Instant::now();
     let (_change, _wait) = game.tick(now);
@@ -150,6 +141,20 @@ extern "C" fn render_tetromino(mode_info: *const xlock::ModeInfo) {
     let () = drop(renderer);
     let () = window.swap_buffers();
   }
+}
+
+/// Handler for the "render" callback.
+#[no_mangle]
+extern "C" fn render_tetromino(mode_info: *const xlock::ModeInfo) {
+  // SAFETY: The hook is always called with a valid `ModeInfo` object.
+  let mode_info = unsafe { &*mode_info };
+  // SAFETY: The hook is always called with a valid `lockstruct` object.
+  let lock_struct = unsafe { &mut *mode_info.lockstruct };
+  // SAFETY The "render" callback is only ever invoked after "init", so
+  //        we are sure we have a `State` object set.
+  let state = unsafe { lock_struct.userdata.cast::<State>().as_mut().unwrap() };
+
+  tick(state)
 }
 
 /// Handler for the "change" callback.
