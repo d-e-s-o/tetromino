@@ -2,6 +2,7 @@
 members = [
   ".",
   "xlock/bindings",
+  "xlock/mode",
 ]
 
 [package]

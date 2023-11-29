@@ -1,5 +1,6 @@
 Unreleased
 ----------
+- Added `xlock` screen lock "mode"
 - Made initial AI state configurable via configuration
 - Updated `glutin` dependency to `0.31.0`
 - Updated `winit` dependency to `0.29.2`

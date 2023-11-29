@@ -36,4 +36,13 @@ Please refer to the help text (`tetromino --help`) for details on what
 can be configured and how.
 
 
+Screen Lock
+-----------
+
+**tetromino** comes with an `xlock(1)` mode that runs the game with the
+auto-playing AI enabled while the screen is locked. Please refer to the
+[**tetromino-xlock-mode** crate][tetromino-xlock-mode] for details.
+
+
 [tetris]: https://github.com/d-e-s-o/tetris
+[tetromino-xlock-mode]: xlock/mode

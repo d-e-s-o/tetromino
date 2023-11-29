@@ -1,0 +1,15 @@
+[package]
+name = "tetromino-xlock-mode"
+version = "0.0.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+xlock = {package = "tetromino-xlock-bindings", path = "../bindings"}
+tetromino = {path = "../.."}
+raw-window-handle = {version = "0.5.2", default-features = false}
+winit = {version = "0.29.2", default-features = false, features = ["x11"]}
