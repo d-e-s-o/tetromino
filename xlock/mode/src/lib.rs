@@ -17,6 +17,7 @@ use winit::event_loop::EventLoop;
 use winit::event_loop::EventLoopBuilder;
 use winit::platform::x11::EventLoopBuilderExtX11 as _;
 
+use tetromino_impl::Change;
 use tetromino_impl::Game;
 use tetromino_impl::GameConfig;
 use tetromino_impl::Renderer;
@@ -36,7 +37,7 @@ static tetromino_description: xlock::ModStruct = xlock::ModStruct {
   init_name: b"init_tetromino\0" as *const _ as *const c_char,
   callback_name: b"render_tetromino\0" as *const _ as *const c_char,
   release_name: b"release_tetromino\0" as *const _ as *const c_char,
-  refresh_name: b"render_tetromino\0" as *const _ as *const c_char,
+  refresh_name: b"refresh_tetromino\0" as *const _ as *const c_char,
   change_name: b"change_tetromino\0" as *const _ as *const c_char,
   unused_name: ptr::null(),
   msopt: &TETROMINO_OPTS as *const _ as *mut _,
@@ -131,15 +132,17 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
 }
 
 /// "Tick" the game.
-fn tick(state: &mut State) {
+fn tick(state: &mut State, force_render: bool) {
   if let Some((window, game, renderer)) = &mut state.data {
     let now = Instant::now();
-    let (_change, _wait) = game.tick(now);
+    let (change, _wait) = game.tick(now);
 
-    let renderer = renderer.on_pre_render(window);
-    let () = game.render(&renderer);
-    let () = drop(renderer);
-    let () = window.swap_buffers();
+    if change == Change::Changed || force_render {
+      let renderer = renderer.on_pre_render(window);
+      let () = game.render(&renderer);
+      let () = drop(renderer);
+      let () = window.swap_buffers();
+    }
   }
 }
 
@@ -154,7 +157,23 @@ extern "C" fn render_tetromino(mode_info: *const xlock::ModeInfo) {
   //        we are sure we have a `State` object set.
   let state = unsafe { lock_struct.userdata.cast::<State>().as_mut().unwrap() };
 
-  tick(state)
+  let force_render = false;
+  tick(state, force_render)
+}
+
+/// Handler for the "refresh" callback.
+#[no_mangle]
+extern "C" fn refresh_tetromino(mode_info: *const xlock::ModeInfo) {
+  // SAFETY: The hook is always called with a valid `ModeInfo` object.
+  let mode_info = unsafe { &*mode_info };
+  // SAFETY: The hook is always called with a valid `lockstruct` object.
+  let lock_struct = unsafe { &mut *mode_info.lockstruct };
+  // SAFETY The "refresh" callback is only ever invoked after "init", so
+  //        we are sure we have a `State` object set.
+  let state = unsafe { lock_struct.userdata.cast::<State>().as_mut().unwrap() };
+
+  let force_render = true;
+  tick(state, force_render)
 }
 
 /// Handler for the "change" callback.
