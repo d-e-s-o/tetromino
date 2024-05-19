@@ -28,7 +28,6 @@ jobs:
       matrix:
         rust: [stable]
         profile: [dev, release]
-        args: ['']
         include:
         - rust: stable
           profile: dev
