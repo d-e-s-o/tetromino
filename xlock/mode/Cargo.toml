@@ -20,4 +20,4 @@ crate-type = ["cdylib"]
 xlock = {version = "0.1", package = "tetromino-xlock-bindings", path = "../bindings"}
 tetromino = {version = "0.1", path = "../.."}
 raw-window-handle = {version = "0.5.2", default-features = false}
-winit = {version = "0.29.2", default-features = false, features = ["x11"]}
+winit = {version = "0.30.4", default-features = false, features = ["x11"]}
