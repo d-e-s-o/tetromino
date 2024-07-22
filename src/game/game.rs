@@ -66,7 +66,7 @@ impl Game {
   /// Instantiate a new game of Tetris with the given configuration.
   pub fn with_config(config: &Config) -> Result<Self> {
     let reader = Cursor::new(data::TETRIS_FIELD_PIECE_TEXTURE);
-    let piece = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
+    let piece = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::with_image(piece)?;
 
     let factory = Rc::new(StoneFactory::with_default_stones(piece.clone()));
@@ -85,7 +85,7 @@ impl Game {
     ));
 
     let reader = Cursor::new(data::TETRIS_FIELD_BACK_TEXTURE);
-    let field_back = image::io::Reader::with_format(reader, image::ImageFormat::Png).decode()?;
+    let field_back = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
     let field_back = Texture::with_image(field_back)?;
     let field = Field::new(
       field_location,
