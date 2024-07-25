@@ -1,6 +1,8 @@
 tetromino-xlock-mode
 ====================
 
+- [Changelog](CHANGELOG.md)
+
 **tetromino-xlock-mode** is an `xlock(1)` mode running **tetromino**
 (with auto-playing AI enabled) when the screen is locked.
 

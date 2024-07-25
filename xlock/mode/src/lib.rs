@@ -13,15 +13,11 @@ use std::time::Instant;
 use raw_window_handle::XlibDisplayHandle;
 use raw_window_handle::XlibWindowHandle;
 
-use winit::event_loop::EventLoop;
-use winit::event_loop::EventLoopBuilder;
-use winit::platform::x11::EventLoopBuilderExtX11 as _;
-
 use tetromino_impl::Change;
+use tetromino_impl::Context;
 use tetromino_impl::Game;
 use tetromino_impl::GameConfig;
 use tetromino_impl::Renderer;
-use tetromino_impl::Window;
 
 
 // SAFETY: `ModeSpecOpt` is just a C-style POD with all bit patterns
@@ -59,10 +55,8 @@ static tetromino_description: xlock::ModStruct = xlock::ModStruct {
 
 /// Our "mode's" main state object.
 struct State {
-  /// The event loop we use.
-  event_loop: EventLoop<()>,
   /// Relevant Tetromino related data.
-  data: Option<(Window, Game, Renderer)>,
+  data: Option<(Context, Game, Renderer)>,
 }
 
 
@@ -75,15 +69,7 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
   let lock_struct = unsafe { &mut *mode_info.lockstruct };
 
   if lock_struct.userdata.is_null() {
-    let event_loop = EventLoopBuilder::new()
-      .with_any_thread(true)
-      .build()
-      .unwrap();
-
-    let state = State {
-      event_loop,
-      data: None,
-    };
+    let state = State { data: None };
     lock_struct.userdata = Box::into_raw(Box::new(state)).cast();
   }
 
@@ -92,9 +78,9 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     // SAFETY: We are sure that `userdata` points to a valid `State` at
     //         this point.
     let state = unsafe { lock_struct.userdata.cast::<State>().as_mut().unwrap() };
-    // At this point the Tetromino `Window` type doesn't support
-    // creation of multiple instances at the same time. Make sure to
-    // drop any previous data before we start over.
+    // At this point the Tetromino logic doesn't support creation of
+    // multiple instances at the same time. Make sure to drop any
+    // previous data before we start over.
     state.data = None;
 
     // TODO: We certainly should not re-create the game when one is
@@ -107,15 +93,15 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     display.display = unsafe { transmute(mode_info.windowinfo.display) };
     display.screen = mode_info.windowinfo.screen;
 
-    let mut window = XlibWindowHandle::empty();
-    window.window = mode_info.windowinfo.window;
-    window.visual_id = unsafe { (*(*mode_info.screeninfo).visual).visualid };
+    let mut window_handle = XlibWindowHandle::empty();
+    window_handle.window = mode_info.windowinfo.window;
+    window_handle.visual_id = unsafe { (*(*mode_info.screeninfo).visual).visualid };
 
     let phys_w = NonZeroU32::new(u32::try_from(mode_info.windowinfo.width).unwrap_or_default())
       .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
     let phys_h = NonZeroU32::new(u32::try_from(mode_info.windowinfo.height).unwrap_or_default())
       .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
-    let window = Window::from_xlib_data(&state.event_loop, display, window as _).unwrap();
+    let context = Context::from_xlib_data(display, window_handle as _, phys_w, phys_h).unwrap();
 
     let mut config = GameConfig::default();
     config.start_level = 200;
@@ -124,7 +110,7 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     let game = Game::with_config(&config).unwrap();
     let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
 
-    state.data = Some((window, game, renderer));
+    state.data = Some((context, game, renderer));
   } else {
     // TODO: We probably still want to be sure to clear the window on
     //       all other screens.
@@ -133,12 +119,11 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
 
 /// "Tick" the game.
 fn tick(state: &mut State, force_render: bool) {
-  if let Some((window, game, renderer)) = &mut state.data {
+  if let Some((context, game, renderer)) = &mut state.data {
     let now = Instant::now();
     let (change, _wait) = game.tick(now);
 
     if change == Change::Changed || force_render {
-      let context = window.context_mut();
       let renderer = renderer.on_pre_render(context);
       let () = game.render(&renderer);
       let () = drop(renderer);
