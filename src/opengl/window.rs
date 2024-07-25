@@ -32,9 +32,8 @@ use raw_window_handle::XlibWindowHandle;
 
 use winit::event_loop::EventLoop;
 use winit::platform::x11::register_xlib_error_hook;
-use winit::platform::x11::WindowBuilderExtX11 as _;
+use winit::platform::x11::WindowAttributesExtX11 as _;
 use winit::window::Window as WinitWindow;
-use winit::window::WindowBuilder;
 
 
 fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
@@ -185,14 +184,14 @@ impl Window {
     let (display, config) = Context::create_display_and_config(raw_display_handle)?;
 
     let visual = config.x11_visual().map(|visual| visual.visual_id());
-    let window = WindowBuilder::new().with_transparent(false);
-    let window = if let Some(x11_visual) = visual {
-      window.with_x11_visual(x11_visual as _)
+    let attributes = WinitWindow::default_attributes().with_transparent(false);
+    let attributes = if let Some(x11_visual) = visual {
+      attributes.with_x11_visual(x11_visual as _)
     } else {
-      window
+      attributes
     };
-    let window = window
-      .build(event_loop)
+    let window = event_loop
+      .create_window(attributes)
       .context("failed to build window object")?;
     let context = Context::new(&display, &config, &window)?;
     let slf = Self { window, context };

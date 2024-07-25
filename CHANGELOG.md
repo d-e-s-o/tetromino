@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Updated `winit` dependency to `0.30`
+
+
 0.1.3
 -----
 - Added `xlock` screen lock "mode"
