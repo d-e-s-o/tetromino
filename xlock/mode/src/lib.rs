@@ -90,7 +90,7 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     //       recreate it, conceptually. If we do, we may need to
     //       serialize the game and restore it to keep the state.
     let mut display = XlibDisplayHandle::empty();
-    display.display = unsafe { transmute(mode_info.windowinfo.display) };
+    display.display = mode_info.windowinfo.display.cast();
     display.screen = mode_info.windowinfo.screen;
 
     let mut window_handle = XlibWindowHandle::empty();
