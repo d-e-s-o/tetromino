@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::num::NonZeroU32;
@@ -6,6 +6,7 @@ use std::num::NonZeroU32;
 use anyhow::Context as _;
 use anyhow::Result;
 
+use glutin::config::Config;
 use glutin::config::ConfigTemplateBuilder;
 use glutin::context::ContextApi;
 use glutin::context::ContextAttributesBuilder;
@@ -25,7 +26,6 @@ use glutin::surface::WindowSurface;
 use raw_window_handle::HasRawDisplayHandle as _;
 use raw_window_handle::HasRawWindowHandle as _;
 use raw_window_handle::RawDisplayHandle;
-use raw_window_handle::RawWindowHandle;
 use raw_window_handle::XlibDisplayHandle;
 use raw_window_handle::XlibWindowHandle;
 
@@ -45,15 +45,15 @@ fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
   (phys_w, phys_h)
 }
 
-/// The Tetris window.
+
+/// An OpenGL context.
 ///
-/// # Notes
-/// Please note that currently the creation of multiple windows (at the
-/// same time) is not a supported workflow.
+/// A context encapsulates the OpenGL specific setup and state on a
+/// window. Hence, conceptually a context is associated with a window,
+/// but that does not have to be a `winit` created one (and can also
+/// include one not managed at the Rust level at all).
 #[derive(Debug)]
-pub struct Window {
-  /// The underlying `winit` window.
-  window: WinitWindow,
+pub struct Context {
   /// The OpenGL surface that is used for rendering.
   surface: Surface<WindowSurface>,
   /// The OpenGL context used for double buffering.
@@ -68,6 +68,89 @@ pub struct Window {
   //       creation and similar would need to be somehow tied to the
   //       window with an active context.
   context: PossiblyCurrentContext,
+}
+
+impl Context {
+  /// Create proper [`Display`] object and an associated [`Config`] from
+  /// a system display handle.
+  fn create_display_and_config(display_handle: RawDisplayHandle) -> Result<(Display, Config)> {
+    let preference = DisplayApiPreference::Glx(Box::new(register_xlib_error_hook));
+    let display = unsafe { Display::new(display_handle, preference) }
+      .context("failed to create display object")?;
+    let template = ConfigTemplateBuilder::new()
+      .with_alpha_size(8)
+      .with_transparency(false)
+      .build();
+    let display_clone = display.clone();
+    let mut configs = unsafe { display_clone.find_configs(template) }
+      .context("failed to find OpenGL configurations")?;
+    let config = configs
+      .next()
+      .context("failed to find any OpenGL configuration")?;
+
+    Ok((display, config))
+  }
+
+  /// Create a new OpenGL context on the given window.
+  pub fn new(display: &Display, config: &Config, window: &WinitWindow) -> Result<Self> {
+    let raw_window_handle = window.raw_window_handle();
+    let (phys_w, phys_h) = window_size(window);
+
+    let context_attributes = ContextAttributesBuilder::new()
+      .with_context_api(ContextApi::OpenGl(Some(Version::new(1, 3))))
+      .build(Some(raw_window_handle));
+    let attrs =
+      SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
+    let surface = unsafe { display.create_window_surface(config, &attrs) }
+      .context("failed to create window surface")?;
+    let context = unsafe { display.create_context(config, &context_attributes) }
+      .context("failed to create context")?
+      .make_current(&surface)
+      .context("failed to make context current")?;
+
+    // Disable vsync. We are using demand-driven rendering and vsync
+    // would cause artificial delays by synchronizing buffer swaps to
+    // some video frame.
+    let () = surface
+      .set_swap_interval(&context, SwapInterval::DontWait)
+      .context("failed to disable vsync")?;
+
+    let slf = Self { surface, context };
+    Ok(slf)
+  }
+
+  /// Inform the surface that the window has been resized.
+  #[inline]
+  pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
+    let () = self.surface.resize(&self.context, phys_w, phys_h);
+  }
+
+  /// Swap the rendering buffers to activate the one that any rendering
+  /// operations occurred on.
+  // This method has an exclusive receiver to prevent invocation while a
+  // renderer is active, because an active renderer already has an
+  // exclusive reference to the window.
+  #[inline]
+  pub fn swap_buffers(&mut self) {
+    let () = self
+      .surface
+      .swap_buffers(&self.context)
+      .expect("failed to swap OpenGL buffers");
+  }
+}
+
+
+/// The Tetris window.
+///
+/// # Notes
+/// Please note that currently the creation of multiple windows (at the
+/// same time) is not a supported workflow.
+#[derive(Debug)]
+pub struct Window {
+  /// The underlying `winit` window.
+  window: WinitWindow,
+  /// The OpenGL context associated with the window.
+  context: Context,
 }
 
 impl Window {
@@ -93,21 +176,10 @@ impl Window {
     display_handle: Option<XlibDisplayHandle>,
     window_handle: Option<XlibWindowHandle>,
   ) -> Result<Self> {
-    let preference = DisplayApiPreference::Glx(Box::new(register_xlib_error_hook));
     let display_handle = display_handle
       .map(RawDisplayHandle::Xlib)
       .unwrap_or_else(|| event_loop.raw_display_handle());
-    let display = unsafe { Display::new(display_handle, preference) }
-      .context("failed to create display object")?;
-    let template = ConfigTemplateBuilder::new()
-      .with_alpha_size(8)
-      .with_transparency(false)
-      .build();
-    let mut configs =
-      unsafe { display.find_configs(template) }.context("failed to find OpenGL configurations")?;
-    let config = configs
-      .next()
-      .context("failed to find any OpenGL configuration")?;
+    let (display, config) = Context::create_display_and_config(display_handle)?;
 
     let visual = window_handle
       .map(|handle| handle.visual_id)
@@ -121,35 +193,9 @@ impl Window {
     let window = window
       .build(event_loop)
       .context("failed to build window object")?;
+    let context = Context::new(&display, &config, &window)?;
+    let slf = Self { window, context };
 
-    let raw_window_handle = window_handle
-      .map(RawWindowHandle::Xlib)
-      .unwrap_or_else(|| window.raw_window_handle());
-    let context_attributes = ContextAttributesBuilder::new()
-      .with_context_api(ContextApi::OpenGl(Some(Version::new(1, 3))))
-      .build(Some(raw_window_handle));
-    let (phys_w, phys_h) = window_size(&window);
-    let attrs =
-      SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
-    let surface = unsafe { display.create_window_surface(&config, &attrs) }
-      .context("failed to create window surface")?;
-    let context = unsafe { display.create_context(&config, &context_attributes) }
-      .context("failed to create context")?
-      .make_current(&surface)
-      .context("failed to make context current")?;
-
-    // Disable vsync. We are using demand-driven rendering and vsync
-    // would cause artificial delays by synchronizing buffer swaps to
-    // some video frame.
-    let () = surface
-      .set_swap_interval(&context, SwapInterval::DontWait)
-      .context("failed to disable vsync")?;
-
-    let slf = Self {
-      window,
-      surface,
-      context,
-    };
     Ok(slf)
   }
 
@@ -162,7 +208,7 @@ impl Window {
   /// Inform the window that it has been resized.
   #[inline]
   pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
-    let () = self.surface.resize(&self.context, phys_w, phys_h);
+    let () = self.context.on_resize(phys_w, phys_h);
   }
 
   /// Swap the rendering buffers to activate the one that any rendering
@@ -172,10 +218,7 @@ impl Window {
   // exclusive reference to the window.
   #[inline]
   pub fn swap_buffers(&mut self) {
-    let () = self
-      .surface
-      .swap_buffers(&self.context)
-      .expect("failed to swap OpenGL buffers");
+    let () = self.context.swap_buffers();
   }
 
   /// Request a redraw of the window's contents.
