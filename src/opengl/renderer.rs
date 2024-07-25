@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::Cell;
@@ -15,8 +15,8 @@ use crate::Point;
 use crate::Rect;
 
 use super::gl;
+use super::Context;
 use super::Texture;
-use super::Window;
 
 
 /// The capacity of our vertex buffer.
@@ -671,8 +671,8 @@ impl Renderer {
   // This method requires an exclusive `Window` reference do ensure that
   // while a renderer is active the window can't swap buffers, for
   // example.
-  pub fn on_pre_render<'win>(&'win self, window: &'win mut Window) -> ActiveRenderer<'win> {
-    let _ = window;
+  pub fn on_pre_render<'ctx>(&'ctx self, context: &'ctx mut Context) -> ActiveRenderer<'ctx> {
+    let _ = context;
     let () = self.push_states();
     let () = self.push_matrizes();
 

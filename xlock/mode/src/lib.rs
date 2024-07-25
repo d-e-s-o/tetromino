@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #![allow(clippy::let_unit_value)]
@@ -138,10 +138,11 @@ fn tick(state: &mut State, force_render: bool) {
     let (change, _wait) = game.tick(now);
 
     if change == Change::Changed || force_render {
-      let renderer = renderer.on_pre_render(window);
+      let context = window.context_mut();
+      let renderer = renderer.on_pre_render(context);
       let () = game.render(&renderer);
       let () = drop(renderer);
-      let () = window.swap_buffers();
+      let () = context.swap_buffers();
     }
   }
 }

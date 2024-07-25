@@ -66,6 +66,7 @@ use crate::rect::Rect;
 pub use crate::config::Config;
 pub use crate::game::Config as GameConfig;
 pub use crate::game::Game;
+pub use crate::opengl::Context;
 pub use crate::opengl::Renderer;
 pub use crate::opengl::Window;
 
@@ -202,10 +203,11 @@ pub fn run() -> Result<()> {
           return
         },
         WindowEvent::RedrawRequested => {
-          let renderer = renderer.on_pre_render(&mut window);
+          let context = window.context_mut();
+          let renderer = renderer.on_pre_render(context);
           let () = game.render(&renderer);
           let () = drop(renderer);
-          let () = window.swap_buffers();
+          let () = context.swap_buffers();
           Change::Unchanged
         },
         WindowEvent::Resized(phys_size) => {
@@ -330,10 +332,11 @@ mod tests {
     let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
 
     let () = b.iter(|| {
-      let renderer = renderer.on_pre_render(&mut window);
+      let context = window.context_mut();
+      let renderer = renderer.on_pre_render(context);
       let () = game.render(&renderer);
       let () = drop(renderer);
-      let () = window.swap_buffers();
+      let () = context.swap_buffers();
     });
   }
 }

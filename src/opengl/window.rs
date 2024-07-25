@@ -199,6 +199,12 @@ impl Window {
     Ok(slf)
   }
 
+  /// Retrieve the window's OpenGL context.
+  #[inline]
+  pub fn context_mut(&mut self) -> &mut Context {
+    &mut self.context
+  }
+
   /// Retrieve the window's inner size (i.e., the size of the drawable
   /// area).
   pub fn size(&self) -> (NonZeroU32, NonZeroU32) {
@@ -209,16 +215,6 @@ impl Window {
   #[inline]
   pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
     let () = self.context.on_resize(phys_w, phys_h);
-  }
-
-  /// Swap the rendering buffers to activate the one that any rendering
-  /// operations occurred on.
-  // This method has an exclusive receiver to prevent invocation while a
-  // renderer is active, because an active renderer already has an
-  // exclusive reference to the window.
-  #[inline]
-  pub fn swap_buffers(&mut self) {
-    let () = self.context.swap_buffers();
   }
 
   /// Request a redraw of the window's contents.

@@ -15,6 +15,7 @@ pub(crate) use renderer::Color;
 pub(crate) use texture::Texture;
 
 pub use renderer::Renderer;
+pub use window::Context;
 pub use window::Window;
 
 
