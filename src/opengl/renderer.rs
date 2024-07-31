@@ -666,10 +666,10 @@ impl Renderer {
     }
   }
 
-  /// Activate the renderer with the given [`Window`] in preparation for
-  /// rendering to take place.
-  // This method requires an exclusive `Window` reference do ensure that
-  // while a renderer is active the window can't swap buffers, for
+  /// Activate the renderer with the given [`Context`] in preparation
+  /// for rendering to take place.
+  // This method requires an exclusive `Context` reference do ensure
+  // that while a renderer is active the context can't swap buffers, for
   // example.
   pub fn on_pre_render<'ctx>(&'ctx self, context: &'ctx mut Context) -> ActiveRenderer<'ctx> {
     let _ = context;
