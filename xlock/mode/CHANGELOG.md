@@ -1,5 +1,6 @@
-Unreleased
-----------
+0.1.1
+-----
+- Updated `tetromino` dependency to `0.2`
 - Removed `winit` dependency
 
 
