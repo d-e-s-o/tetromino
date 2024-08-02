@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.2.0
+-----
 - Updated `winit` dependency to `0.30`
 
 
