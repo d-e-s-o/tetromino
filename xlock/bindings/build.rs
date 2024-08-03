@@ -14,6 +14,9 @@ const XLOCK_SRC_ARCHIVE_URL: &str = "XLOCK_SRC_ARCHIVE_URL";
 #[cfg(feature = "generate-xlock-bindings")]
 const XLOCK_SRC_ROOT: &str = "XLOCK_SRC_ROOT";
 const XLOCK_VERSION: &str = "XLOCK_VERSION";
+/// The default version of `xlock` to download.
+// Please adjust README when modifying this value.
+const XLOCK_DEFAULT_VERSION: &str = "5.77";
 
 
 /// Unpack an xz compressed file.
@@ -104,7 +107,7 @@ fn download_xlock_source(xlock_src: &Path) {
 
     let version = env::var_os(XLOCK_VERSION)
       .map(Cow::from)
-      .unwrap_or_else(|| Cow::Borrowed(OsStr::new("5.77")));
+      .unwrap_or_else(|| Cow::Borrowed(OsStr::new(XLOCK_DEFAULT_VERSION)));
     let version = version
       .to_str()
       .unwrap_or_else(|| panic!("{XLOCK_VERSION} variable does not contain valid Unicode"));

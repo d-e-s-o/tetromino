@@ -22,7 +22,7 @@ bindings as follows:
 - a build with the `download-xlock-source` feature enabled will download
   the `xlock` source code into `xlock-src/`
   - the `XLOCK_VERSION` environment variable is honored, specifying the
-    version to download (defaults to `5.73`)
+    version to download (defaults to `5.77`)
   - alternatively, the `XLOCK_SRC_ARCHIVE_URL` environment variable can
     be used to specify a URL of a `tar.xz` that will be downloaded and
     extracted into `xlock-src/`
