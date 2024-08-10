@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::replace;
@@ -257,6 +257,25 @@ impl Field {
 
   pub(super) fn rotate_stone_right(&mut self) -> Change {
     self.rotate_stone(false)
+  }
+
+  /// "Event handler" for informing the field that the overall game has
+  /// been paused.
+  pub(super) fn on_pause(&mut self) {
+    match &mut self.state {
+      State::Clearing {
+        next_stone,
+        y_range,
+        ..
+      } => {
+        let _removed = self.pieces.remove_complete_lines(y_range.clone());
+        self.state = State::Moving {
+          stone: next_stone.take(),
+        };
+      },
+      State::Colliding { .. } => panic!("attempted to pause from collision state"),
+      State::Moving { .. } => (),
+    }
   }
 
   /// Render the walls of the field.

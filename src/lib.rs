@@ -166,7 +166,7 @@ struct State {
   game: Game,
   renderer: Renderer,
   keys: Keys,
-  was_paused: Option<bool>,
+  was_paused: bool,
 }
 
 
@@ -236,14 +236,14 @@ impl ApplicationHandler for App {
       let change = match event {
         WindowEvent::Focused(focused) => {
           if focused {
-            if let Some(false) = was_paused {
+            if !*was_paused {
               // The game was not paused when we lost focus. That means
               // we ended up pausing it. Unpause it again.
               let () = game.pause(false);
             }
           } else {
             *was_paused = game.is_paused();
-            if let Some(false) = was_paused {
+            if !*was_paused {
               // The game is currently running but we are about to loose
               // focus. Pause it, as the user will no longer have a
               // chance to control it and it's not great to have it
@@ -347,9 +347,7 @@ impl ApplicationHandler for App {
           Change::Unchanged
         },
         Key::F3 => {
-          if let Some(paused) = game.is_paused() {
-            let () = game.pause(!paused);
-          }
+          let () = game.pause(!game.is_paused());
           *repeat = KeyRepeat::Disabled;
           Change::Unchanged
         },

@@ -209,6 +209,10 @@ impl Game {
     match self.field.state() {
       State::Moving { .. } => (),
       State::Clearing { until, .. } => {
+        // The game must not be paused while we are clearing. Pausing
+        // should always transition the field to "moving" state.
+        debug_assert!(self.next_tick.is_some());
+
         if now > *until {
           self.next_tick = Some(Self::next_tick(*until, self.score.level()));
           let () = self.field.clear_complete_lines();
@@ -289,10 +293,17 @@ impl Game {
   /// Pause or unpause the game.
   #[inline]
   pub(crate) fn pause(&mut self, pause: bool) {
-    if pause {
-      let _next_tick = self.next_tick.take();
-    } else {
-      if !matches!(self.field.state(), State::Colliding { .. }) {
+    if !matches!(self.field.state(), State::Colliding { .. }) {
+      if pause {
+        // Note that strictly speaking the field could change state here
+        // (if it was "clearing") and, conceptually, we should cause a
+        // redraw (i.e., by returning `Change::Changed`. Practically,
+        // though, we do *not* want to do that, because doing so could
+        // eagerly remove cleared lines and it just makes more sense to
+        // leave them there for the duration of the pause.
+        let () = self.field.on_pause();
+        let _next_tick = self.next_tick.take();
+      } else {
         let _next_tick = self
           .next_tick
           .replace(Self::next_tick(Instant::now(), self.score.level()));
@@ -302,12 +313,8 @@ impl Game {
 
   /// Inquire whether the game is currently paused.
   #[inline]
-  pub(crate) fn is_paused(&self) -> Option<bool> {
-    if matches!(self.field.state(), State::Colliding { .. }) {
-      None
-    } else {
-      Some(self.next_tick.is_none())
-    }
+  pub(crate) fn is_paused(&self) -> bool {
+    self.next_tick.is_none()
   }
 
   /// Enable or disable auto-playing of the game.
