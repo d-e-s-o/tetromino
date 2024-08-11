@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.2.1
+-----
 - Allow for game pausing even while clearing lines
 
 
