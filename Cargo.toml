@@ -23,9 +23,9 @@ categories = [
 keywords = [
   "2d",
   "game",
-  "graphics",
   "linux",
   "opengl",
+  "tetris",
 ]
 description = """
 A graphical Tetris clone.
