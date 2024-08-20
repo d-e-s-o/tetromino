@@ -7,6 +7,19 @@ license = "GPL-3.0-or-later"
 homepage = "https://github.com/d-e-s-o/tetromino"
 repository = "https://github.com/d-e-s-o/tetromino.git"
 readme = "README.md"
+categories = [
+  "api-bindings",
+  "authentication",
+  "development-tools::ffi",
+  "os::unix-apis",
+]
+keywords = [
+  "authentication",
+  "bindings",
+  "screenlock",
+  "x11",
+  "xlock",
+]
 description = """
 Rust bindings for xlock, suitable for writing a custom "mode".
 """
