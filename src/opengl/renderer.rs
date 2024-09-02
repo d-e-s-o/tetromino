@@ -9,6 +9,7 @@ use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 use std::ops::Add;
 use std::ops::DerefMut as _;
+use std::ops::Sub;
 
 use crate::guard::Guard;
 use crate::Point;
@@ -18,6 +19,20 @@ use super::gl;
 use super::Context;
 use super::Texture;
 
+
+const CLEAR_COLOR_LIGHT: Color = Color {
+  r: 0xee,
+  g: 0xee,
+  b: 0xee,
+  a: 0xff,
+};
+
+const CLEAR_COLOR_DARK: Color = Color {
+  r: 0x11,
+  g: 0x11,
+  b: 0x11,
+  a: 0xff,
+};
 
 /// The capacity of our vertex buffer.
 // TODO: We should consider sizing it more dynamically and just making
@@ -46,16 +61,26 @@ struct Vertex {
 }
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(packed)]
 pub(crate) struct Color {
-  r: gl::GLubyte,
-  g: gl::GLubyte,
-  b: gl::GLubyte,
-  a: gl::GLubyte,
+  pub(crate) r: gl::GLubyte,
+  pub(crate) g: gl::GLubyte,
+  pub(crate) b: gl::GLubyte,
+  pub(crate) a: gl::GLubyte,
 }
 
 impl Color {
+  #[inline]
+  fn as_floats(&self) -> (gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat) {
+    (
+      self.r as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
+      self.g as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
+      self.b as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
+      self.a as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
+    )
+  }
+
   /// A `const` version of `Add::add`.
   const fn cadd(self, other: Color) -> Self {
     Self {
@@ -65,6 +90,17 @@ impl Color {
       a: self.a.saturating_add(other.a),
     }
   }
+
+  /// A `const` version of `Sub::sub`.
+  pub const fn csub(self, other: Color) -> Self {
+    Self {
+      r: self.r.saturating_sub(other.r),
+      g: self.g.saturating_sub(other.g),
+      b: self.b.saturating_sub(other.b),
+      a: self.a.saturating_sub(other.a),
+    }
+  }
+
 
   #[inline]
   pub(crate) const fn black() -> Self {
@@ -157,6 +193,14 @@ impl Add<Color> for Color {
 
   fn add(self, other: Color) -> Self::Output {
     self.cadd(other)
+  }
+}
+
+impl Sub<Color> for Color {
+  type Output = Color;
+
+  fn sub(self, other: Color) -> Self::Output {
+    self.csub(other)
   }
 }
 
@@ -494,6 +538,13 @@ impl Drop for ActiveRenderer<'_> {
 }
 
 
+#[derive(Debug)]
+enum ClearColor {
+  Light((gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat)),
+  Dark((gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat)),
+}
+
+
 /// A type enabling the rendering of graphics.
 #[derive(Debug)]
 pub struct Renderer {
@@ -505,6 +556,8 @@ pub struct Renderer {
   logic_w: gl::GLfloat,
   /// The logical height of the view maintained by this renderer.
   logic_h: gl::GLfloat,
+  /// The color to use for clearing the screen with.
+  clear_color: ClearColor,
 }
 
 impl Renderer {
@@ -523,6 +576,7 @@ impl Renderer {
       phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
+      clear_color: ClearColor::Light(CLEAR_COLOR_LIGHT.as_floats()),
     }
   }
 
@@ -675,11 +729,12 @@ impl Renderer {
     let _ = context;
     let () = self.push_states();
     let () = self.push_matrizes();
+    let (r, g, b, a) = match self.clear_color {
+      ClearColor::Light((r, g, b, a)) | ClearColor::Dark((r, g, b, a)) => (r, g, b, a),
+    };
 
     unsafe {
-      // Approximation of 0xeeeeee.
-      // TODO: Make color configurable.
-      gl::ClearColor(0.93, 0.93, 0.93, 1.0);
+      gl::ClearColor(r, g, b, a);
       gl::Clear(gl::COLOR_BUFFER_BIT);
 
       debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
@@ -690,5 +745,32 @@ impl Renderer {
   fn on_post_render(&self) {
     let () = self.pop_matrizes();
     let () = self.pop_states();
+  }
+
+  /// Toggle the color mode (light/dark) in use.
+  pub(crate) fn toggle_color_mode(&mut self) {
+    match self.clear_color {
+      ClearColor::Light(..) => self.clear_color = ClearColor::Dark(CLEAR_COLOR_DARK.as_floats()),
+      ClearColor::Dark(..) => self.clear_color = ClearColor::Light(CLEAR_COLOR_LIGHT.as_floats()),
+    }
+  }
+}
+
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+
+  /// Check that we can convert a `Color` the corresponding floating
+  /// point representation.
+  #[test]
+  fn color_float_conversion() {
+    let (r, g, b, a) = Color::white().as_floats();
+    let e = gl::GLfloat::EPSILON;
+    assert!(1.0 - e <= r && r <= 1.0 + e);
+    assert!(1.0 - e <= g && g <= 1.0 + e);
+    assert!(1.0 - e <= b && b <= 1.0 + e);
+    assert!(1.0 - e <= a && a <= 1.0 + e);
   }
 }

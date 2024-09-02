@@ -312,6 +312,7 @@ impl ApplicationHandler for App {
     if let Some(State {
       ref mut window,
       ref mut game,
+      ref mut renderer,
       ref mut keys,
       ..
     }) = self.state(event_loop)
@@ -350,6 +351,12 @@ impl ApplicationHandler for App {
           let () = game.pause(!game.is_paused());
           *repeat = KeyRepeat::Disabled;
           Change::Unchanged
+        },
+        Key::F4 => {
+          let () = renderer.toggle_color_mode();
+          let () = game.toggle_color_mode();
+          *repeat = KeyRepeat::Disabled;
+          Change::Changed
         },
         #[cfg(debug_assertions)]
         Key::F11 => {

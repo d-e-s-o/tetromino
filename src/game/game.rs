@@ -442,6 +442,11 @@ impl Game {
     let () = self.score.render(renderer);
   }
 
+  /// Toggle the color mode (light/dark) in use.
+  pub(crate) fn toggle_color_mode(&mut self) {
+    self.field.toggle_color_mode()
+  }
+
   #[cfg(debug_assertions)]
   pub(crate) fn dump_state(&self) {
     if let Some((stone, field)) = self.field.to_ai_data() {

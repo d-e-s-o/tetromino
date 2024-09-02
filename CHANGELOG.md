@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Introduced "dark mode" support
+
+
 0.2.1
 -----
 - Allow for game pausing even while clearing lines

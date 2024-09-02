@@ -28,6 +28,7 @@ Usage
 | Backspace | Restart the game                         |
 | F2        | Enable (and disable) auto-playing AI     |
 | F3        | Pause (and resume) the game              |
+| F4        | Toggle dark/light mode                   |
 
 
 Certain aspects of the game can be configured via its configuration
