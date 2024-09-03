@@ -9,6 +9,8 @@ use std::rc::Rc;
 use std::time::Duration;
 use std::time::Instant;
 
+use crate::mode::ColorMode;
+use crate::mode::ColorSet;
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
 use crate::Color;
@@ -28,13 +30,15 @@ use super::Stonelike as _;
 /// The width of each wall.
 const WALL_WIDTH: i16 = 1;
 
-const BACKGROUND_COLOR_LIGHT: Color = Color::white();
-const BACKGROUND_COLOR_DARK: Color = Color::white().csub(Color {
-  r: 85,
-  g: 85,
-  b: 85,
-  a: 0,
-});
+const BACKGROUND_COLOR: ColorSet = ColorSet::new(
+  Color::white(),
+  Color::white().csub(Color {
+    r: 85,
+    g: 85,
+    b: 85,
+    a: 0,
+  }),
+);
 
 
 /// The result of a stone downward movement.
@@ -398,7 +402,7 @@ struct PieceField {
   /// The texture to use for the entire inner back area.
   back: Texture,
   /// The color to use for the background image.
-  back_color: Color,
+  back_color: ColorMode,
   /// The texture to use for pieces.
   piece: Texture,
 }
@@ -408,7 +412,7 @@ impl PieceField {
     Self {
       matrix: Matrix::new(width, height),
       back,
-      back_color: BACKGROUND_COLOR_LIGHT,
+      back_color: ColorMode::Light(BACKGROUND_COLOR.light),
       piece,
     }
   }
@@ -425,7 +429,7 @@ impl PieceField {
     {
       // TODO: Make the color configurable.
       let _guard = renderer.set_texture(&self.back);
-      let _guard = renderer.set_color(self.back_color);
+      let _guard = renderer.set_color(self.back_color.color());
 
       let () = renderer.render_rect(Rect::new(0, 0, self.width(), self.height()));
     }
@@ -475,11 +479,7 @@ impl PieceField {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    if self.back_color == BACKGROUND_COLOR_LIGHT {
-      self.back_color = BACKGROUND_COLOR_DARK
-    } else {
-      self.back_color = BACKGROUND_COLOR_LIGHT
-    }
+    self.back_color.toggle_with(&BACKGROUND_COLOR)
   }
 }
 

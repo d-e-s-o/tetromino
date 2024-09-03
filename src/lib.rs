@@ -23,6 +23,7 @@ mod config;
 mod game;
 mod guard;
 mod keys;
+mod mode;
 mod opengl;
 mod point;
 mod rand;
@@ -59,6 +60,8 @@ use winit::window::WindowId;
 
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
+use crate::mode::ColorMode;
+use crate::mode::ColorSet;
 use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
 use crate::opengl::Font;

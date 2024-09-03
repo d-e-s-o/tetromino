@@ -12,6 +12,8 @@ use std::ops::DerefMut as _;
 use std::ops::Sub;
 
 use crate::guard::Guard;
+use crate::ColorMode;
+use crate::ColorSet;
 use crate::Point;
 use crate::Rect;
 
@@ -20,19 +22,25 @@ use super::Context;
 use super::Texture;
 
 
-const CLEAR_COLOR_LIGHT: Color = Color {
-  r: 0xee,
-  g: 0xee,
-  b: 0xee,
-  a: 0xff,
-};
+const CLEAR_COLOR: ColorSet = ColorSet::new(
+  Color {
+    r: 0xee,
+    g: 0xee,
+    b: 0xee,
+    a: 0xff,
+  },
+  Color {
+    r: 0x11,
+    g: 0x11,
+    b: 0x11,
+    a: 0xff,
+  },
+);
 
-const CLEAR_COLOR_DARK: Color = Color {
-  r: 0x11,
-  g: 0x11,
-  b: 0x11,
-  a: 0xff,
-};
+
+/// A representation of color using four floating point values.
+type Color4f = (gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat);
+
 
 /// The capacity of our vertex buffer.
 // TODO: We should consider sizing it more dynamically and just making
@@ -538,13 +546,6 @@ impl Drop for ActiveRenderer<'_> {
 }
 
 
-#[derive(Debug)]
-enum ClearColor {
-  Light((gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat)),
-  Dark((gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat)),
-}
-
-
 /// A type enabling the rendering of graphics.
 #[derive(Debug)]
 pub struct Renderer {
@@ -557,7 +558,7 @@ pub struct Renderer {
   /// The logical height of the view maintained by this renderer.
   logic_h: gl::GLfloat,
   /// The color to use for clearing the screen with.
-  clear_color: ClearColor,
+  clear_color: ColorMode<Color4f>,
 }
 
 impl Renderer {
@@ -576,7 +577,7 @@ impl Renderer {
       phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
-      clear_color: ClearColor::Light(CLEAR_COLOR_LIGHT.as_floats()),
+      clear_color: ColorMode::Light(CLEAR_COLOR.light.as_floats()),
     }
   }
 
@@ -729,9 +730,7 @@ impl Renderer {
     let _ = context;
     let () = self.push_states();
     let () = self.push_matrizes();
-    let (r, g, b, a) = match self.clear_color {
-      ClearColor::Light((r, g, b, a)) | ClearColor::Dark((r, g, b, a)) => (r, g, b, a),
-    };
+    let (r, g, b, a) = self.clear_color.color();
 
     unsafe {
       gl::ClearColor(r, g, b, a);
@@ -750,8 +749,8 @@ impl Renderer {
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
     match self.clear_color {
-      ClearColor::Light(..) => self.clear_color = ClearColor::Dark(CLEAR_COLOR_DARK.as_floats()),
-      ClearColor::Dark(..) => self.clear_color = ClearColor::Light(CLEAR_COLOR_LIGHT.as_floats()),
+      ColorMode::Light(..) => self.clear_color = ColorMode::Dark(CLEAR_COLOR.dark.as_floats()),
+      ColorMode::Dark(..) => self.clear_color = ColorMode::Light(CLEAR_COLOR.light.as_floats()),
     }
   }
 }
