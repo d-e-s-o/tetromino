@@ -1,11 +1,10 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::iter;
 use std::mem::replace;
-use std::rc::Rc;
 use std::slice;
 
 use crate::ActiveRenderer as Renderer;
@@ -26,7 +25,7 @@ pub(super) struct PreviewStones {
   /// The location of the upper left corner of the preview area.
   location: Point<i16>,
   /// The producer we use for creating new stones.
-  producer: Rc<dyn StoneProducer>,
+  producer: Box<dyn StoneProducer>,
   /// The upcoming stones.
   stones: RefCell<Box<[Stone]>>,
   /// The index of the next stone to yield.
@@ -35,7 +34,7 @@ pub(super) struct PreviewStones {
 
 impl PreviewStones {
   /// Create a new `PreviewStones` object displaying `count` stones.
-  pub(super) fn new(location: Point<i16>, count: u8, producer: Rc<dyn StoneProducer>) -> Self {
+  pub(super) fn new(location: Point<i16>, count: u8, producer: Box<dyn StoneProducer>) -> Self {
     let stones = (0..count)
       .map(|_| producer.create_stone())
       .collect::<Vec<_>>()

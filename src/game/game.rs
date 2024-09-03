@@ -69,7 +69,7 @@ impl Game {
     let piece = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::with_image(piece)?;
 
-    let factory = Rc::new(StoneFactory::with_default_stones(piece.clone()));
+    let factory = Box::new(StoneFactory::with_default_stones(piece.clone()));
 
     let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
     let preview_location = field_location
