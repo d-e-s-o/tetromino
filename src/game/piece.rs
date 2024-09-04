@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::ActiveRenderer as Renderer;
@@ -9,14 +9,27 @@ use crate::Rect;
 
 /// The representation of a single "piece" of a stone.
 #[derive(Clone, Copy, Debug)]
+#[repr(packed)]
 pub(crate) struct Piece {
-  /// The color the piece has.
-  color: Color,
+  /// The index of the color that the piece has.
+  color_idx: u8,
 }
 
 impl Piece {
-  pub(crate) fn new(color: Color) -> Self {
-    Self { color }
+  /// The set of colors we use for pieces.
+  pub(super) const COLORS: &'static [Color] = &[
+    Color::red(),
+    Color::green(),
+    Color::yellow(),
+    Color::violet(),
+    Color::blue(),
+    Color::cyan(),
+    Color::gray(),
+  ];
+
+  pub(crate) fn new(color_idx: u8) -> Self {
+    debug_assert!(usize::from(color_idx) < Self::COLORS.len());
+    Self { color_idx }
   }
 
   /// # Notes
@@ -35,7 +48,8 @@ impl Piece {
     location: Point<i16>,
     overlay: Color,
   ) {
-    let _guard = renderer.set_color(self.color + overlay);
+    let color = Self::COLORS[usize::from(self.color_idx)];
+    let _guard = renderer.set_color(color + overlay);
 
     let () = renderer.render_rect(Rect::new(location.x, location.y, 1, 1));
   }

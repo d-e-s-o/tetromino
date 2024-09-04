@@ -1,32 +1,20 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::max;
 use std::cmp::min;
 use std::ops::Deref;
 
-use crate::Color;
 use crate::Point;
 use crate::Rng;
 use crate::Texture;
 
+use super::Piece;
 use super::Stone;
 use super::StoneProducer;
 
 
 type StoneTemplate = Box<[Point<i8>]>;
-
-
-/// The set of colors we use for stones.
-const COLORS: &[Color] = &[
-  Color::red(),
-  Color::green(),
-  Color::yellow(),
-  Color::violet(),
-  Color::blue(),
-  Color::cyan(),
-  Color::gray(),
-];
 
 
 #[derive(Debug)]
@@ -65,9 +53,9 @@ impl StoneProducer for StoneFactory {
   fn create_stone(&self) -> Stone {
     let index = self.rng.rand_u32() as usize % self.templates.len();
     let template = &self.templates[index];
-    let color = COLORS[index % COLORS.len()];
+    let color_idx = index % Piece::COLORS.len();
 
-    Stone::new(self.piece_texture.clone(), template, color)
+    Stone::new(self.piece_texture.clone(), template, color_idx as u8)
   }
 
   // TODO: Loose copy of logic from `Stone`. Should think about deduplicating.

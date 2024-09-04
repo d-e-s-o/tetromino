@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::iter;
@@ -27,14 +27,14 @@ pub(crate) struct Stone {
 }
 
 impl Stone {
-  pub(crate) fn new(piece_texture: Texture, template: &[Point<i8>], color: Color) -> Self {
+  pub(crate) fn new(piece_texture: Texture, template: &[Point<i8>], color_idx: u8) -> Self {
     assert!(!template.is_empty(), "provided stone template is empty");
 
     Self {
       piece_texture,
       pieces: template
         .iter()
-        .map(|p| (Piece::new(color), p.into_other()))
+        .map(|p| (Piece::new(color_idx), p.into_other()))
         .collect(),
     }
   }
@@ -103,7 +103,7 @@ mod tests {
 
 
   fn new_stone(template: &[Point<i8>]) -> Stone {
-    Stone::new(Texture::invalid(), template, Color::black())
+    Stone::new(Texture::invalid(), template, 0)
   }
 
 
