@@ -11,6 +11,9 @@ use anyhow::Result;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
+use crate::Color;
+use crate::ColorMode;
+use crate::ColorSet;
 use crate::Font;
 use crate::Point;
 use crate::Texture;
@@ -26,6 +29,23 @@ use super::PreviewStones;
 use super::Score;
 use super::Stone;
 use super::StoneFactory;
+
+
+/// The color set used when clearing the screen.
+const SCREEN_CLEAR_COLOR: ColorSet = ColorSet::new(
+  Color {
+    r: 0xee,
+    g: 0xee,
+    b: 0xee,
+    a: 0xff,
+  },
+  Color {
+    r: 0x11,
+    g: 0x11,
+    b: 0x11,
+    a: 0xff,
+  },
+);
 
 /// Space between the left screen side and the field.
 const LEFT_SPACE: i16 = 1;
@@ -48,6 +68,8 @@ const CLEAR_TIME: Duration = Duration::from_millis(200);
 /// A type representing a game of Tetris.
 #[derive(Debug)]
 pub struct Game {
+  /// The color to use for clearing the screen with.
+  screen_clear_color: ColorMode,
   /// The Tetris field.
   field: Field,
   /// The preview stones.
@@ -113,6 +135,7 @@ impl Game {
     };
 
     let slf = Self {
+      screen_clear_color: ColorMode::Light(SCREEN_CLEAR_COLOR.light),
       field,
       preview,
       ai,
@@ -437,6 +460,7 @@ impl Game {
 
   /// Render the game and its components.
   pub fn render(&self, renderer: &Renderer) {
+    let () = renderer.clear_screen(self.screen_clear_color.color());
     let () = self.field.render(renderer);
     let () = self.preview.render(renderer);
     let () = self.score.render(renderer);
@@ -444,6 +468,7 @@ impl Game {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
+    let () = self.screen_clear_color.toggle_with(&SCREEN_CLEAR_COLOR);
     let () = self.field.toggle_color_mode();
     let () = self.preview.toggle_color_mode();
   }

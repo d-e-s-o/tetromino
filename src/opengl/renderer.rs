@@ -12,34 +12,12 @@ use std::ops::DerefMut as _;
 use std::ops::Sub;
 
 use crate::guard::Guard;
-use crate::ColorMode;
-use crate::ColorSet;
 use crate::Point;
 use crate::Rect;
 
 use super::gl;
 use super::Context;
 use super::Texture;
-
-
-const CLEAR_COLOR: ColorSet = ColorSet::new(
-  Color {
-    r: 0xee,
-    g: 0xee,
-    b: 0xee,
-    a: 0xff,
-  },
-  Color {
-    r: 0x11,
-    g: 0x11,
-    b: 0x11,
-    a: 0xff,
-  },
-);
-
-
-/// A representation of color using four floating point values.
-type Color4f = (gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat);
 
 
 /// The capacity of our vertex buffer.
@@ -379,6 +357,16 @@ impl<'renderer> ActiveRenderer<'renderer> {
     self.set_texture(&self.invalid_texture)
   }
 
+  /// Clear the screen using the given color.
+  pub(crate) fn clear_screen(&self, color: Color) {
+    let (r, g, b, a) = color.as_floats();
+
+    unsafe { gl::ClearColor(r, g, b, a) };
+    unsafe { gl::Clear(gl::COLOR_BUFFER_BIT) };
+
+    debug_assert_eq!(unsafe { gl::GetError() }, gl::NO_ERROR);
+  }
+
   /// Render a line.
   pub(crate) fn render_line(&self, mut p1: Point<i16>, mut p2: Point<i16>) {
     const VERTEX_COUNT_LINE: usize = 2;
@@ -557,8 +545,6 @@ pub struct Renderer {
   logic_w: gl::GLfloat,
   /// The logical height of the view maintained by this renderer.
   logic_h: gl::GLfloat,
-  /// The color to use for clearing the screen with.
-  clear_color: ColorMode<Color4f>,
 }
 
 impl Renderer {
@@ -577,7 +563,6 @@ impl Renderer {
       phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
-      clear_color: ColorMode::Light(CLEAR_COLOR.light.as_floats()),
     }
   }
 
@@ -730,28 +715,13 @@ impl Renderer {
     let _ = context;
     let () = self.push_states();
     let () = self.push_matrizes();
-    let (r, g, b, a) = self.clear_color.color();
 
-    unsafe {
-      gl::ClearColor(r, g, b, a);
-      gl::Clear(gl::COLOR_BUFFER_BIT);
-
-      debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-    }
     ActiveRenderer::new(self)
   }
 
   fn on_post_render(&self) {
     let () = self.pop_matrizes();
     let () = self.pop_states();
-  }
-
-  /// Toggle the color mode (light/dark) in use.
-  pub(crate) fn toggle_color_mode(&mut self) {
-    match self.clear_color {
-      ColorMode::Light(..) => self.clear_color = ColorMode::Dark(CLEAR_COLOR.dark.as_floats()),
-      ColorMode::Dark(..) => self.clear_color = ColorMode::Light(CLEAR_COLOR.light.as_floats()),
-    }
   }
 }
 
