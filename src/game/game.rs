@@ -444,7 +444,8 @@ impl Game {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    self.field.toggle_color_mode()
+    let () = self.field.toggle_color_mode();
+    let () = self.preview.toggle_color_mode();
   }
 
   #[cfg(debug_assertions)]

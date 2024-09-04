@@ -40,6 +40,8 @@ const BACKGROUND_COLOR: ColorSet = ColorSet::new(
   }),
 );
 
+const WALL_COLOR: ColorSet = ColorSet::new(Color::orange(), Color::gray());
+
 
 /// The result of a stone downward movement.
 #[derive(Debug)]
@@ -97,6 +99,8 @@ pub(crate) struct Field {
   producer: Rc<dyn StoneProducer>,
   /// The texture to use for one unit of wall.
   wall: Texture,
+  /// The color to use for the walls.
+  wall_color: ColorMode,
 }
 
 impl Field {
@@ -125,6 +129,7 @@ impl Field {
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
+      wall_color: ColorMode::Light(WALL_COLOR.light),
     }
   }
 
@@ -293,7 +298,7 @@ impl Field {
   /// Render the walls of the field.
   fn render_walls(&self, renderer: &Renderer) {
     let _guard = renderer.set_texture(&self.wall);
-    let _guard = renderer.set_color(Color::orange());
+    let _guard = renderer.set_color(self.wall_color.color());
 
     let left = Rect::new(0, 0, WALL_WIDTH, self.height());
     let () = renderer.render_rect_with_tex_coords(left, left.into_other());
@@ -336,7 +341,8 @@ impl Field {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    self.pieces.toggle_color_mode()
+    let () = self.wall_color.toggle_with(&WALL_COLOR);
+    let () = self.pieces.toggle_color_mode();
   }
 
   /// Convert this `Field` into an `ai::Field` together with an
@@ -427,7 +433,6 @@ impl PieceField {
   fn render_back(&self, renderer: &Renderer) {
     // Render background image.
     {
-      // TODO: Make the color configurable.
       let _guard = renderer.set_texture(&self.back);
       let _guard = renderer.set_color(self.back_color.color());
 
@@ -479,7 +484,14 @@ impl PieceField {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    self.back_color.toggle_with(&BACKGROUND_COLOR)
+    let () = self.back_color.toggle_with(&BACKGROUND_COLOR);
+    let mode = self.back_color.stripped();
+
+    for (piece, _position) in self.matrix.iter_mut() {
+      if let Some(piece) = piece {
+        let () = piece.set_color_mode(mode);
+      }
+    }
   }
 }
 

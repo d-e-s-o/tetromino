@@ -8,6 +8,7 @@ use std::mem::replace;
 use std::slice;
 
 use crate::ActiveRenderer as Renderer;
+use crate::ColorMode;
 use crate::Point;
 
 use super::Stone;
@@ -30,6 +31,8 @@ pub(super) struct PreviewStones {
   stones: RefCell<Box<[Stone]>>,
   /// The index of the next stone to yield.
   index: Cell<u8>,
+  /// The color mode in use.
+  mode: RefCell<ColorMode<()>>,
 }
 
 impl PreviewStones {
@@ -45,6 +48,7 @@ impl PreviewStones {
       producer,
       stones: RefCell::new(stones),
       index: Cell::new(0),
+      mode: RefCell::new(ColorMode::default()),
     };
 
     let () = slf.reposition_stones();
@@ -54,7 +58,8 @@ impl PreviewStones {
   /// Replace the currently "active" stone with a new one and adjust the
   /// "active" index by one to make this new stone the last one.
   fn add_new_stone(&self) -> Stone {
-    let new_stone = self.producer.create_stone();
+    let mut new_stone = self.producer.create_stone();
+    let () = new_stone.set_color_mode(*self.mode.borrow());
     let index = usize::from(self.index.get());
 
     let mut stones = self.stones.borrow_mut();
@@ -84,6 +89,16 @@ impl PreviewStones {
   pub(super) fn render(&self, renderer: &Renderer) {
     for stone in self.stones.borrow().iter() {
       let () = stone.render(renderer);
+    }
+  }
+
+  /// Toggle the color mode (light/dark) in use.
+  #[inline]
+  pub(crate) fn toggle_color_mode(&self) {
+    let () = self.mode.borrow_mut().toggle();
+
+    for stone in self.stones.borrow_mut().iter_mut() {
+      let () = stone.set_color_mode(*self.mode.borrow());
     }
   }
 

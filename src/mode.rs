@@ -24,6 +24,26 @@ impl<T> ColorMode<T> {
       Self::Light(c) | Self::Dark(c) => *c,
     }
   }
+
+  /// Create a new [`ColorMode`] object without any payload.
+  #[inline]
+  pub fn stripped(&self) -> ColorMode<()> {
+    match self {
+      Self::Light(..) => ColorMode::Light(()),
+      Self::Dark(..) => ColorMode::Dark(()),
+    }
+  }
+}
+
+impl ColorMode<()> {
+  /// Toggle the currently active color.
+  #[inline]
+  pub fn toggle(&mut self) {
+    match self {
+      Self::Light(()) => *self = Self::Dark(()),
+      Self::Dark(()) => *self = Self::Light(()),
+    }
+  }
 }
 
 impl ColorMode<Color> {
@@ -34,6 +54,12 @@ impl ColorMode<Color> {
       Self::Light(..) => *self = Self::Dark(colors.dark),
       Self::Dark(..) => *self = Self::Light(colors.light),
     }
+  }
+}
+
+impl Default for ColorMode<()> {
+  fn default() -> Self {
+    Self::Light(())
   }
 }
 
@@ -48,5 +74,14 @@ impl ColorSet {
   #[inline]
   pub const fn new(light: Color, dark: Color) -> Self {
     Self { light, dark }
+  }
+
+  /// Retrieve the appropriate color based on the provided mode.
+  #[inline]
+  pub fn select(&self, mode: &ColorMode<()>) -> Color {
+    match mode {
+      ColorMode::Light(()) => self.light,
+      ColorMode::Dark(()) => self.dark,
+    }
   }
 }

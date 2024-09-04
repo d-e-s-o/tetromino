@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Index;
@@ -69,6 +69,18 @@ impl<T> Matrix<T> {
     let width = self.width as usize;
 
     self.matrix.iter().enumerate().map(move |(i, t)| {
+      let x = i % width;
+      let y = i / width;
+      (t, Point::new(x as i16, y as i16))
+    })
+  }
+
+  /// Create a mutable iterator over all elements, along with their
+  /// positions.
+  pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = (&mut T, Point<i16>)> {
+    let width = self.width as usize;
+
+    self.matrix.iter_mut().enumerate().map(move |(i, t)| {
       let x = i % width;
       let y = i / width;
       (t, Point::new(x as i16, y as i16))

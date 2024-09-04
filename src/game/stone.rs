@@ -8,6 +8,7 @@ use std::vec;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Color;
+use crate::ColorMode;
 use crate::Point;
 use crate::Texture;
 
@@ -50,6 +51,15 @@ impl Stone {
       .pieces
       .iter()
       .for_each(|(piece, location)| piece.render_with_overlay(renderer, *location, overlay));
+  }
+
+  /// Set the stone's color mode.
+  #[inline]
+  pub(crate) fn set_color_mode(&mut self, mode: ColorMode<()>) {
+    let () = self
+      .pieces
+      .iter_mut()
+      .for_each(|(piece, _location)| piece.set_color_mode(mode));
   }
 
   /// Rip out the object's guts, creating a new stone and leaving this
