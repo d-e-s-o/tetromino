@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::Deserialize;
@@ -48,6 +48,9 @@ pub struct Config {
   /// Whether or not the AI is enabled initially.
   #[serde(default)]
   pub enable_ai: bool,
+  /// Whether or not to use dark mode by default.
+  #[serde(default)]
+  pub enable_dark_mode: bool,
 }
 
 impl Default for Config {
@@ -59,6 +62,7 @@ impl Default for Config {
       field_height: default_field_height(),
       preview_stone_count: default_preview_stone_count(),
       enable_ai: Default::default(),
+      enable_dark_mode: Default::default(),
     }
   }
 }

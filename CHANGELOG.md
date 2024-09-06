@@ -1,6 +1,7 @@
 Unreleased
 ----------
 - Introduced "dark mode" support
+  - Added `enable_dark_mode` member to `GameConfig` type
 
 
 0.2.1

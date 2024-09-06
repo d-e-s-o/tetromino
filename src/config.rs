@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::Deserialize;
@@ -44,6 +44,7 @@ field_width = 10
 field_height = 20
 preview_stone_count = 1
 enable_ai = false
+enable_dark_mode = false
     "#;
     assert!(toml::from_str::<Config>(config).is_ok());
 

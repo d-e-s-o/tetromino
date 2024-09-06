@@ -134,7 +134,7 @@ impl Game {
       None
     };
 
-    let slf = Self {
+    let mut slf = Self {
       screen_clear_color: ColorMode::Light(SCREEN_CLEAR_COLOR.light),
       field,
       preview,
@@ -142,6 +142,10 @@ impl Game {
       next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
     };
+
+    if config.enable_dark_mode {
+      let () = slf.toggle_color_mode();
+    }
     Ok(slf)
   }
 
