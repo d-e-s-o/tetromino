@@ -108,6 +108,7 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     let mut config = GameConfig::default();
     config.start_level = 200;
     config.enable_ai = true;
+    config.enable_dark_mode = true;
 
     let game = Game::with_config(&config).unwrap();
     let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
