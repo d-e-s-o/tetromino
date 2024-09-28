@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A graphical Tetris clone.
@@ -12,7 +12,6 @@
 #![warn(
   missing_debug_implementations,
   missing_docs,
-  private_in_public,
   rustdoc::broken_intra_doc_links
 )]
 #![cfg_attr(feature = "nightly", feature(test))]
