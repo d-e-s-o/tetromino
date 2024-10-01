@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Note: Most of the font functionality is independent of the OpenGL
@@ -18,6 +18,7 @@ pub use renderer::Renderer;
 pub use window::Window;
 
 
+#[allow(unused_imports)]
 #[allow(clippy::all)]
 mod gl {
   #[link(name = "GL")]
