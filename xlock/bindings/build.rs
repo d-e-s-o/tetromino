@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #![allow(clippy::let_unit_value)]
@@ -43,13 +43,27 @@ fn unpack_tar_xz(_src_file: &File, _dst: &Path) {
 fn download_file(url: &str) -> Option<File> {
   use std::io::Seek as _;
   use std::io::Write as _;
+  use std::time::Duration;
 
+  use reqwest::blocking::Client;
   use reqwest::StatusCode;
   use reqwest::Url;
   use tempfile::tempfile;
 
   let mut dst = tempfile().expect("failed to create temporary file");
-  let result = reqwest::blocking::get(Url::parse(url).unwrap())
+  let client = Client::builder()
+    // Some servers are braindead and report nonsensical HTTP errors
+    // that mask otherwise useful ones if no user agent is provided.
+    .user_agent("reqwest")
+    // Only have a connect timeout here, because the "normal" timeout
+    // seems to guard the *entire* transfer?!
+    .timeout(None)
+    .connect_timeout(Duration::from_secs(60))
+    .build()
+    .unwrap();
+  let result = client
+    .get(Url::parse(url).unwrap())
+    .send()
     .unwrap()
     .error_for_status();
   match result {
