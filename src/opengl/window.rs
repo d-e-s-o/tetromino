@@ -23,17 +23,17 @@ use glutin::surface::SurfaceAttributesBuilder;
 use glutin::surface::SwapInterval;
 use glutin::surface::WindowSurface;
 
-use raw_window_handle::HasRawDisplayHandle as _;
 use raw_window_handle::HasRawWindowHandle as _;
 use raw_window_handle::RawDisplayHandle;
 use raw_window_handle::RawWindowHandle;
 use raw_window_handle::XlibDisplayHandle;
 use raw_window_handle::XlibWindowHandle;
 
-use winit::event_loop::EventLoop;
+use winit::error::OsError;
 use winit::platform::x11::register_xlib_error_hook;
 use winit::platform::x11::WindowAttributesExtX11 as _;
 use winit::window::Window as WinitWindow;
+use winit::window::WindowAttributes;
 
 
 fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
@@ -178,9 +178,11 @@ pub struct Window {
 }
 
 impl Window {
-  /// Create a new window using the provided `EventLoop`.
-  pub(crate) fn new(event_loop: &EventLoop<()>) -> Result<Self> {
-    let raw_display_handle = event_loop.raw_display_handle();
+  /// Create a new window using the provided event loop.
+  pub(crate) fn new<F>(raw_display_handle: RawDisplayHandle, create_window_fn: F) -> Result<Self>
+  where
+    F: FnOnce(WindowAttributes) -> Result<WinitWindow, OsError>,
+  {
     let (display, config) = Context::create_display_and_config(raw_display_handle)?;
 
     let visual = config.x11_visual().map(|visual| visual.visual_id());
@@ -190,9 +192,7 @@ impl Window {
     } else {
       attributes
     };
-    let window = event_loop
-      .create_window(attributes)
-      .context("failed to build window object")?;
+    let window = create_window_fn(attributes).context("failed to build window object")?;
     let context = Context::new(&display, &config, &window)?;
     let slf = Self { window, context };
 

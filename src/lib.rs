@@ -28,6 +28,7 @@ mod point;
 mod rand;
 mod rect;
 
+use std::cell::OnceCell;
 use std::cmp::min;
 use std::cmp::Ordering;
 use std::fs::read_to_string;
@@ -43,14 +44,19 @@ use anyhow::Result;
 
 use dirs::config_dir;
 
+use raw_window_handle::HasRawDisplayHandle as _;
+
+use winit::application::ApplicationHandler;
 use winit::event::DeviceEvent;
-use winit::event::Event;
+use winit::event::DeviceId;
 use winit::event::RawKeyEvent;
 use winit::event::WindowEvent;
+use winit::event_loop::ActiveEventLoop;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::keyboard::KeyCode as Key;
 use winit::keyboard::PhysicalKey;
+use winit::window::WindowId;
 
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
@@ -155,25 +161,78 @@ fn load_config() -> Result<Config> {
 }
 
 
-// This function is really only meant to be used by the main program.
-#[doc(hidden)]
-pub fn run() -> Result<()> {
-  let config = load_config().context("failed to load program configuration")?;
-  let event_loop = EventLoop::new().context("failed to create event loop")?;
-  let mut window = Window::new(&event_loop).context("failed to create OpenGL window")?;
+/// Our application's state.
+struct State {
+  window: Window,
+  game: Game,
+  renderer: Renderer,
+  keys: Keys,
+  was_paused: Option<bool>,
+}
 
-  let (phys_w, phys_h) = window.size();
-  let mut game = Game::with_config(&config.game).context("failed to instantiate game object")?;
-  let mut renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
-  let mut keys =
-    Keys::with_config(config.keyboard).context("failed to instantiate auto key repeat manager")?;
-  let mut was_paused = game.is_paused();
 
-  let () = event_loop.run(move |event, target| {
-    let now = Instant::now();
-    let change = match event {
-      Event::LoopExiting => return,
-      Event::WindowEvent { event, .. } => match event {
+#[derive(Default)]
+struct App {
+  state: OnceCell<Result<State>>,
+}
+
+impl App {
+  fn state<'slf>(&'slf mut self, event_loop: &ActiveEventLoop) -> Option<&'slf mut State> {
+    match self.state.get_mut()? {
+      Ok(state) => Some(state),
+      Err(..) => {
+        let () = event_loop.exit();
+        None
+      },
+    }
+  }
+}
+
+impl ApplicationHandler for App {
+  fn resumed(&mut self, event_loop: &ActiveEventLoop) {
+    fn create_state(event_loop: &ActiveEventLoop) -> Result<State> {
+      let config = load_config().context("failed to load program configuration")?;
+      let display_handle = event_loop.raw_display_handle();
+      let create_window_fn = |attrs| event_loop.create_window(attrs);
+      let window =
+        Window::new(display_handle, create_window_fn).context("failed to create OpenGL window")?;
+      let (phys_w, phys_h) = window.size();
+      let game = Game::with_config(&config.game).context("failed to instantiate game object")?;
+      let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
+      let keys = Keys::with_config(config.keyboard)
+        .context("failed to instantiate auto key repeat manager")?;
+      let was_paused = game.is_paused();
+
+      let state = State {
+        window,
+        game,
+        renderer,
+        keys,
+        was_paused,
+      };
+      Ok(state)
+    }
+
+    let _state = self.state.get_or_init(|| create_state(event_loop));
+    let _state = self.state(event_loop);
+  }
+
+  fn window_event(
+    &mut self,
+    event_loop: &ActiveEventLoop,
+    _window_id: WindowId,
+    event: WindowEvent,
+  ) {
+    if let Some(State {
+      ref mut window,
+      ref mut game,
+      ref mut renderer,
+      ref mut keys,
+      ref mut was_paused,
+      ..
+    }) = self.state(event_loop)
+    {
+      let change = match event {
         WindowEvent::Focused(focused) => {
           if focused {
             if let Some(false) = was_paused {
@@ -182,7 +241,7 @@ pub fn run() -> Result<()> {
               let () = game.pause(false);
             }
           } else {
-            was_paused = game.is_paused();
+            *was_paused = game.is_paused();
             if let Some(false) = was_paused {
               // The game is currently running but we are about to loose
               // focus. Pause it, as the user will no longer have a
@@ -199,7 +258,7 @@ pub fn run() -> Result<()> {
           Change::Unchanged
         },
         WindowEvent::CloseRequested => {
-          let () = target.exit();
+          let () = event_loop.exit();
           return
         },
         WindowEvent::RedrawRequested => {
@@ -221,86 +280,120 @@ pub fn run() -> Result<()> {
           Change::Changed
         },
         _ => Change::Unchanged,
-      },
-      Event::DeviceEvent {
-        event:
-          DeviceEvent::Key(RawKeyEvent {
-            physical_key: PhysicalKey::Code(key),
-            state,
-          }),
-        ..
-      } => {
-        let () = keys.on_key_event(now, key, state);
-        Change::Unchanged
-      },
-      Event::AboutToWait => {
-        let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
-          Key::Digit1 => {
-            *repeat = KeyRepeat::Disabled;
-            game.on_rotate_left()
-          },
-          Key::Digit2 => {
-            *repeat = KeyRepeat::Disabled;
-            game.on_rotate_right()
-          },
-          Key::KeyH => game.on_move_left(),
-          Key::KeyJ => game.on_move_down(),
-          Key::KeyL => game.on_move_right(),
-          Key::KeyQ => Change::Quit,
-          Key::Backspace => {
-            *repeat = KeyRepeat::Disabled;
-            let () = game.restart();
-            Change::Changed
-          },
-          Key::ArrowDown => game.on_move_down(),
-          Key::ArrowLeft => game.on_move_left(),
-          Key::ArrowRight => game.on_move_right(),
-          Key::Space => {
-            *repeat = KeyRepeat::Disabled;
-            game.on_drop()
-          },
-          Key::F2 => {
-            let () = game.auto_play(!game.is_auto_playing());
-            *repeat = KeyRepeat::Disabled;
-            Change::Unchanged
-          },
-          Key::F3 => {
-            if let Some(paused) = game.is_paused() {
-              let () = game.pause(!paused);
-            }
-            *repeat = KeyRepeat::Disabled;
-            Change::Unchanged
-          },
-          #[cfg(debug_assertions)]
-          Key::F11 => {
-            let () = game.dump_state();
-            Change::Unchanged
-          },
-          _ => Change::Unchanged,
-        };
+      };
 
-        let (keys_change, keys_wait) = keys.tick(now, handle_key);
-        let (game_change, game_wait) = game.tick(now);
-
-        let control_flow = match min(game_wait, keys_wait) {
-          Tick::None => ControlFlow::Wait,
-          Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
-        };
-        let () = target.set_control_flow(control_flow);
-
-        keys_change | game_change
-      },
-      _ => Change::Unchanged,
-    };
-
-    match change {
-      Change::Changed => window.request_redraw(),
-      Change::Quit => target.exit(),
-      Change::Unchanged => (),
+      match change {
+        Change::Changed => window.request_redraw(),
+        Change::Quit => event_loop.exit(),
+        Change::Unchanged => (),
+      }
     }
-  })?;
+  }
 
-  Ok(())
+  fn device_event(
+    &mut self,
+    event_loop: &ActiveEventLoop,
+    _device_id: DeviceId,
+    event: DeviceEvent,
+  ) {
+    if let Some(State { ref mut keys, .. }) = self.state(event_loop) {
+      if let DeviceEvent::Key(RawKeyEvent {
+        physical_key: PhysicalKey::Code(key),
+        state,
+      }) = event
+      {
+        let () = keys.on_key_event(Instant::now(), key, state);
+      }
+    }
+  }
+
+  fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
+    if let Some(State {
+      ref mut window,
+      ref mut game,
+      ref mut keys,
+      ..
+    }) = self.state(event_loop)
+    {
+      let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
+        Key::Digit1 => {
+          *repeat = KeyRepeat::Disabled;
+          game.on_rotate_left()
+        },
+        Key::Digit2 => {
+          *repeat = KeyRepeat::Disabled;
+          game.on_rotate_right()
+        },
+        Key::KeyH => game.on_move_left(),
+        Key::KeyJ => game.on_move_down(),
+        Key::KeyL => game.on_move_right(),
+        Key::KeyQ => Change::Quit,
+        Key::Backspace => {
+          *repeat = KeyRepeat::Disabled;
+          let () = game.restart();
+          Change::Changed
+        },
+        Key::ArrowDown => game.on_move_down(),
+        Key::ArrowLeft => game.on_move_left(),
+        Key::ArrowRight => game.on_move_right(),
+        Key::Space => {
+          *repeat = KeyRepeat::Disabled;
+          game.on_drop()
+        },
+        Key::F2 => {
+          let () = game.auto_play(!game.is_auto_playing());
+          *repeat = KeyRepeat::Disabled;
+          Change::Unchanged
+        },
+        Key::F3 => {
+          if let Some(paused) = game.is_paused() {
+            let () = game.pause(!paused);
+          }
+          *repeat = KeyRepeat::Disabled;
+          Change::Unchanged
+        },
+        #[cfg(debug_assertions)]
+        Key::F11 => {
+          let () = game.dump_state();
+          Change::Unchanged
+        },
+        _ => Change::Unchanged,
+      };
+
+      let now = Instant::now();
+      let (keys_change, keys_wait) = keys.tick(now, handle_key);
+      let (game_change, game_wait) = game.tick(now);
+
+      let control_flow = match min(game_wait, keys_wait) {
+        Tick::None => ControlFlow::Wait,
+        Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
+      };
+      let () = event_loop.set_control_flow(control_flow);
+
+      let change = keys_change | game_change;
+
+      match change {
+        Change::Changed => window.request_redraw(),
+        Change::Quit => event_loop.exit(),
+        Change::Unchanged => (),
+      }
+    }
+  }
+}
+
+
+// This function is really only meant to be used by the main program.
+#[doc(hidden)]
+pub fn run() -> Result<()> {
+  let event_loop = EventLoop::new().context("failed to create event loop")?;
+  let () = event_loop.set_control_flow(ControlFlow::Wait);
+  let mut app = App::default();
+  let () = event_loop.run_app(&mut app)?;
+  if let Some(result) = app.state.into_inner() {
+    result.map(|_state| ())
+  } else {
+    Ok(())
+  }
 }
 
 
@@ -317,10 +410,13 @@ mod tests {
 
 
   /// Benchmark the performance of the rendering path.
+  #[allow(deprecated)]
   #[bench]
   fn bench_render(b: &mut Bencher) {
     let event_loop = EventLoop::builder().with_any_thread(true).build().unwrap();
-    let mut window = Window::new(&event_loop).unwrap();
+    let display_handle = event_loop.raw_display_handle();
+    let create_window_fn = |attrs| event_loop.create_window(attrs);
+    let mut window = Window::new(display_handle, create_window_fn).unwrap();
 
     let (phys_w, phys_h) = window.size();
     let config = Config::default();
