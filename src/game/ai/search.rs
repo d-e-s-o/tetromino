@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::collections::BinaryHeap;
@@ -65,11 +65,12 @@ pub(super) fn actions(
 
   let it = from_fn(move || {
     while let Some(state) = &next {
+      let parent = state.parent.clone();
       if let action @ Some(..) = state.action {
-        next = state.parent.clone();
+        next = parent;
         return action
       } else {
-        next = state.parent.clone();
+        next = parent;
       }
     }
 
