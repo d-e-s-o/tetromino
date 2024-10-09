@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::Cursor;
@@ -262,7 +262,7 @@ impl Game {
   }
 
   /// Restart the game.
-  pub fn restart(&mut self) -> Change {
+  pub fn restart(&mut self) {
     let () = self.score.reset();
     let () = if self.field.reset() {
       if self.ai.is_some() {
@@ -272,8 +272,6 @@ impl Game {
     } else {
       self.end()
     };
-
-    Change::Changed
   }
 
   /// End the current game.
