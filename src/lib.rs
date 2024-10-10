@@ -233,8 +233,14 @@ pub fn run() -> Result<()> {
       },
       Event::AboutToWait => {
         let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
-          Key::Digit1 => game.on_rotate_left(),
-          Key::Digit2 => game.on_rotate_right(),
+          Key::Digit1 => {
+            *repeat = KeyRepeat::Disabled;
+            game.on_rotate_left()
+          },
+          Key::Digit2 => {
+            *repeat = KeyRepeat::Disabled;
+            game.on_rotate_right()
+          },
           Key::KeyH => game.on_move_left(),
           Key::KeyJ => game.on_move_down(),
           Key::KeyL => game.on_move_right(),
@@ -253,6 +259,7 @@ pub fn run() -> Result<()> {
           },
           Key::F2 => {
             let () = game.auto_play(!game.is_auto_playing());
+            *repeat = KeyRepeat::Disabled;
             Change::Unchanged
           },
           Key::F3 => {
