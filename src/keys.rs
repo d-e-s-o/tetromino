@@ -117,6 +117,72 @@ impl KeyState {
     }
   }
 
+  fn on_press(&mut self, now: Instant) {
+    match self {
+      Self::Pressed { .. } | Self::Repeated { .. } => {
+        // If the key is already pressed we just got an AutoRepeat
+        // event. We manage repetitions ourselves, so we skip any
+        // handling.
+      },
+      Self::ReleasePending { fire_count, .. } => {
+        // The key had been released, but some events were still
+        // undelivered. Mark it as pressed again, and carry over said
+        // events.
+        *self = Self::Pressed {
+          pressed_at: now,
+          fire_count: *fire_count,
+        }
+      },
+    }
+  }
+
+  fn on_release(&mut self, now: Instant, timeout: Duration, interval: Duration) {
+    match self {
+      Self::Pressed {
+        pressed_at,
+        fire_count,
+      } => {
+        let next_repeat = *pressed_at + timeout;
+        if now >= next_repeat {
+          // We hit the auto-repeat "threshold".
+          *self = Self::Repeated {
+            pressed_at: *pressed_at,
+            next_repeat,
+            fire_count: *fire_count + 1,
+          };
+          let () = self.on_release(now, timeout, interval);
+        } else {
+          *self = Self::ReleasePending {
+            pressed_at: *pressed_at,
+            fire_count: *fire_count + 1,
+          }
+        }
+      },
+      Self::Repeated {
+        pressed_at,
+        next_repeat,
+        fire_count,
+      } => {
+        let diff = now.saturating_duration_since(*next_repeat);
+        // TODO: Use `Duration::div_duration_f64` once stable.
+        *fire_count += (diff.as_secs_f64() / interval.as_secs_f64()).trunc() as usize;
+        // If `now` is past the next auto repeat, take that into account
+        // as well.
+        if now > *next_repeat {
+          *fire_count += 1;
+        }
+
+        *self = Self::ReleasePending {
+          pressed_at: *pressed_at,
+          fire_count: *fire_count,
+        }
+      },
+      Self::ReleasePending { .. } => {
+        debug_assert!(false, "released key was not pressed");
+      },
+    }
+  }
+
   fn next_tick(&self) -> Option<Instant> {
     match self {
       Self::Pressed { pressed_at, .. } => Some(*pressed_at),
@@ -191,6 +257,7 @@ pub(crate) enum KeyRepeat {
 
 
 /// A type helping with key press repetitions.
+#[derive(Debug)]
 pub(crate) struct Keys {
   /// The "timeout" after the initial key press after which the first
   /// repeat is issued.
@@ -226,21 +293,31 @@ impl Keys {
   /// This method is to be invoked on every key event.
   pub(crate) fn on_key_event(&mut self, now: Instant, key: Key, state: ElementState) {
     match state {
-      ElementState::Released => {
-        // TODO: Needs adjustment to emit `ReleasePending`.
-        let _prev = self.pressed.remove(&key);
+      ElementState::Released => match self.pressed.entry(key) {
+        Entry::Vacant(_vacancy) => {
+          // Note that a key could be released without being marked here
+          // as pressed anymore, if auto repeat had been disabled. In
+          // such a case it is fine to just ignore the release.
+        },
+        Entry::Occupied(mut occupancy) => {
+          if let Some(ref mut state) = occupancy.get_mut() {
+            let () = state.on_release(now, self.timeout, self.interval);
+          } else {
+            let _state = occupancy.remove();
+          }
+        },
       },
-      ElementState::Pressed => {
-        let entry = self.pressed.entry(key);
-        match entry {
-          Entry::Vacant(vacancy) => {
-            let _state = vacancy.insert(Some(KeyState::pressed(now)));
-          },
-          // If the key is already pressed we just got an AutoRepeat
-          // event. We manage repetitions ourselves, so we skip any
-          // handling.
-          Entry::Occupied(_occupancy) => (),
-        }
+      ElementState::Pressed => match self.pressed.entry(key) {
+        Entry::Vacant(vacancy) => {
+          let _state = vacancy.insert(Some(KeyState::pressed(now)));
+        },
+        Entry::Occupied(mut occupancy) => {
+          if let Some(ref mut state) = occupancy.get_mut() {
+            let () = state.on_press(now);
+          } else {
+            let _state = occupancy.insert(Some(KeyState::pressed(now)));
+          }
+        },
       },
     }
   }
@@ -316,6 +393,8 @@ mod tests {
 
   /// A `Duration` of one second.
   const SECOND: Duration = Duration::from_secs(1);
+  const TIMEOUT: Duration = Duration::from_secs(5);
+  const INTERVAL: Duration = Duration::from_secs(1);
 
 
   /// Make sure that we can create a `Config` object using system
@@ -331,6 +410,99 @@ mod tests {
       Err(err) => panic!("{}", err),
     }
   }
+
+  /// Check that we correctly handle press-release sequences without an
+  /// intermediate tick.
+  #[test]
+  fn press_release_without_tick() {
+    let l_pressed = Cell::new(0);
+
+    let mut handler = |key: &Key, _repeat: &mut KeyRepeat| match key {
+      Key::KeyL => {
+        l_pressed.set(l_pressed.get() + 1);
+        Change::Changed
+      },
+      _ => Change::Unchanged,
+    };
+
+    let now = Instant::now();
+    let mut keys = Keys::new(TIMEOUT, INTERVAL);
+
+    let () = keys.on_key_event(now, Key::KeyL, ElementState::Pressed);
+    let () = keys.on_key_event(now + 1 * SECOND, Key::KeyL, ElementState::Released);
+    let (change, tick) = keys.tick(now + 1 * SECOND, &mut handler);
+    assert_eq!(l_pressed.get(), 1);
+    assert_eq!(change, Change::Changed);
+    assert_eq!(tick, Tick::None);
+
+    let (change, tick) = keys.tick(now + 2 * SECOND, &mut handler);
+    assert_eq!(l_pressed.get(), 1);
+    assert_eq!(change, Change::Unchanged);
+    assert_eq!(tick, Tick::None);
+  }
+
+
+  /// Check that we handle a press after a release without a tick as
+  /// expected.
+  #[test]
+  fn press_after_release_pending() {
+    let h_pressed = Cell::new(0);
+
+    let mut handler = |key: &Key, _repeat: &mut KeyRepeat| match key {
+      Key::KeyH => {
+        h_pressed.set(h_pressed.get() + 1);
+        Change::Changed
+      },
+      _ => Change::Unchanged,
+    };
+
+    let now = Instant::now();
+    let mut keys = Keys::new(TIMEOUT, INTERVAL);
+
+    let () = keys.on_key_event(now, Key::KeyH, ElementState::Pressed);
+    let () = keys.on_key_event(now + 1 * SECOND, Key::KeyH, ElementState::Released);
+    let () = keys.on_key_event(now + 2 * SECOND, Key::KeyH, ElementState::Pressed);
+
+    let (change, tick) = keys.tick(now + 2 * SECOND, &mut handler);
+    assert_eq!(h_pressed.get(), 2);
+    assert_eq!(change, Change::Changed);
+    assert_eq!(tick, Tick::At(now + 7 * SECOND));
+
+    let (change, tick) = keys.tick(now + 3 * SECOND, &mut handler);
+    assert_eq!(h_pressed.get(), 2);
+    assert_eq!(change, Change::Unchanged);
+    assert_eq!(tick, Tick::At(now + 7 * SECOND));
+  }
+
+
+  /// Test that our `KeyState` logic works correctly when a key is
+  /// released after auto-repeat already kicked in.
+  #[test]
+  fn release_pending_after_repeat() {
+    let h_pressed = Cell::new(0);
+
+    let mut handler = |key: &Key, _repeat: &mut KeyRepeat| match key {
+      Key::KeyH => {
+        h_pressed.set(h_pressed.get() + 1);
+        Change::Changed
+      },
+      _ => Change::Unchanged,
+    };
+
+    let now = Instant::now();
+    let mut keys = Keys::new(TIMEOUT, INTERVAL);
+
+    let () = keys.on_key_event(now, Key::KeyH, ElementState::Pressed);
+    // Auto-repeat should kick in at `now + 5`. The one at `now + 7`
+    // should not trigger, though, because of release.
+    let () = keys.on_key_event(now + 7 * SECOND, Key::KeyH, ElementState::Released);
+
+    let (change, tick) = keys.tick(now + 8 * SECOND, &mut handler);
+    assert_eq!(h_pressed.get(), 4);
+    assert_eq!(change, Change::Changed);
+    assert_eq!(tick, Tick::None);
+  }
+
 
   /// Check that keys are being reported as pressed as expected.
   #[test]
@@ -356,9 +528,7 @@ mod tests {
       _ => Change::Unchanged,
     };
 
-    let timeout = Duration::from_secs(5);
-    let interval = Duration::from_secs(1);
-    let mut keys = Keys::new(timeout, interval);
+    let mut keys = Keys::new(TIMEOUT, INTERVAL);
 
     let now = Instant::now();
     let (change, tick) = keys.tick(now, &mut handler);
