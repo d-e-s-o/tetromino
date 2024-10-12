@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::min;
@@ -94,15 +94,89 @@ impl Default for Config {
 /// The state a single key can be in.
 #[derive(Clone, Copy, Debug)]
 enum KeyState {
-  Pressed { pressed_at: Instant },
-  Repeated { next_repeat: Instant },
+  Pressed {
+    pressed_at: Instant,
+    fire_count: usize,
+  },
+  Repeated {
+    pressed_at: Instant,
+    next_repeat: Instant,
+    fire_count: usize,
+  },
+  ReleasePending {
+    pressed_at: Instant,
+    fire_count: usize,
+  },
 }
 
 impl KeyState {
-  fn next_tick(&self) -> Instant {
+  fn pressed(pressed_at: Instant) -> Self {
+    Self::Pressed {
+      pressed_at,
+      fire_count: 0,
+    }
+  }
+
+  fn next_tick(&self) -> Option<Instant> {
     match self {
-      Self::Pressed { pressed_at } => *pressed_at,
-      Self::Repeated { next_repeat } => *next_repeat,
+      Self::Pressed { pressed_at, .. } => Some(*pressed_at),
+      Self::Repeated {
+        pressed_at,
+        next_repeat,
+        fire_count,
+      } => {
+        if *fire_count > 0 {
+          Some(*pressed_at)
+        } else {
+          Some(*next_repeat)
+        }
+      },
+      Self::ReleasePending {
+        pressed_at,
+        fire_count,
+      } => {
+        if *fire_count > 0 {
+          Some(*pressed_at)
+        } else {
+          None
+        }
+      },
+    }
+  }
+
+  /// # Notes
+  /// This method should only be called once the `Instant` returned by
+  /// [`KeyState::next_tick`] has been reached.
+  fn tick(&mut self, timeout: Duration, interval: Duration) {
+    match self {
+      Self::Pressed {
+        pressed_at,
+        fire_count,
+      } => {
+        if let Some(count) = fire_count.checked_sub(1) {
+          *fire_count = count;
+        } else {
+          *self = KeyState::Repeated {
+            pressed_at: *pressed_at,
+            next_repeat: *pressed_at + timeout,
+            fire_count: 0,
+          };
+        }
+      },
+      Self::Repeated {
+        next_repeat,
+        fire_count,
+        ..
+      } => {
+        if let Some(count) = fire_count.checked_sub(1) {
+          *fire_count = count;
+        } else {
+          *next_repeat += interval;
+        }
+      },
+      Self::ReleasePending { fire_count, .. } => {
+        *fire_count = fire_count.saturating_sub(1);
+      },
     }
   }
 }
@@ -125,6 +199,9 @@ pub(crate) struct Keys {
   interval: Duration,
   /// A map from keys that are currently pressed to internally used
   /// key repetition state.
+  ///
+  /// The state may be `None` temporarily, in which case it is about to
+  /// be removed.
   pressed: HashMap<Key, Option<KeyState>>,
 }
 
@@ -150,13 +227,14 @@ impl Keys {
   pub(crate) fn on_key_event(&mut self, now: Instant, key: Key, state: ElementState) {
     match state {
       ElementState::Released => {
+        // TODO: Needs adjustment to emit `ReleasePending`.
         let _prev = self.pressed.remove(&key);
       },
       ElementState::Pressed => {
         let entry = self.pressed.entry(key);
         match entry {
           Entry::Vacant(vacancy) => {
-            let _state = vacancy.insert(Some(KeyState::Pressed { pressed_at: now }));
+            let _state = vacancy.insert(Some(KeyState::pressed(now)));
           },
           // If the key is already pressed we just got an AutoRepeat
           // event. We manage repetitions ourselves, so we skip any
@@ -179,32 +257,34 @@ impl Keys {
 
     'next_key: for (key, key_state_opt) in self.pressed.iter_mut() {
       if let Some(key_state) = key_state_opt {
-        while now >= key_state.next_tick() {
-          let mut repeat = KeyRepeat::Enabled;
-          change |= handler(key, &mut repeat);
-
-          match repeat {
-            KeyRepeat::Disabled => {
-              *key_state_opt = None;
-              remove = Some(*key);
+        loop {
+          if let Some(tick) = key_state.next_tick() {
+            if tick > now {
+              next_tick = min(next_tick, Tick::At(tick));
               continue 'next_key
-            },
-            KeyRepeat::Enabled => match key_state {
-              KeyState::Pressed { pressed_at } => {
-                let first_repeat = *pressed_at + self.timeout;
-                *key_state = KeyState::Repeated {
-                  next_repeat: first_repeat,
-                };
+            }
+
+            let mut repeat = KeyRepeat::Enabled;
+            change |= handler(key, &mut repeat);
+
+            match repeat {
+              KeyRepeat::Disabled => {
+                *key_state_opt = None;
+                remove = remove.or(Some(*key));
+                continue 'next_key
               },
-              KeyState::Repeated { next_repeat } => {
-                let next_repeat = *next_repeat + self.interval;
-                *key_state = KeyState::Repeated { next_repeat };
+              KeyRepeat::Enabled => {
+                let () = key_state.tick(self.timeout, self.interval);
               },
-            },
+            }
+          } else {
+            // If there is no next tick then the key had been released
+            // earlier. Make sure to remove the state after we are done.
+            *key_state_opt = None;
+            remove = remove.or(Some(*key));
+            continue 'next_key
           }
         }
-
-        next_tick = min(next_tick, Tick::At(key_state.next_tick()));
       }
     }
 
