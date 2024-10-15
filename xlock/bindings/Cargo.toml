@@ -1,6 +1,6 @@
 [package]
 name = "tetromino-xlock-bindings"
-version = "0.0.0+v5.73"
+version = "0.0.0+v5.77"
 edition = "2021"
 authors = ["Daniel Mueller <deso@posteo.net>"]
 license = "GPL-3.0-or-later"

@@ -104,7 +104,7 @@ fn download_xlock_source(xlock_src: &Path) {
 
     let version = env::var_os(XLOCK_VERSION)
       .map(Cow::from)
-      .unwrap_or_else(|| Cow::Borrowed(OsStr::new("5.73")));
+      .unwrap_or_else(|| Cow::Borrowed(OsStr::new("5.77")));
     let version = version
       .to_str()
       .unwrap_or_else(|| panic!("{XLOCK_VERSION} variable does not contain valid Unicode"));
@@ -194,7 +194,7 @@ fn main() {
       .allowlist_type("ModeInfo")
       .allowlist_type("ModStruct")
       .layout_tests(false)
-      .parse_callbacks(Box::new(bindgen::CargoCallbacks))
+      .parse_callbacks(Box::new(bindgen::CargoCallbacks::new()))
       .generate()
       .expect("failed to generate bindings")
       .write_to_file(crate_dir.join("bindings.rs"))
