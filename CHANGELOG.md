@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.1.3
+-----
 - Added `xlock` screen lock "mode"
 - Improved key event handling logic to eliminate chance of missed key
   presses
