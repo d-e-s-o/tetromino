@@ -1,7 +1,7 @@
-# Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+# Copyright (C) 2024 Daniel Mueller <deso@posteo.net>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-name: Publish Tetromino
+name: Publish xlock bindings
 
 on:
   workflow_dispatch:
@@ -17,6 +17,7 @@ jobs:
     - id: version
       shell: bash
       run: |
+        cd xlock/bindings
         cargo generate-lockfile
         pkgid="$(cargo pkgid)"
         # Format is typically
@@ -53,14 +54,15 @@ jobs:
           --header "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}"\
           --header "X-GitHub-Api-Version: 2022-11-28" \
           --data "{
-              \"tag_name\":\"v${version}\",
+              \"tag_name\":\"xlock-v${version}\",
               \"target_commitish\":\"${{ github.ref }}\",
-              \"name\":\"v${version}\",
+              \"name\":\"xlock-v${version}\",
               \"draft\":false,
               \"prerelease\":false,
-              \"generate_release_notes\":false
+              \"generate_release_notes\":false,
+              \"make_latest\":\"false\"
             }"
     - name: Publish
-      run: cargo publish --no-verify --token "${CARGO_REGISTRY_TOKEN}"
+      run: cargo publish --package tetromino-xlock-bindings --token "${CARGO_REGISTRY_TOKEN}"
       env:
         CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
