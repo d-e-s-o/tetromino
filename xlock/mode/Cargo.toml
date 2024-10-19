@@ -1,7 +1,15 @@
 [package]
 name = "tetromino-xlock-mode"
-version = "0.0.0"
+version = "0.1.0"
 edition = "2021"
+authors = ["Daniel Mueller <deso@posteo.net>"]
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/d-e-s-o/tetromino"
+repository = "https://github.com/d-e-s-o/tetromino.git"
+readme = "README.md"
+description = """
+An xlock "mode" using Tetromino and its auto-playing AI.
+"""
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -9,7 +17,7 @@ edition = "2021"
 crate-type = ["cdylib"]
 
 [dependencies]
-xlock = {package = "tetromino-xlock-bindings", path = "../bindings"}
-tetromino = {path = "../.."}
+xlock = {version = "0.1", package = "tetromino-xlock-bindings", path = "../bindings"}
+tetromino = {version = "0.1", path = "../.."}
 raw-window-handle = {version = "0.5.2", default-features = false}
 winit = {version = "0.29.2", default-features = false, features = ["x11"]}
