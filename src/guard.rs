@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::marker::PhantomData;
@@ -15,7 +15,7 @@ where
   _phantom: PhantomData<&'guardee ()>,
 }
 
-impl<'guardee, F> Guard<'guardee, F>
+impl<F> Guard<'_, F>
 where
   F: FnOnce(),
 {
@@ -27,7 +27,7 @@ where
   }
 }
 
-impl<'guardee, F> Drop for Guard<'guardee, F>
+impl<F> Drop for Guard<'_, F>
 where
   F: FnOnce(),
 {
