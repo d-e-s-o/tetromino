@@ -36,7 +36,7 @@ download-xlock-source = ["reqwest", "tar", "tempfile", "xz2"]
 generate-xlock-bindings = ["bindgen"]
 
 [build-dependencies]
-bindgen = {version = "0.70", optional = true}
+bindgen = {version = "0.71", optional = true}
 reqwest = {version = "0.12", optional = true, features = ["blocking"]}
 tar = {version = "0.4.40", default-features = false, optional = true}
 tempfile = {version = "3.4", optional = true}
