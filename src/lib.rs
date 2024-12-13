@@ -218,6 +218,8 @@ impl ApplicationHandler for App {
     }
 
     let _state = self.state.get_or_init(|| create_state(event_loop));
+    // "Check" the state and potentially trigger an event loop exit if
+    // we failed part of the initialization.
     let _state = self.state(event_loop);
   }
 
