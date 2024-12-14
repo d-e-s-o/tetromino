@@ -1,10 +1,18 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use grev::git_revision_auto;
 
+// OpenGL 1.3 is guaranteed to be available on Linux, so it's fine
+// for us to use static bindings.
+const OPENGL_MAJOR: u8 = 1;
+const OPENGL_MINOR: u8 = 3;
+
 
 fn main() {
+  println!("cargo:rustc-env=OPENGL_MAJOR={OPENGL_MAJOR}");
+  println!("cargo:rustc-env=OPENGL_MINOR={OPENGL_MINOR}");
+
   #[cfg(feature = "generate-opengl-bindings")]
   {
     use std::env;
@@ -24,11 +32,15 @@ fn main() {
       .join("bindings.rs");
     let mut file = File::create(dst).unwrap();
 
-    // OpenGL 1.3 is guaranteed to be available on Linux, so it's fine
-    // for us to use static bindings.
-    Registry::new(Api::Gl, (1, 3), Profile::Core, Fallbacks::All, [])
-      .write_bindings(StaticGenerator, &mut file)
-      .unwrap();
+    Registry::new(
+      Api::Gl,
+      (OPENGL_MAJOR, OPENGL_MINOR),
+      Profile::Core,
+      Fallbacks::All,
+      [],
+    )
+    .write_bindings(StaticGenerator, &mut file)
+    .unwrap();
   }
 
   let dir = env!("CARGO_MANIFEST_DIR");
