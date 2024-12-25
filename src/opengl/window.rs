@@ -46,6 +46,26 @@ fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
 }
 
 
+/// Retrieve the OpenGL version to use.
+fn opengl_version() -> (u8, u8) {
+  let major = env!(
+    "OPENGL_MAJOR",
+    "OPENGL_MAJOR environment variable not found"
+  )
+  .parse()
+  .expect("OPENGL_MAJOR environment variable does not contain a valid number");
+
+  let minor = env!(
+    "OPENGL_MINOR",
+    "OPENGL_MINOR environment variable not found"
+  )
+  .parse()
+  .expect("OPENGL_MINOR environment variable does not contain a valid number");
+
+  (major, minor)
+}
+
+
 /// An OpenGL context.
 ///
 /// A context encapsulates the OpenGL specific setup and state on a
@@ -123,8 +143,9 @@ impl Context {
     phys_w: NonZeroU32,
     phys_h: NonZeroU32,
   ) -> Result<Self> {
+    let (major, minor) = opengl_version();
     let context_attributes = ContextAttributesBuilder::new()
-      .with_context_api(ContextApi::OpenGl(Some(Version::new(1, 3))))
+      .with_context_api(ContextApi::OpenGl(Some(Version::new(major, minor))))
       .build(Some(raw_window_handle));
     let attrs =
       SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
