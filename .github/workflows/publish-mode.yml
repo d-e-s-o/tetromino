@@ -1,4 +1,4 @@
-# Copyright (C) 2024 Daniel Mueller <deso@posteo.net>
+# Copyright (C) 2024-2025 Daniel Mueller <deso@posteo.net>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: Publish Tetromino xlock mode
@@ -40,7 +40,7 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     - name: Install dependencies
-      run: sudo apt-get install libgl-dev
+      run: sudo apt-get install --yes --no-install-recommends libgl-dev
     - uses: dtolnay/rust-toolchain@stable
     - name: Dry-run package creation
       run: cargo package --no-verify
