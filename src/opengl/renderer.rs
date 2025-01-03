@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::Cell;
@@ -497,32 +497,6 @@ impl<'renderer> ActiveRenderer<'renderer> {
       //         plain old data. No need to drop them properly.
       unsafe { buffer.set_len(0) };
     }
-  }
-
-  /// Retrieve the physical width of the rendering area, in pixels.
-  #[inline]
-  pub(crate) fn phys_width(&self) -> u32 {
-    self.renderer.phys_w as _
-  }
-
-  /// Retrieve the physical height of the rendering area, in pixels.
-  #[inline]
-  pub(crate) fn phys_height(&self) -> u32 {
-    self.renderer.phys_h as _
-  }
-
-  /// Retrieve the logical width of the rendering area, in game units,
-  /// but already expressed as a floating point value.
-  #[inline]
-  pub(crate) fn logic_width(&self) -> f32 {
-    self.renderer.logic_w as _
-  }
-
-  /// Retrieve the logical height of the rendering area, in game units,
-  /// but already expressed as a floating point value.
-  #[inline]
-  pub(crate) fn logic_height(&self) -> f32 {
-    self.renderer.logic_h as _
   }
 }
 

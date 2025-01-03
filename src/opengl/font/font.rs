@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Deref as _;
@@ -80,6 +80,8 @@ impl Font {
     Self::load(&raster::GLYPHS, &raster::SPACES, b' ', invalid_idx, texture)
   }
 
+  /// Renderer a string using the provided font size, in game unit.
+  ///
   /// # Notes
   /// If the string contains non-ASCII characters the result may not be
   /// as expected.
@@ -88,17 +90,12 @@ impl Font {
     renderer: &Renderer,
     location: Point<f32>,
     s: &[u8],
-    size: u16,
+    size: f32,
   ) -> (f32, f32) {
     let mut location = location;
     let start_x = location.x;
+    let factor = size / f32::from(self.point_size);
     let _guard = renderer.set_texture(&self.texture);
-
-    let x_factor = f32::from(size) * renderer.logic_width()
-      / renderer.phys_width() as f32
-      / f32::from(self.point_size);
-    let h = f32::from(size) * renderer.logic_height() / renderer.phys_height() as f32;
-    let y_factor = h / f32::from(self.point_size);
 
     for c in s {
       let (glyph, space) = c
@@ -109,18 +106,18 @@ impl Font {
 
       for coord in glyph.deref() {
         let () = renderer.render_rect_f32(Rect::new(
-          location.x + f32::from(coord.x) * x_factor,
-          location.y + f32::from(coord.y) * y_factor,
-          x_factor,
-          y_factor,
+          location.x + f32::from(coord.x) * factor,
+          location.y + f32::from(coord.y) * factor,
+          factor,
+          factor,
         ));
       }
 
-      location.x += f32::from(*space) * x_factor;
+      location.x += f32::from(*space) * factor;
     }
 
     let w = location.x - start_x;
-    (w, h)
+    (w, size)
   }
 }
 

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::min;
@@ -11,8 +11,8 @@ use crate::Color;
 use crate::Font;
 use crate::Point;
 
-/// The font size to use, in pixels.
-const FONT_SIZE_PX: u16 = 96;
+/// The font size to use, in game units.
+const FONT_SIZE: f32 = 2.0;
 
 
 struct StackWriter<'buf, const N: usize> {
@@ -117,21 +117,21 @@ impl Score {
       renderer,
       location + Point::new(0.0, 0.0),
       b"Level:  ",
-      FONT_SIZE_PX,
+      FONT_SIZE,
     );
 
     let (points_w, points_h) = self.font.render_str(
       renderer,
       location + Point::new(0.0, -level_h),
       b"Points:  ",
-      FONT_SIZE_PX,
+      FONT_SIZE,
     );
 
     let (lines_w, _lines_h) = self.font.render_str(
       renderer,
       location + Point::new(0.0, -level_h - points_h),
       b"Lines:  ",
-      FONT_SIZE_PX,
+      FONT_SIZE,
     );
 
     let w = level_w.max(points_w).max(lines_w);
@@ -143,12 +143,9 @@ impl Score {
 
     let () = write!(writer, "{}", self.level).unwrap();
     let string = writer.written();
-    let (_w, _h) = self.font.render_str(
-      renderer,
-      location + Point::new(w, 0.0),
-      string,
-      FONT_SIZE_PX,
-    );
+    let (_w, _h) = self
+      .font
+      .render_str(renderer, location + Point::new(w, 0.0), string, FONT_SIZE);
 
     let () = writer.reset();
     let () = write!(writer, "{}", self.points).unwrap();
@@ -157,7 +154,7 @@ impl Score {
       renderer,
       location + Point::new(w, -level_h),
       string,
-      FONT_SIZE_PX,
+      FONT_SIZE,
     );
 
     let () = writer.reset();
@@ -167,7 +164,7 @@ impl Score {
       renderer,
       location + Point::new(w, -level_h - points_h),
       string,
-      FONT_SIZE_PX,
+      FONT_SIZE,
     );
   }
 
