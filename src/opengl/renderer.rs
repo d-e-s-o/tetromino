@@ -511,10 +511,6 @@ impl Drop for ActiveRenderer<'_> {
 /// A type enabling the rendering of graphics.
 #[derive(Debug)]
 pub struct Renderer {
-  /// The physical width of the window to which this renderer belongs.
-  phys_w: gl::GLsizei,
-  /// The physical height of the window to which this renderer belongs.
-  phys_h: gl::GLsizei,
   /// The logical width of the view maintained by this renderer.
   logic_w: gl::GLfloat,
   /// The logical height of the view maintained by this renderer.
@@ -530,14 +526,8 @@ impl Renderer {
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) -> Self {
-    let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
-
-    Self {
-      phys_w: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
-      phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
-      logic_w,
-      logic_h,
-    }
+    let (logic_w, logic_h) = Self::set_view(phys_w, phys_h, logic_w, logic_h);
+    Self { logic_w, logic_h }
   }
 
   fn calculate_view(
@@ -573,6 +563,24 @@ impl Renderer {
     (width, height)
   }
 
+  fn set_view(
+    phys_w: NonZeroU32,
+    phys_h: NonZeroU32,
+    logic_w: NonZeroU16,
+    logic_h: NonZeroU16,
+  ) -> (f32, f32) {
+    let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
+
+    let phys_w = gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX);
+    let phys_h = gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX);
+
+    unsafe {
+      let () = gl::Viewport(0, 0, phys_w, phys_h);
+    }
+
+    (logic_w, logic_h)
+  }
+
   /// Update the view after the containing window or contained logical
   /// dimensions have changed.
   pub fn update_view(
@@ -582,10 +590,7 @@ impl Renderer {
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) {
-    let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
-
-    self.phys_w = gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX);
-    self.phys_h = gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX);
+    let (logic_w, logic_h) = Self::set_view(phys_w, phys_h, logic_w, logic_h);
     self.logic_w = logic_w;
     self.logic_h = logic_h;
   }
@@ -604,8 +609,7 @@ impl Renderer {
           | gl::SCISSOR_BIT
           | gl::STENCIL_BUFFER_BIT
           | gl::TEXTURE_BIT
-          | gl::TRANSFORM_BIT
-          | gl::VIEWPORT_BIT,
+          | gl::TRANSFORM_BIT,
       );
 
       gl::Disable(gl::FOG);
@@ -619,8 +623,6 @@ impl Renderer {
 
       gl::PointSize(1.0);
       gl::LineWidth(1.0);
-
-      gl::Viewport(0, 0, self.phys_w, self.phys_h);
 
       debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
     }
