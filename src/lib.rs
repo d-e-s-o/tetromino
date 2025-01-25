@@ -120,6 +120,15 @@ pub enum Tick {
   None,
 }
 
+impl From<Option<Instant>> for Tick {
+  fn from(other: Option<Instant>) -> Self {
+    match other {
+      Some(instant) => Tick::At(instant),
+      None => Tick::None,
+    }
+  }
+}
+
 impl PartialOrd<Tick> for Tick {
   fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
     Some(self.cmp(other))
@@ -374,7 +383,7 @@ impl ApplicationHandler for App {
       let (keys_change, keys_wait) = keys.tick(now, handle_key);
       let (game_change, game_wait) = game.tick(now);
 
-      let control_flow = match min(game_wait, keys_wait) {
+      let control_flow = match min(game_wait, Tick::from(keys_wait)) {
         Tick::None => ControlFlow::Wait,
         Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
       };
