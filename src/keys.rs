@@ -1,10 +1,11 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::min;
 use std::collections::hash_map::Entry;
 use std::collections::HashMap;
 use std::mem::MaybeUninit;
+use std::ops::BitOrAssign;
 use std::os::raw::c_uint;
 use std::ptr::null;
 use std::time::Duration;
@@ -22,7 +23,6 @@ use winit::keyboard::KeyCode as Key;
 
 use x11_dl::xlib;
 
-use crate::Change;
 use crate::Tick;
 
 
@@ -324,11 +324,12 @@ impl Keys {
 
   // TODO: It could be beneficial to coalesce nearby ticks into a single
   //       one, to reduce the number of event loop wake ups.
-  pub(crate) fn tick<F>(&mut self, now: Instant, mut handler: F) -> (Change, Tick)
+  pub(crate) fn tick<F, C>(&mut self, now: Instant, mut handler: F) -> (C, Tick)
   where
-    F: FnMut(&Key, &mut KeyRepeat) -> Change,
+    F: FnMut(&Key, &mut KeyRepeat) -> C,
+    C: Default + BitOrAssign,
   {
-    let mut change = Change::Unchanged;
+    let mut change = C::default();
     let mut next_tick = Tick::None;
     let mut remove = None;
 
@@ -386,9 +387,11 @@ impl Keys {
 
 #[cfg(test)]
 mod tests {
+  use super::*;
+
   use std::cell::Cell;
 
-  use super::*;
+  use crate::Change;
 
 
   /// A `Duration` of one second.
