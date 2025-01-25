@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A graphical Tetris clone.
@@ -81,13 +81,14 @@ pub use crate::opengl::Window;
 
 /// An enumeration of possible state changes performed/desired by lower
 /// level parts of the program.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq)]
 pub enum Change {
   /// Some state was changed that necessitates a redraw.
   Changed,
   /// A desire to quite the program has been made.
   Quit,
   /// No visible state has changed.
+  #[default]
   Unchanged,
 }
 
