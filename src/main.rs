@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A graphical Tetris clone.
@@ -16,7 +16,7 @@ fn default_config() -> String {
   // SANITY: Converting the config object to a string is expected to
   //         always succeed and any failure would be a bug.
   let config =
-    toml::to_string_pretty(&Config::default()).expect("failed to serialize Tetris config");
+    toml::to_string_pretty(&Config::default()).expect("failed to serialize Tetromino config");
   let mut lines = config.lines();
   let indent = lines
     .next()
