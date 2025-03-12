@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Permuted congruential generator implementation, based on
@@ -39,7 +39,7 @@ impl Rng {
   /// Generate a new pseudo random `u32` value.
   pub(crate) fn rand_u32(&self) -> u32 {
     fn rotr32(x: u32, r: usize) -> u32 {
-      x >> r | x << (!r & 31)
+      (x >> r) | (x << (!r & 31))
     }
 
     let mut x = self.state.get();
