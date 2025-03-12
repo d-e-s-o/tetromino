@@ -28,7 +28,7 @@ const VERTEX_BUFFER_CAPACITY: usize = 1024;
 
 #[derive(Clone, Copy, Debug)]
 #[allow(dead_code)]
-#[repr(packed)]
+#[repr(C, packed)]
 struct Vertex {
   // texture coordinates
   u: gl::GLfloat,
@@ -48,7 +48,7 @@ struct Vertex {
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct Color {
   pub(crate) r: gl::GLubyte,
   pub(crate) g: gl::GLubyte,

@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::transmute;
@@ -50,7 +50,7 @@ pub(super) struct Orientations(NonZeroU8);
 impl Orientations {
   #[inline]
   pub fn contains(&self, orientation: Orientation) -> bool {
-    (self.0.get() >> 1 & orientation as u8) != 0
+    ((self.0.get() >> 1) & orientation as u8) != 0
   }
 }
 

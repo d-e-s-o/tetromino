@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::ActiveRenderer as Renderer;
@@ -11,7 +11,7 @@ use crate::Rect;
 
 /// The representation of a single "piece" of a stone.
 #[derive(Clone, Copy, Debug)]
-#[repr(packed)]
+#[repr(C, packed)]
 pub(crate) struct Piece {
   /// The index of the color that the piece has.
   color_idx: u8,
