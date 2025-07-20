@@ -21,7 +21,7 @@ env:
 
 jobs:
   build:
-    name: Build [${{ matrix.toolchain }}, ${{ matrix.profile }}, ${{ matrix.args }}]
+    name: Build [${{ matrix.rust }}, ${{ matrix.profile }}, ${{ matrix.args }}]
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
