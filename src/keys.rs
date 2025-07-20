@@ -39,9 +39,9 @@ fn min_instant(a: Option<Instant>, b: Option<Instant>) -> Option<Instant> {
 #[non_exhaustive]
 pub struct Config {
   /// The auto-repeat timeout, in milliseconds.
-  auto_repeat_timeout_ms: u32,
+  pub(crate) auto_repeat_timeout_ms: u32,
   /// The auto-repeat interval, in milliseconds.
-  auto_repeat_interval_ms: u32,
+  pub(crate) auto_repeat_interval_ms: u32,
 }
 
 impl Config {
@@ -285,16 +285,7 @@ impl<K> Keys<K>
 where
   K: Copy + Eq + Hash,
 {
-  /// Instantiate a `Keys` object using system default auto repeat
-  /// timeout and interval.
-  pub(crate) fn with_config(config: Config) -> Result<Self> {
-    let timeout = Duration::from_millis(config.auto_repeat_timeout_ms.into());
-    let interval = Duration::from_millis(config.auto_repeat_interval_ms.into());
-
-    Ok(Self::new(timeout, interval))
-  }
-
-  fn new(timeout: Duration, interval: Duration) -> Self {
+  pub(crate) fn new(timeout: Duration, interval: Duration) -> Self {
     Self {
       timeout,
       interval,

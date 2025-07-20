@@ -38,6 +38,7 @@ use std::num::NonZeroU32;
 use std::ops::BitOr;
 use std::ops::BitOrAssign;
 use std::path::PathBuf;
+use std::time::Duration;
 use std::time::Instant;
 
 use anyhow::Context as _;
@@ -214,8 +215,9 @@ impl ApplicationHandler for App {
       let (phys_w, phys_h) = window.size();
       let game = Game::with_config(&config.game).context("failed to instantiate game object")?;
       let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
-      let keys = Keys::with_config(config.keyboard)
-        .context("failed to instantiate auto key repeat manager")?;
+      let timeout = Duration::from_millis(config.keyboard.auto_repeat_timeout_ms.into());
+      let interval = Duration::from_millis(config.keyboard.auto_repeat_interval_ms.into());
+      let keys = Keys::new(timeout, interval);
       let was_paused = game.is_paused();
 
       let state = State {
