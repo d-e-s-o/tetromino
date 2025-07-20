@@ -69,4 +69,4 @@ image = {version = "0.25", default-features = false, features = ["png"]}
 serde = {version = "1.0.182", default-features = false, features = ["derive", "std"]}
 winit = {version = "0.30", default-features = false, features = ["rwh_06", "x11"]}
 x11-dl = {version = "2.21.0", default-features = false}
-toml = {version = "0.8.13", default-features = false, features = ["display", "parse"]}
+toml = {version = "0.9", default-features = false, features = ["display", "parse", "serde"]}
