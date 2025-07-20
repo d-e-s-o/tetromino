@@ -17,7 +17,6 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use winit::event::ElementState;
 use winit::keyboard::KeyCode as Key;
 
 use x11_dl::xlib;
@@ -301,10 +300,9 @@ impl Keys {
     }
   }
 
-  /// This method is to be invoked on every key event.
-  pub(crate) fn on_key_event(&mut self, now: Instant, key: Key, state: ElementState) {
-    match state {
-      ElementState::Released => match self.pressed.entry(key) {
+  fn on_key_event(&mut self, now: Instant, key: Key, pressed: bool) {
+    match pressed {
+      false => match self.pressed.entry(key) {
         Entry::Vacant(_vacancy) => {
           // Note that a key could be released without being marked here
           // as pressed anymore, if auto repeat had been disabled. In
@@ -318,7 +316,7 @@ impl Keys {
           }
         },
       },
-      ElementState::Pressed => match self.pressed.entry(key) {
+      true => match self.pressed.entry(key) {
         Entry::Vacant(vacancy) => {
           let _state = vacancy.insert(Some(KeyState::pressed(now)));
         },
@@ -331,6 +329,16 @@ impl Keys {
         },
       },
     }
+  }
+
+  /// This method is to be invoked on every key press.
+  pub(crate) fn on_key_press(&mut self, now: Instant, key: Key) {
+    self.on_key_event(now, key, true)
+  }
+
+  /// This method is to be invoked on every key release.
+  pub(crate) fn on_key_release(&mut self, now: Instant, key: Key) {
+    self.on_key_event(now, key, false)
   }
 
   // TODO: It could be beneficial to coalesce nearby ticks into a single
@@ -442,8 +450,8 @@ mod tests {
     let now = Instant::now();
     let mut keys = Keys::new(TIMEOUT, INTERVAL);
 
-    let () = keys.on_key_event(now, Key::KeyL, ElementState::Pressed);
-    let () = keys.on_key_event(now + 1 * SECOND, Key::KeyL, ElementState::Released);
+    let () = keys.on_key_press(now, Key::KeyL);
+    let () = keys.on_key_release(now + 1 * SECOND, Key::KeyL);
     let (change, tick) = keys.tick(now + 1 * SECOND, &mut handler);
     assert_eq!(l_pressed.get(), 1);
     assert_eq!(change, Change::Changed);
@@ -473,9 +481,9 @@ mod tests {
     let now = Instant::now();
     let mut keys = Keys::new(TIMEOUT, INTERVAL);
 
-    let () = keys.on_key_event(now, Key::KeyH, ElementState::Pressed);
-    let () = keys.on_key_event(now + 1 * SECOND, Key::KeyH, ElementState::Released);
-    let () = keys.on_key_event(now + 2 * SECOND, Key::KeyH, ElementState::Pressed);
+    let () = keys.on_key_press(now, Key::KeyH);
+    let () = keys.on_key_release(now + 1 * SECOND, Key::KeyH);
+    let () = keys.on_key_press(now + 2 * SECOND, Key::KeyH);
 
     let (change, tick) = keys.tick(now + 2 * SECOND, &mut handler);
     assert_eq!(h_pressed.get(), 2);
@@ -506,10 +514,10 @@ mod tests {
     let now = Instant::now();
     let mut keys = Keys::new(TIMEOUT, INTERVAL);
 
-    let () = keys.on_key_event(now, Key::KeyH, ElementState::Pressed);
+    let () = keys.on_key_press(now, Key::KeyH);
     // Auto-repeat should kick in at `now + 5`. The one at `now + 7`
     // should not trigger, though, because of release.
-    let () = keys.on_key_event(now + 7 * SECOND, Key::KeyH, ElementState::Released);
+    let () = keys.on_key_release(now + 7 * SECOND, Key::KeyH);
 
     let (change, tick) = keys.tick(now + 8 * SECOND, &mut handler);
     assert_eq!(h_pressed.get(), 4);
@@ -549,7 +557,7 @@ mod tests {
     assert_eq!(change, Change::Unchanged);
     assert_eq!(tick, None);
 
-    let () = keys.on_key_event(now, Key::Enter, ElementState::Pressed);
+    let () = keys.on_key_press(now, Key::Enter);
     let (change, tick) = keys.tick(now, &mut handler);
     assert_eq!(enter_pressed.get(), 1);
     assert_eq!(change, Change::Changed);
@@ -562,7 +570,7 @@ mod tests {
     assert_eq!(tick, Some(now + 5 * SECOND));
 
     // Additional press events for the same key should just be ignored.
-    let () = keys.on_key_event(now, Key::Enter, ElementState::Pressed);
+    let () = keys.on_key_press(now, Key::Enter);
 
     // Or even half a second into the future.
     let (change, tick) = keys.tick(now + Duration::from_millis(500), &mut handler);
@@ -578,7 +586,7 @@ mod tests {
 
     // Press F3 as well. That should be a one-time thing only, as the
     // handler disabled auto-repeat.
-    let () = keys.on_key_event(now + 5 * SECOND, Key::F3, ElementState::Pressed);
+    let () = keys.on_key_press(now + 5 * SECOND, Key::F3);
     assert_eq!(f3_pressed.get(), 0);
 
     // We skipped a couple of ticks and at t+8s we should see three
@@ -591,7 +599,7 @@ mod tests {
 
     assert_eq!(space_pressed.get(), 0);
     // At t+9s we also press Space.
-    let () = keys.on_key_event(now + 9 * SECOND, Key::Space, ElementState::Pressed);
+    let () = keys.on_key_press(now + 9 * SECOND, Key::Space);
 
     let (change, tick) = keys.tick(now + 10 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 7);
@@ -611,7 +619,7 @@ mod tests {
 
     // Space is released just "before" it's next tick, so we shouldn't
     // see a press fire.
-    let () = keys.on_key_event(now + 16 * SECOND, Key::Space, ElementState::Released);
+    let () = keys.on_key_release(now + 16 * SECOND, Key::Space);
 
     let (change, tick) = keys.tick(now + 16 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 13);
@@ -620,7 +628,7 @@ mod tests {
     assert_eq!(change, Change::Changed);
     assert_eq!(tick, Some(now + 17 * SECOND));
 
-    let () = keys.on_key_event(now + 17 * SECOND, Key::Enter, ElementState::Released);
+    let () = keys.on_key_release(now + 17 * SECOND, Key::Enter);
 
     let (change, tick) = keys.tick(now + 17 * SECOND, &mut handler);
     assert_eq!(enter_pressed.get(), 13);

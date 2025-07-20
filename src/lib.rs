@@ -48,6 +48,7 @@ use dirs::config_dir;
 use winit::application::ApplicationHandler;
 use winit::event::DeviceEvent;
 use winit::event::DeviceId;
+use winit::event::ElementState;
 use winit::event::RawKeyEvent;
 use winit::event::WindowEvent;
 use winit::event_loop::ActiveEventLoop;
@@ -318,7 +319,11 @@ impl ApplicationHandler for App {
         state,
       }) = event
       {
-        let () = keys.on_key_event(Instant::now(), key, state);
+        let now = Instant::now();
+        match state {
+          ElementState::Pressed => keys.on_key_press(now, key),
+          ElementState::Released => keys.on_key_release(now, key),
+        }
       }
     }
   }
