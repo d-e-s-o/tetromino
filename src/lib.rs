@@ -179,7 +179,7 @@ struct State {
   window: Window,
   game: Game,
   renderer: Renderer,
-  keys: Keys,
+  keys: Keys<Key>,
   was_paused: bool,
 }
 
