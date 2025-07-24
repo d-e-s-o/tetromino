@@ -33,3 +33,6 @@ crate-type = ["cdylib"]
 xlock = {version = "0.1", package = "tetromino-xlock-bindings", path = "../bindings"}
 tetromino = {version = "0.2.2", path = "../.."}
 raw-window-handle = {version = "0.6", default-features = false}
+
+[lints]
+workspace = true

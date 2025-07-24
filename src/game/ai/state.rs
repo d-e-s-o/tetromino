@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::RefCell;
@@ -75,23 +75,23 @@ impl Iterator for Expander {
       // similarly for a left move
       match self.clone() {
         Self::MoveDown(state) => {
-          *self = Self::MoveLeft(state.clone());
+          *self = Self::MoveLeft(Rc::clone(&state));
           break state.derive(Action::MoveDown)
         },
         Self::MoveLeft(state) => {
-          *self = Self::MoveRight(state.clone());
+          *self = Self::MoveRight(Rc::clone(&state));
           if state.action != Some(Action::MoveRight) {
             break state.derive(Action::MoveLeft)
           }
         },
         Self::MoveRight(state) => {
-          *self = Self::RotateLeft(state.clone());
+          *self = Self::RotateLeft(Rc::clone(&state));
           if state.action != Some(Action::MoveLeft) {
             break state.derive(Action::MoveRight)
           }
         },
         Self::RotateLeft(state) => {
-          *self = Self::RotateRight(state.clone());
+          *self = Self::RotateRight(Rc::clone(&state));
 
           let stone = state.stone.as_ref()?;
           if stone.orientation() != Orientation::Rotated180 {
@@ -211,10 +211,10 @@ impl State {
     } = self.deref();
 
     let slf = Self {
-      parent: Some(self.clone()),
-      field: field.clone(),
+      parent: Some(Rc::clone(self)),
+      field: Rc::clone(field),
       stone: Some(perform_action(action, stone.as_ref()?.clone())),
-      visited: visited.clone(),
+      visited: Rc::clone(visited),
       index: *index,
       count: *count,
       action: Some(action),
@@ -248,7 +248,7 @@ impl State {
     let index = index + 1;
 
     let slf = Self {
-      parent: Some(self.clone()),
+      parent: Some(Rc::clone(self)),
       visited: Rc::new(RefCell::new(VisitedStones::new(
         field.width(),
         field.height(),
@@ -286,8 +286,8 @@ impl State {
     } = self.deref();
 
     let slf = Self {
-      parent: Some(self.clone()),
-      visited: visited.clone(),
+      parent: Some(Rc::clone(self)),
+      visited: Rc::clone(visited),
       field: Rc::new(field),
       stone: None,
       index: *index,
@@ -317,9 +317,9 @@ impl State {
 
     let slf = Self {
       parent,
-      field: field.clone(),
+      field: Rc::clone(field),
       stone: stone.clone(),
-      visited: visited.clone(),
+      visited: Rc::clone(visited),
       index: *index,
       count: *count,
       action: *action,
@@ -334,7 +334,7 @@ impl State {
   /// "Expand" this `State` into all possible derivations.
   #[inline]
   pub fn expand(self: &Rc<Self>) -> Expander {
-    Expander::expand(self.clone())
+    Expander::expand(Rc::clone(self))
   }
 
   /// Mark the [`State`] as visited.

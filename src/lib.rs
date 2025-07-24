@@ -3,17 +3,6 @@
 
 //! A graphical Tetris clone.
 
-#![allow(
-  clippy::collapsible_else_if,
-  clippy::let_and_return,
-  clippy::let_unit_value,
-  clippy::module_inception
-)]
-#![warn(
-  missing_debug_implementations,
-  missing_docs,
-  rustdoc::broken_intra_doc_links
-)]
 #![cfg_attr(feature = "nightly", feature(test))]
 
 #[cfg(feature = "nightly")]
@@ -83,7 +72,7 @@ pub use crate::opengl::Window;
 
 /// An enumeration of possible state changes performed/desired by lower
 /// level parts of the program.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum Change {
   /// Some state was changed that necessitates a redraw.
   Changed,

@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::replace;
@@ -522,7 +522,7 @@ impl Fieldlike<Stone> for PieceField {
 
   #[inline]
   fn line_complete(&self, line: i16) -> bool {
-    self.matrix.iter_line(line).all(|elem| elem.is_some())
+    self.matrix.iter_line(line).all(Option::is_some)
   }
 
   #[inline]

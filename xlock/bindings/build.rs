@@ -1,7 +1,7 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#![allow(clippy::let_unit_value)]
+//! Build script for `tetromino-xlock-bindings`.
 
 use std::borrow::Cow;
 use std::env;
@@ -94,7 +94,7 @@ fn download_xlock_source(xlock_src: &Path) {
   let urls1;
   let urls2;
 
-  println!("cargo:rerun-if-env-changed={}", XLOCK_SRC_ARCHIVE_URL);
+  println!("cargo:rerun-if-env-changed={XLOCK_SRC_ARCHIVE_URL}");
   let url = env::var_os(XLOCK_SRC_ARCHIVE_URL);
   let urls = if let Some(url) = &url {
     url1 = url
@@ -103,7 +103,7 @@ fn download_xlock_source(xlock_src: &Path) {
     urls1 = [url1];
     urls1.as_slice()
   } else {
-    println!("cargo:rerun-if-env-changed={}", XLOCK_VERSION);
+    println!("cargo:rerun-if-env-changed={XLOCK_VERSION}");
 
     let version = env::var_os(XLOCK_VERSION)
       .map(Cow::from)

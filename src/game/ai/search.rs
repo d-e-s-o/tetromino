@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::collections::BinaryHeap;
@@ -20,7 +20,7 @@ use super::Stone;
 pub(super) fn actions(
   state: Option<Rc<State>>,
 ) -> (impl Iterator<Item = Action>, Option<Rc<Field>>) {
-  let mut field = state.as_ref().map(|state| state.field.clone());
+  let mut field = state.as_ref().map(|state| Rc::clone(&state.field));
   let mut prev_field = None;
   let mut prev = Option::<Rc<State>>::None;
   let mut next = state.clone();
@@ -44,7 +44,7 @@ pub(super) fn actions(
     match state.action {
       Some(Action::Merge) => {
         prev_field = field;
-        field = parent.as_ref().map(|parent| parent.field.clone());
+        field = parent.as_ref().map(|parent| Rc::clone(&parent.field));
         merge = state.action;
         prev = None
       },
@@ -53,7 +53,7 @@ pub(super) fn actions(
         break
       },
       Some(_) => {
-        prev = Some(state.clone());
+        prev = Some(Rc::clone(&state));
       },
     }
 

@@ -27,7 +27,6 @@ const VERTEX_BUFFER_CAPACITY: usize = 1024;
 
 
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)]
 #[repr(C, packed)]
 struct Vertex {
   // texture coordinates

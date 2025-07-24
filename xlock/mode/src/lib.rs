@@ -1,7 +1,7 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-#![allow(clippy::let_unit_value)]
+//! An xlock "mode" using Tetromino and its auto-playing AI.
 
 use std::mem::size_of;
 use std::mem::transmute;

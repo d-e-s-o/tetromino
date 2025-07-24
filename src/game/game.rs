@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::Cursor;
@@ -114,7 +114,7 @@ impl Game {
       config.field_width,
       config.field_height,
       CLEAR_TIME,
-      preview.clone(),
+      Rc::clone(&preview) as _,
       piece.clone(),
       field_back,
     );
