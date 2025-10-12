@@ -9,6 +9,7 @@ use std::ffi::OsStr;
 use std::fs::File;
 use std::ops::Deref as _;
 use std::path::Path;
+use std::path::PathBuf;
 
 const XLOCK_SRC_ARCHIVE_URL: &str = "XLOCK_SRC_ARCHIVE_URL";
 #[cfg(feature = "generate-xlock-bindings")]
@@ -137,7 +138,8 @@ fn download_xlock_source(xlock_src: &Path) {
 
 
 fn main() {
-  let crate_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+  let crate_dir =
+    PathBuf::from(env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR variable not set"));
   let xlock_src = crate_dir.join("xlock-src");
 
   if cfg!(feature = "download-xlock-source") {
@@ -147,7 +149,6 @@ fn main() {
   #[cfg(feature = "generate-xlock-bindings")]
   {
     use std::fs::read_dir;
-    use std::path::PathBuf;
 
     println!("cargo:rerun-if-env-changed={}", XLOCK_SRC_ROOT);
 
