@@ -3,6 +3,8 @@
 
 //! Build script for `tetromino`.
 
+use std::env;
+
 use grev::git_revision_auto;
 
 // OpenGL 1.3 is guaranteed to be available on Linux, so it's fine
@@ -45,14 +47,13 @@ fn main() {
     .unwrap();
   }
 
-  let dir = env!("CARGO_MANIFEST_DIR");
-  if let Some(git_rev) = git_revision_auto(dir).unwrap() {
-    println!(
-      "cargo:rustc-env=VERSION={} (@ {})",
-      env!("CARGO_PKG_VERSION"),
-      git_rev
-    );
+  let manifest_dir =
+    env::var_os("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR variable not set");
+  let pkg_version = env::var("CARGO_PKG_VERSION").expect("CARGO_PKG_VERSION variable not set");
+
+  if let Some(git_rev) = git_revision_auto(manifest_dir).unwrap() {
+    println!("cargo:rustc-env=VERSION={pkg_version} ({git_rev})");
   } else {
-    println!("cargo:rustc-env=VERSION={}", env!("CARGO_PKG_VERSION"));
+    println!("cargo:rustc-env=VERSION={pkg_version}");
   }
 }
