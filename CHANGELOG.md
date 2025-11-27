@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Introduced `debug` feature for enabling debug related functionality
+
+
 0.2.2
 -----
 - Introduced "dark mode" support

@@ -367,7 +367,7 @@ impl ApplicationHandler for App {
           *repeat = KeyRepeat::Disabled;
           Change::Changed
         },
-        #[cfg(debug_assertions)]
+        #[cfg(feature = "debug")]
         Key::F11 => {
           let () = game.dump_state();
           Change::Unchanged

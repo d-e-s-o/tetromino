@@ -31,6 +31,9 @@ jobs:
         include:
         - rust: stable
           profile: dev
+          args: --features=debug
+        - rust: stable
+          profile: dev
           args: --workspace --features=generate-opengl-bindings,download-xlock-source,generate-xlock-bindings
         - rust: nightly
           profile: dev

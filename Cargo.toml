@@ -70,6 +70,9 @@ name = "tetromino_impl"
 
 [features]
 default = []
+# Enable miscellaneous debug functionality.
+debug = []
+
 # Enable this feature to re-generate the OpenGL bindings. This is
 # generally not relevant to users.
 generate-opengl-bindings = ["gl_generator"]

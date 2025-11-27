@@ -477,7 +477,7 @@ impl Game {
     let () = self.preview.toggle_color_mode();
   }
 
-  #[cfg(debug_assertions)]
+  #[cfg(feature = "debug")]
   pub(crate) fn dump_state(&self) {
     if let Some((stone, field)) = self.field.to_ai_data() {
       if let Some(ai) = self.ai.as_ref() {
