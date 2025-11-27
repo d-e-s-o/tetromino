@@ -131,7 +131,7 @@ impl Iterator for Expander {
 /// new `State` by performing an [`Action`] on the `Stone`.
 ///
 /// Once no other movement is possible or desired, the `State` should be
-/// [merged][Self::merge] and a new `Field` and `Stone` be set. This
+/// [merged][Self::merged] and a new `Field` and `Stone` be set. This
 /// process repeats.
 ///
 /// If all preview stones are exhausted the search can eventually be
@@ -152,8 +152,8 @@ pub(super) struct State {
   pub stone: Option<Stone>,
   pub visited: Rc<RefCell<VisitedStones>>,
   /// The index of the next stone to evaluate. The index is incremented
-  /// on every [`update`][Self::update]. It has no meaning to the
-  /// `State` itself, but is logically associated in it.
+  /// on every update. It has no meaning to the `State` itself, but is
+  /// logically associated in it.
   ///
   /// As a conjecture of using `u8`, we cannot handle more than 255
   /// preview stones.

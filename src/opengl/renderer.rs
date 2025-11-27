@@ -704,8 +704,8 @@ mod tests {
   use super::*;
 
 
-  /// Check that we can convert a `Color` the corresponding floating
-  /// point representation.
+  /// Check that we can convert a `Color` into the corresponding
+  /// floating point representation.
   #[test]
   fn color_float_conversion() {
     let (r, g, b, a) = Color::white().as_floats();

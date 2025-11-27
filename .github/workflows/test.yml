@@ -69,3 +69,12 @@ jobs:
         with:
           components: rustfmt
       - run: cargo +nightly fmt -- --check
+  cargo-doc:
+    name: Generate documentation
+    runs-on: ubuntu-latest
+    env:
+      RUSTDOCFLAGS: '-D warnings'
+    steps:
+      - uses: actions/checkout@v6
+      - uses: dtolnay/rust-toolchain@nightly
+      - run: cargo doc --workspace --no-deps --document-private-items
