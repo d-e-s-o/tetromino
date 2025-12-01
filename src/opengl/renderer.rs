@@ -421,7 +421,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect_with_tex_coords_f32(&self, mut rect: Rect<f32>, coords: Rect<f32>) {
+  fn render_rect_with_tex_coords_f32(&self, mut rect: Rect<f32>, coords: Rect<f32>) {
     const VERTEX_COUNT_QUAD: usize = 4;
 
     let origin = self.origin.get();
@@ -491,7 +491,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
         debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
       }
 
-      debug_assert!(!needs_drop::<Vertex>());
+      debug_assert!(const { !needs_drop::<Vertex>() });
       // SAFETY: We are strictly decreasing size and our vertices are
       //         plain old data. No need to drop them properly.
       unsafe { buffer.set_len(0) };

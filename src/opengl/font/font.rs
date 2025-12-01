@@ -80,7 +80,7 @@ impl Font {
     Self::load(&raster::GLYPHS, &raster::SPACES, b' ', invalid_idx, texture)
   }
 
-  /// Renderer a string using the provided font size, in game unit.
+  /// Renderer a string using the provided font size, in game units.
   ///
   /// # Notes
   /// If the string contains non-ASCII characters the result may not be
