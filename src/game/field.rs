@@ -444,7 +444,7 @@ impl PieceField {
       let _guard = renderer.set_no_texture();
       let _guard = renderer.set_color(Color::black());
 
-      for i in 0..=self.width() {
+      for i in 1..self.width() {
         let () = renderer.render_line(Point::new(i, 0), Point::new(i, self.height()));
       }
     }
