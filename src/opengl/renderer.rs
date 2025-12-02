@@ -11,12 +11,15 @@ use std::ops::Add;
 use std::ops::DerefMut as _;
 use std::ops::Sub;
 
+use xgl::MatrixStack;
+
 use crate::guard::Guard;
 use crate::Point;
 use crate::Rect;
 
 use super::gl;
 use super::Context;
+use super::Mat4f;
 use super::Texture;
 
 
@@ -518,9 +521,20 @@ pub struct Renderer {
   logic_w: gl::GLfloat,
   /// The logical height of the view maintained by this renderer.
   logic_h: gl::GLfloat,
+  /// The model-view matrix stack.
+  modelview: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
+  /// The projection matrix stack.
+  projection: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
 }
 
 impl Renderer {
+  /// Convenience wrapper around `gl::LoadMatrixf` suitable for use with
+  /// a `MatrixStack`.
+  fn load_matrix(matrix: &Mat4f) {
+    // SAFETY: The pointer comes from a reference and is always valid.
+    unsafe { gl::LoadMatrixf(matrix.as_array().as_ptr()) }
+  }
+
   /// Create a new [`Renderer`] object assuming the provide "physical"
   /// and logical view dimensions.
   pub fn new(
@@ -536,6 +550,8 @@ impl Renderer {
       phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
+      modelview: RefCell::new(MatrixStack::new(Self::load_matrix)),
+      projection: RefCell::new(MatrixStack::new(Self::load_matrix)),
     }
   }
 
@@ -638,23 +654,17 @@ impl Renderer {
       // We create an orthogonal projection matrix with bounds
       // sufficient to contain the logical view.
       gl::MatrixMode(gl::PROJECTION);
-      gl::PushMatrix();
-      gl::LoadIdentity();
-      // Our renderer will render everything with z-coordinate of 0.0f,
-      // this must lie inside the range [zNear, zFar] (last two
-      // parameters).
-      gl::Ortho(
-        0.0,
-        self.logic_w.into(),
-        0.0,
-        self.logic_h.into(),
-        -0.5,
-        0.5,
-      );
+      let () = self.projection.borrow_mut().push(|p| {
+        // Our renderer will render everything with z-coordinate of 0.0f,
+        // this must lie inside the range [zNear, zFar] (last two
+        // parameters).
+        *p = Mat4f::orthographic(0.0, self.logic_w, 0.0, self.logic_h, -0.5, 0.5);
+      });
 
       gl::MatrixMode(gl::MODELVIEW);
-      gl::PushMatrix();
-      gl::LoadIdentity();
+      let () = self.modelview.borrow_mut().push(|mv| {
+        *mv = Mat4f::identity();
+      });
 
       debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
     }
@@ -663,10 +673,10 @@ impl Renderer {
   fn pop_matrizes(&self) {
     unsafe {
       gl::MatrixMode(gl::MODELVIEW);
-      gl::PopMatrix();
+      let () = self.modelview.borrow_mut().pop();
 
       gl::MatrixMode(gl::PROJECTION);
-      gl::PopMatrix();
+      let () = self.projection.borrow_mut().pop();
 
       debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
     }
