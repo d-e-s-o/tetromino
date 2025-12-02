@@ -652,10 +652,6 @@ impl Renderer {
         0.5,
       );
 
-      gl::MatrixMode(gl::TEXTURE);
-      gl::PushMatrix();
-      gl::LoadIdentity();
-
       gl::MatrixMode(gl::MODELVIEW);
       gl::PushMatrix();
       gl::LoadIdentity();
@@ -667,9 +663,6 @@ impl Renderer {
   fn pop_matrizes(&self) {
     unsafe {
       gl::MatrixMode(gl::MODELVIEW);
-      gl::PopMatrix();
-
-      gl::MatrixMode(gl::TEXTURE);
       gl::PopMatrix();
 
       gl::MatrixMode(gl::PROJECTION);
