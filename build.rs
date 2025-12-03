@@ -7,10 +7,8 @@ use std::env;
 
 use grev::git_revision_auto;
 
-// OpenGL 1.3 is guaranteed to be available on Linux, so it's fine
-// for us to use static bindings.
-const OPENGL_MAJOR: u8 = 1;
-const OPENGL_MINOR: u8 = 3;
+const OPENGL_MAJOR: u8 = 3;
+const OPENGL_MINOR: u8 = 1;
 
 
 fn main() {
@@ -41,7 +39,7 @@ fn main() {
       Api::Gl,
       (OPENGL_MAJOR, OPENGL_MINOR),
       Profile::Core,
-      Fallbacks::All,
+      Fallbacks::None,
       [],
     )
     .write_bindings(StaticGenerator, &mut file)
