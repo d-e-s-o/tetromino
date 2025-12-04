@@ -10,6 +10,7 @@ use std::num::NonZeroU32;
 use std::ops::Add;
 use std::ops::DerefMut as _;
 use std::ops::Sub;
+use std::ptr::addr_of;
 
 use xgl::MatrixStack;
 
@@ -488,8 +489,32 @@ impl<'renderer> ActiveRenderer<'renderer> {
       let () = texture.ensure_bound();
 
       unsafe {
-        gl::InterleavedArrays(gl::T2F_C4UB_V3F, 0, buffer.as_ptr().cast());
-        gl::DrawArrays(self.primitive.get().as_glenum(), 0, size);
+        let () = gl::EnableClientState(gl::COLOR_ARRAY);
+        let () = gl::ColorPointer(
+          4,
+          gl::UNSIGNED_BYTE,
+          size_of_val(&buffer[0]) as _,
+          addr_of!(buffer[0].r).cast(),
+        );
+        let () = gl::EnableClientState(gl::VERTEX_ARRAY);
+        let () = gl::VertexPointer(
+          3,
+          gl::FLOAT,
+          size_of_val(&buffer[0]) as _,
+          addr_of!(buffer[0].x).cast(),
+        );
+        let () = gl::EnableClientState(gl::TEXTURE_COORD_ARRAY);
+        let () = gl::TexCoordPointer(
+          2,
+          gl::FLOAT,
+          size_of_val(&buffer[0]) as _,
+          addr_of!(buffer[0].u).cast(),
+        );
+
+        let () = gl::DrawArrays(self.primitive.get().as_glenum(), 0, size);
+        let () = gl::DisableClientState(gl::NORMAL_ARRAY);
+        let () = gl::DisableClientState(gl::TEXTURE_COORD_ARRAY);
+        let () = gl::DisableClientState(gl::VERTEX_ARRAY);
 
         debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
       }
