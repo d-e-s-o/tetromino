@@ -12,12 +12,15 @@ use std::ops::DerefMut as _;
 use std::ops::Sub;
 use std::ptr::addr_of;
 
+use anyhow::Result;
+
 use xgl::MatrixStack;
 
 use crate::guard::Guard;
 use crate::Point;
 use crate::Rect;
 
+use super::empty_texture;
 use super::gl;
 use super::Context;
 use super::Mat4f;
@@ -217,7 +220,7 @@ enum TextureState {
   /// required is via the [`ensure_bound`][Self::ensure_bound] method.
   Unbound {
     unbound: Texture,
-    still_bound: Texture,
+    still_bound: Option<Texture>,
   },
 }
 
@@ -229,7 +232,7 @@ impl TextureState {
       Self::Bound { bound } => {
         let state = Self::Unbound {
           unbound: texture,
-          still_bound: bound.clone(),
+          still_bound: Some(bound.clone()),
         };
         replace(self, state).into_texture()
       },
@@ -245,7 +248,7 @@ impl TextureState {
         unbound,
         still_bound,
       } => {
-        if unbound != still_bound {
+        if Some(&unbound) != still_bound.as_mut().as_ref() {
           let () = unbound.bind();
         }
 
@@ -285,8 +288,6 @@ impl TextureState {
 pub struct ActiveRenderer<'renderer> {
   /// The `Renderer` this object belongs to.
   renderer: &'renderer Renderer,
-  /// An invalid texture.
-  invalid_texture: Texture,
   /// The origin relative to which rendering happens.
   origin: Cell<Point<i16>>,
   /// The currently set color.
@@ -301,18 +302,13 @@ pub struct ActiveRenderer<'renderer> {
 
 impl<'renderer> ActiveRenderer<'renderer> {
   fn new(renderer: &'renderer Renderer) -> Self {
-    let invalid_texture = Texture::invalid();
     Self {
       renderer,
-      invalid_texture: invalid_texture.clone(),
       origin: Cell::new(Point::default()),
       color: Cell::new(Color::black()),
-      // We know that no texture is active, because we are called on the
-      // `Renderer::on_pre_render` path and it just cleared a bunch of
-      // state. So it's fine for us to claim that an "invalid" texture
-      // is bound already.
-      texture: RefCell::new(TextureState::Bound {
-        bound: invalid_texture,
+      texture: RefCell::new(TextureState::Unbound {
+        unbound: renderer.empty_texture.clone(),
+        still_bound: None,
       }),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
       primitive: Cell::new(Primitive::Quad),
@@ -357,7 +353,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
   #[inline]
   pub(crate) fn set_no_texture(&self) -> Guard<'_, impl FnOnce() + '_> {
-    self.set_texture(&self.invalid_texture)
+    self.set_texture(&self.renderer.empty_texture)
   }
 
   /// Clear the screen using the given color.
@@ -550,6 +546,8 @@ pub struct Renderer {
   modelview: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
   /// The projection matrix stack.
   projection: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
+  /// An "empty" texture.
+  empty_texture: Texture,
 }
 
 impl Renderer {
@@ -567,17 +565,19 @@ impl Renderer {
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
-  ) -> Self {
+  ) -> Result<Self> {
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
-    Self {
+    let slf = Self {
       phys_w: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
       phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
       logic_w,
       logic_h,
       modelview: RefCell::new(MatrixStack::new(Self::load_matrix)),
       projection: RefCell::new(MatrixStack::new(Self::load_matrix)),
-    }
+      empty_texture: empty_texture()?,
+    };
+    Ok(slf)
   }
 
   fn calculate_view(

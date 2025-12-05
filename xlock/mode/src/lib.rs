@@ -111,7 +111,7 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     config.enable_dark_mode = true;
 
     let game = Game::with_config(&config).unwrap();
-    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
+    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height()).unwrap();
 
     state.data = Some((context, game, renderer));
   } else {

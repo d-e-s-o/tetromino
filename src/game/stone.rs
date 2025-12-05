@@ -113,11 +113,12 @@ mod tests {
 
   use test_fork::fork;
 
+  use crate::opengl::empty_texture;
   use crate::opengl::with_opengl_context;
 
 
   fn new_stone(template: &[Point<i8>]) -> Stone {
-    Stone::new(Texture::invalid(), template, 0)
+    Stone::new(empty_texture().unwrap(), template, 0)
   }
 
 

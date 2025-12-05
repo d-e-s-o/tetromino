@@ -88,6 +88,7 @@ mod tests {
 
   use test_fork::fork;
 
+  use crate::opengl::empty_texture;
   use crate::opengl::with_opengl_context;
 
 
@@ -97,7 +98,7 @@ mod tests {
   #[test]
   fn stone_dimensions() {
     with_opengl_context(|| {
-      let texture = Texture::invalid();
+      let texture = empty_texture().unwrap();
       let factory = StoneFactory::with_default_stones(texture);
 
       let (w, h) = factory.max_dimensions();

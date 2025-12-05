@@ -12,6 +12,7 @@ mod window;
 pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Color;
+pub(crate) use texture::empty_texture;
 pub(crate) use texture::Texture;
 #[cfg(test)]
 pub(crate) use window::with_opengl_context;

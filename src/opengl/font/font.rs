@@ -128,6 +128,7 @@ mod tests {
 
   use test_fork::fork;
 
+  use crate::opengl::empty_texture;
   use crate::opengl::with_opengl_context;
 
 
@@ -137,7 +138,7 @@ mod tests {
   #[test]
   fn font_loading() {
     with_opengl_context(|| {
-      let font = Font::builtin(Texture::invalid());
+      let font = Font::builtin(empty_texture().unwrap());
       // Space has no coordinates to render.
       let (glyph, space) = &font.glyphs[0];
       assert!(glyph.is_empty());

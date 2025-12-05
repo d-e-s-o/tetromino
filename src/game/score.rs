@@ -174,8 +174,8 @@ mod tests {
 
   use test_fork::fork;
 
+  use crate::opengl::empty_texture;
   use crate::opengl::with_opengl_context;
-  use crate::Texture;
 
 
   /// Check that we can keep track of scores correctly.
@@ -183,7 +183,8 @@ mod tests {
   #[test]
   fn score_counting() {
     with_opengl_context(|| {
-      let font = Font::builtin(Texture::invalid());
+      let texture = empty_texture().unwrap();
+      let font = Font::builtin(texture);
       let mut score = Score::new(Point::new(0, 0), 1, 10, font);
       assert_eq!(score.level, 1);
       assert_eq!(score.points, 0);

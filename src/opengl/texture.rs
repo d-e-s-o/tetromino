@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ptr;
@@ -8,9 +8,18 @@ use anyhow::ensure;
 use anyhow::Result;
 
 use image::DynamicImage;
+use image::Rgba;
+use image::RgbaImage;
 
 use super::gl;
 
+
+/// Create a white ("empty") 1x1 texture.
+pub(crate) fn empty_texture() -> Result<Texture> {
+  let white = RgbaImage::from_fn(1, 1, |_, _| Rgba([255u8, 255, 255, 255]));
+  let white = Texture::with_image(DynamicImage::from(white))?;
+  Ok(white)
+}
 
 fn create_texture(image: image::DynamicImage) -> Result<()> {
   let width = image.width() as _;
@@ -117,18 +126,6 @@ impl Texture {
     let () = texture.unbind();
 
     Ok(texture)
-  }
-
-  #[cfg(not(test))]
-  pub(super) fn invalid() -> Self {
-    Self { id: Rc::new(0) }
-  }
-
-  // For testing purposes we allow access of this constructor outside of
-  // the parent module.
-  #[cfg(test)]
-  pub(crate) fn invalid() -> Self {
-    Self { id: Rc::new(0) }
   }
 
   pub(super) fn bind(&self) {

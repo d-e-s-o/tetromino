@@ -203,7 +203,8 @@ impl ApplicationHandler for App {
         Window::new(display_handle, create_window_fn).context("failed to create OpenGL window")?;
       let (phys_w, phys_h) = window.size();
       let game = Game::with_config(&config.game).context("failed to instantiate game object")?;
-      let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
+      let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height())
+        .context("failed to create OpenGL renderer")?;
       let timeout = Duration::from_millis(config.keyboard.auto_repeat_timeout_ms.into());
       let interval = Duration::from_millis(config.keyboard.auto_repeat_interval_ms.into());
       let keys = Keys::new(timeout, interval);
@@ -437,7 +438,7 @@ mod tests {
     let (phys_w, phys_h) = window.size();
     let config = Config::default();
     let game = Game::with_config(&config).unwrap();
-    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height());
+    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height()).unwrap();
 
     let () = b.iter(|| {
       let context = window.context_mut();
