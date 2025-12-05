@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::max;
@@ -86,16 +86,23 @@ impl StoneProducer for StoneFactory {
 mod tests {
   use super::*;
 
+  use test_fork::fork;
+
+  use crate::opengl::with_opengl_context;
+
 
   /// Check that we report the correct upper bound dimensions for the
   /// default set of stones.
+  #[fork]
   #[test]
   fn stone_dimensions() {
-    let texture = Texture::invalid();
-    let factory = StoneFactory::with_default_stones(texture);
+    with_opengl_context(|| {
+      let texture = Texture::invalid();
+      let factory = StoneFactory::with_default_stones(texture);
 
-    let (w, h) = factory.max_dimensions();
-    assert_eq!(w, 3);
-    assert_eq!(h, 4);
+      let (w, h) = factory.max_dimensions();
+      assert_eq!(w, 3);
+      assert_eq!(h, 4);
+    })
   }
 }

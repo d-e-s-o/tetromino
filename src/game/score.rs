@@ -172,35 +172,41 @@ impl Score {
 mod tests {
   use super::*;
 
+  use test_fork::fork;
+
+  use crate::opengl::with_opengl_context;
   use crate::Texture;
 
 
   /// Check that we can keep track of scores correctly.
+  #[fork]
   #[test]
   fn score_counting() {
-    let font = Font::builtin(Texture::invalid());
-    let mut score = Score::new(Point::new(0, 0), 1, 10, font);
-    assert_eq!(score.level, 1);
-    assert_eq!(score.points, 0);
-    assert_eq!(score.lines, 0);
-    assert_eq!(score.lines_for_level, 10);
+    with_opengl_context(|| {
+      let font = Font::builtin(Texture::invalid());
+      let mut score = Score::new(Point::new(0, 0), 1, 10, font);
+      assert_eq!(score.level, 1);
+      assert_eq!(score.points, 0);
+      assert_eq!(score.lines, 0);
+      assert_eq!(score.lines_for_level, 10);
 
-    let () = score.add(5);
-    assert_eq!(score.level, 1);
-    assert_ne!(score.points, 0);
-    assert_eq!(score.lines, 5);
-    assert_eq!(score.lines_for_level, 10);
+      let () = score.add(5);
+      assert_eq!(score.level, 1);
+      assert_ne!(score.points, 0);
+      assert_eq!(score.lines, 5);
+      assert_eq!(score.lines_for_level, 10);
 
-    let () = score.add(1);
-    assert_eq!(score.level, 1);
-    assert_ne!(score.points, 0);
-    assert_eq!(score.lines, 6);
-    assert_eq!(score.lines_for_level, 10);
+      let () = score.add(1);
+      assert_eq!(score.level, 1);
+      assert_ne!(score.points, 0);
+      assert_eq!(score.lines, 6);
+      assert_eq!(score.lines_for_level, 10);
 
-    let () = score.add(4);
-    assert_eq!(score.level, 2);
-    assert_ne!(score.points, 0);
-    assert_eq!(score.lines, 10);
-    assert_eq!(score.lines_for_level, 10);
+      let () = score.add(4);
+      assert_eq!(score.level, 2);
+      assert_ne!(score.points, 0);
+      assert_eq!(score.lines, 10);
+      assert_eq!(score.lines_for_level, 10);
+    })
   }
 }

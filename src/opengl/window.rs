@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::num::NonZeroU32;
@@ -250,4 +250,33 @@ impl Window {
   pub(crate) fn request_redraw(&self) {
     self.window.request_redraw()
   }
+}
+
+/// A test helper to run a function with an OpenGL window (and context)
+/// present.
+///
+/// # Notes
+/// You most likely want to use this function in a separate process,
+/// because of the effectively global OpenGL state.
+#[cfg(test)]
+#[expect(deprecated)]
+pub(crate) fn with_opengl_context<F>(f: F)
+where
+  F: FnOnce(),
+{
+  use winit::event_loop::EventLoop;
+  use winit::platform::x11::EventLoopBuilderExtX11 as _;
+  use winit::raw_window_handle::HasDisplayHandle as _;
+
+  let event_loop = EventLoop::builder().with_any_thread(true).build().unwrap();
+  let display_handle = event_loop.display_handle().unwrap();
+  // Create an invisible window, which will contain a valid OpenGL
+  // context.
+  let create_window_fn = |mut attrs: WindowAttributes| {
+    attrs.visible = false;
+    event_loop.create_window(attrs)
+  };
+  let _window = Window::new(display_handle, create_window_fn).unwrap();
+
+  f()
 }

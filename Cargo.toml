@@ -109,5 +109,8 @@ winit = {version = "0.30", default-features = false, features = ["rwh_06", "x11"
 x11-dl = {version = "2.21.0", default-features = false}
 xgl = {version = "0.2"}
 
+[dev-dependencies]
+test-fork = {version = "0.1.2"}
+
 [lints]
 workspace = true

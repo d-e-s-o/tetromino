@@ -53,9 +53,13 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
-      run: sudo apt-get install --yes --no-install-recommends libgl-dev
+      run: sudo apt-get install --yes --no-install-recommends libgl-dev xvfb libxkbcommon-x11-0
     - name: Test
-      run: cargo test
+      shell: bash
+      run: |
+        export DISPLAY=:1
+        Xvfb $DISPLAY -screen 0 1280x720x24 &> /tmp/xvfb.log &
+        cargo test
   clippy:
     name: Lint with clippy
     runs-on: ubuntu-latest

@@ -126,23 +126,30 @@ impl Font {
 mod tests {
   use super::*;
 
+  use test_fork::fork;
+
+  use crate::opengl::with_opengl_context;
+
 
   /// Make sure that we can load a font correctly by spot-checking some
   /// calculated glyph coordinates.
+  #[fork]
   #[test]
   fn font_loading() {
-    let font = Font::builtin(Texture::invalid());
-    // Space has no coordinates to render.
-    let (glyph, space) = &font.glyphs[0];
-    assert!(glyph.is_empty());
-    assert_eq!(*space, 3);
+    with_opengl_context(|| {
+      let font = Font::builtin(Texture::invalid());
+      // Space has no coordinates to render.
+      let (glyph, space) = &font.glyphs[0];
+      assert!(glyph.is_empty());
+      assert_eq!(*space, 3);
 
-    // Apostrophe.
-    let (glyph, space) = &font.glyphs[7];
-    assert_eq!(
-      glyph.deref(),
-      &[Point::new(0, 8), Point::new(0, 9), Point::new(0, 10)],
-    );
-    assert_eq!(*space, 2);
+      // Apostrophe.
+      let (glyph, space) = &font.glyphs[7];
+      assert_eq!(
+        glyph.deref(),
+        &[Point::new(0, 8), Point::new(0, 9), Point::new(0, 10)],
+      );
+      assert_eq!(*space, 2);
+    })
   }
 }

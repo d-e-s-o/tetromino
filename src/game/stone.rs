@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::iter;
@@ -111,6 +111,10 @@ impl Stonelike for Stone {
 mod tests {
   use super::*;
 
+  use test_fork::fork;
+
+  use crate::opengl::with_opengl_context;
+
 
   fn new_stone(template: &[Point<i8>]) -> Stone {
     Stone::new(Texture::invalid(), template, 0)
@@ -118,82 +122,91 @@ mod tests {
 
 
   /// Check that the bounds of a `Stone` are calculated correctly.
+  #[fork]
   #[test]
   fn stone_bounds() {
-    let template = [Point::new(1, 2)];
-    let bounds = new_stone(&template).bounds();
-    assert_eq!(bounds.x, 1);
-    assert_eq!(bounds.y, 2);
-    assert_eq!(bounds.w, 1);
-    assert_eq!(bounds.h, 1);
+    with_opengl_context(|| {
+      let template = [Point::new(1, 2)];
+      let bounds = new_stone(&template).bounds();
+      assert_eq!(bounds.x, 1);
+      assert_eq!(bounds.y, 2);
+      assert_eq!(bounds.w, 1);
+      assert_eq!(bounds.h, 1);
 
-    let template = [Point::new(1, 2), Point::new(3, 2)];
-    let bounds = new_stone(&template).bounds();
-    assert_eq!(bounds.x, 1);
-    assert_eq!(bounds.y, 2);
-    assert_eq!(bounds.w, 3);
-    assert_eq!(bounds.h, 1);
+      let template = [Point::new(1, 2), Point::new(3, 2)];
+      let bounds = new_stone(&template).bounds();
+      assert_eq!(bounds.x, 1);
+      assert_eq!(bounds.y, 2);
+      assert_eq!(bounds.w, 3);
+      assert_eq!(bounds.h, 1);
 
-    let template = [Point::new(1, 2), Point::new(0, 1)];
-    let bounds = new_stone(&template).bounds();
-    assert_eq!(bounds.x, 0);
-    assert_eq!(bounds.y, 1);
-    assert_eq!(bounds.w, 2);
-    assert_eq!(bounds.h, 2);
+      let template = [Point::new(1, 2), Point::new(0, 1)];
+      let bounds = new_stone(&template).bounds();
+      assert_eq!(bounds.x, 0);
+      assert_eq!(bounds.y, 1);
+      assert_eq!(bounds.w, 2);
+      assert_eq!(bounds.h, 2);
 
-    let template = [
-      Point::new(0, 0),
-      Point::new(0, 1),
-      Point::new(1, 0),
-      Point::new(1, 1),
-    ];
-    let bounds = new_stone(&template).bounds();
-    assert_eq!(bounds.x, 0);
-    assert_eq!(bounds.y, 0);
-    assert_eq!(bounds.w, 2);
-    assert_eq!(bounds.h, 2);
+      let template = [
+        Point::new(0, 0),
+        Point::new(0, 1),
+        Point::new(1, 0),
+        Point::new(1, 1),
+      ];
+      let bounds = new_stone(&template).bounds();
+      assert_eq!(bounds.x, 0);
+      assert_eq!(bounds.y, 0);
+      assert_eq!(bounds.w, 2);
+      assert_eq!(bounds.h, 2);
+    })
   }
 
   /// Check that we can move a `Stone` object as expected.
+  #[fork]
   #[test]
   fn stone_movement() {
-    let template = [Point::new(1, 2), Point::new(0, 1)];
-    let mut stone = new_stone(&template);
-    let bounds = stone.bounds();
-    assert_eq!(bounds.x, 0);
-    assert_eq!(bounds.y, 1);
-    assert_eq!(bounds.w, 2);
-    assert_eq!(bounds.h, 2);
+    with_opengl_context(|| {
+      let template = [Point::new(1, 2), Point::new(0, 1)];
+      let mut stone = new_stone(&template);
+      let bounds = stone.bounds();
+      assert_eq!(bounds.x, 0);
+      assert_eq!(bounds.y, 1);
+      assert_eq!(bounds.w, 2);
+      assert_eq!(bounds.h, 2);
 
-    let () = stone.move_to(Point::new(3, 4));
-    let bounds = stone.bounds();
-    assert_eq!(bounds.x, 3);
-    assert_eq!(bounds.y, 4);
+      let () = stone.move_to(Point::new(3, 4));
+      let bounds = stone.bounds();
+      assert_eq!(bounds.x, 3);
+      assert_eq!(bounds.y, 4);
 
-    let () = stone.move_to(Point::new(0, 0));
-    let bounds = stone.bounds();
-    assert_eq!(bounds.x, 0);
-    assert_eq!(bounds.y, 0);
-    assert_eq!(bounds.w, 2);
-    assert_eq!(bounds.h, 2);
+      let () = stone.move_to(Point::new(0, 0));
+      let bounds = stone.bounds();
+      assert_eq!(bounds.x, 0);
+      assert_eq!(bounds.y, 0);
+      assert_eq!(bounds.w, 2);
+      assert_eq!(bounds.h, 2);
+    })
   }
 
   /// Check that we can rotate a `Stone` object as expected.
+  #[fork]
   #[test]
   fn stone_rotation() {
-    // T stone
-    let template = [
-      Point::new(0, 0),
-      Point::new(1, 0),
-      Point::new(1, 1),
-      Point::new(2, 0),
-    ];
-    let mut stone = new_stone(&template);
-    let () = stone.move_to(Point::new(6, 4));
-    let before = stone.pieces().collect::<Vec<_>>();
-    let () = stone.rotate_left();
-    let after = stone.pieces().collect::<Vec<_>>();
+    with_opengl_context(|| {
+      // T stone
+      let template = [
+        Point::new(0, 0),
+        Point::new(1, 0),
+        Point::new(1, 1),
+        Point::new(2, 0),
+      ];
+      let mut stone = new_stone(&template);
+      let () = stone.move_to(Point::new(6, 4));
+      let before = stone.pieces().collect::<Vec<_>>();
+      let () = stone.rotate_left();
+      let after = stone.pieces().collect::<Vec<_>>();
 
-    assert_ne!(before, after);
+      assert_ne!(before, after);
+    })
   }
 }
