@@ -14,6 +14,7 @@ pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Color;
 pub(crate) use texture::empty_texture;
 pub(crate) use texture::Texture;
+pub(crate) use texture::TextureBuilderExt;
 #[cfg(test)]
 pub(crate) use window::with_opengl_context;
 

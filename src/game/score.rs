@@ -172,6 +172,8 @@ impl Score {
 mod tests {
   use super::*;
 
+  use std::rc::Rc;
+
   use test_fork::fork;
 
   use crate::opengl::empty_texture;
@@ -183,7 +185,7 @@ mod tests {
   #[test]
   fn score_counting() {
     with_opengl_context(|| {
-      let texture = empty_texture().unwrap();
+      let texture = Rc::new(empty_texture().unwrap());
       let font = Font::builtin(texture);
       let mut score = Score::new(Point::new(0, 0), 1, 10, font);
       assert_eq!(score.level, 1);

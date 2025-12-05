@@ -3,6 +3,7 @@
 
 use std::iter;
 use std::mem::take;
+use std::rc::Rc;
 use std::slice;
 use std::vec;
 
@@ -21,14 +22,14 @@ use super::Stonelike;
 #[derive(Debug)]
 pub(crate) struct Stone {
   /// The texture to use for an individual piece.
-  piece_texture: Texture,
+  piece_texture: Rc<Texture>,
   /// The individual pieces making up the stone and their locations.
   /// Typically a stone has four pieces, but that's not set in stone.
   pieces: Box<[(Piece, Point<i16>)]>,
 }
 
 impl Stone {
-  pub(crate) fn new(piece_texture: Texture, template: &[Point<i8>], color_idx: u8) -> Self {
+  pub(crate) fn new(piece_texture: Rc<Texture>, template: &[Point<i8>], color_idx: u8) -> Self {
     assert!(!template.is_empty(), "provided stone template is empty");
 
     Self {
@@ -68,7 +69,7 @@ impl Stone {
   // allowing us to omit unnecessary clones due to limitations of Rust.
   pub(crate) fn take(&mut self) -> Self {
     Self {
-      piece_texture: self.piece_texture.clone(),
+      piece_texture: Rc::clone(&self.piece_texture),
       pieces: take(&mut self.pieces),
     }
   }
@@ -118,7 +119,8 @@ mod tests {
 
 
   fn new_stone(template: &[Point<i8>]) -> Stone {
-    Stone::new(empty_texture().unwrap(), template, 0)
+    let texture = Rc::new(empty_texture().unwrap());
+    Stone::new(texture, template, 0)
   }
 
 

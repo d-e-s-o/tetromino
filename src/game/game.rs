@@ -9,6 +9,8 @@ use std::time::Instant;
 
 use anyhow::Result;
 
+use xgl::sys;
+
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
 use crate::Color;
@@ -17,6 +19,7 @@ use crate::ColorSet;
 use crate::Font;
 use crate::Point;
 use crate::Texture;
+use crate::TextureBuilderExt as _;
 use crate::Tick;
 
 use super::ai;
@@ -87,11 +90,17 @@ pub struct Game {
 impl Game {
   /// Instantiate a new game of Tetris with the given configuration.
   pub fn with_config(config: &Config) -> Result<Self> {
+    // TODO: We must not create a context on demand pass one through
+    //       from somewhere.
+    let context = sys::Context::default();
     let reader = Cursor::new(data::TETRIS_FIELD_PIECE_TEXTURE);
     let piece = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
-    let piece = Texture::with_image(piece)?;
+    let piece = Texture::builder()
+      .set_context(&context)
+      .from_dynamic_image(&piece)?;
+    let piece = Rc::new(piece);
 
-    let factory = Box::new(StoneFactory::with_default_stones(piece.clone()));
+    let factory = Box::new(StoneFactory::with_default_stones(Rc::clone(&piece)));
 
     let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
     let preview_location = field_location
@@ -100,22 +109,22 @@ impl Game {
         Field::total_height(config.field_height),
       )
       + Point::new(RIGHT_SPACE, 0);
-    let preview = Rc::new(PreviewStones::new(
-      preview_location,
-      config.preview_stone_count,
-      factory,
-    ));
+    let preview = PreviewStones::new(preview_location, config.preview_stone_count, factory);
+    let preview = Rc::new(preview);
 
     let reader = Cursor::new(data::TETRIS_FIELD_BACK_TEXTURE);
     let field_back = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
-    let field_back = Texture::with_image(field_back)?;
+    let field_back = Texture::builder()
+      .set_context(&context)
+      .from_dynamic_image(&field_back)?;
+    let field_back = Rc::new(field_back);
     let field = Field::new(
       field_location,
       config.field_width,
       config.field_height,
       CLEAR_TIME,
       Rc::clone(&preview) as _,
-      piece.clone(),
+      Rc::clone(&piece),
       field_back,
     );
 

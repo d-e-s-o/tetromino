@@ -4,6 +4,7 @@
 use std::cmp::max;
 use std::cmp::min;
 use std::ops::Deref;
+use std::rc::Rc;
 
 use crate::Point;
 use crate::Rng;
@@ -20,7 +21,7 @@ type StoneTemplate = Box<[Point<i8>]>;
 #[derive(Debug)]
 pub(super) struct StoneFactory {
   /// The texture to use for each piece.
-  piece_texture: Texture,
+  piece_texture: Rc<Texture>,
   /// The known stone types.
   templates: Box<[StoneTemplate]>,
   /// The random number generator we use when creating new stones.
@@ -28,7 +29,7 @@ pub(super) struct StoneFactory {
 }
 
 impl StoneFactory {
-  pub(super) fn with_default_stones(piece_texture: Texture) -> Self {
+  pub(super) fn with_default_stones(piece_texture: Rc<Texture>) -> Self {
     #[rustfmt::skip]
     let templates = Box::new([
       vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(0, 1)].into_boxed_slice(), // O
@@ -55,7 +56,7 @@ impl StoneProducer for StoneFactory {
     let template = &self.templates[index];
     let color_idx = index % Piece::COLORS.len();
 
-    Stone::new(self.piece_texture.clone(), template, color_idx as u8)
+    Stone::new(Rc::clone(&self.piece_texture), template, color_idx as u8)
   }
 
   // TODO: Loose copy of logic from `Stone`. Should think about deduplicating.
@@ -98,7 +99,7 @@ mod tests {
   #[test]
   fn stone_dimensions() {
     with_opengl_context(|| {
-      let texture = empty_texture().unwrap();
+      let texture = Rc::new(empty_texture().unwrap());
       let factory = StoneFactory::with_default_stones(texture);
 
       let (w, h) = factory.max_dimensions();

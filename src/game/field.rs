@@ -98,7 +98,7 @@ pub(crate) struct Field {
   /// The producer we use for creating new stones.
   producer: Rc<dyn StoneProducer>,
   /// The texture to use for one unit of wall.
-  wall: Texture,
+  wall: Rc<Texture>,
   /// The color to use for the walls.
   wall_color: ColorMode,
 }
@@ -110,10 +110,10 @@ impl Field {
     height: i16,
     clear_time: Duration,
     producer: Rc<dyn StoneProducer>,
-    piece: Texture,
-    back: Texture,
+    piece: Rc<Texture>,
+    back: Rc<Texture>,
   ) -> Self {
-    let pieces = PieceField::new(width, height, back, piece.clone());
+    let pieces = PieceField::new(width, height, back, Rc::clone(&piece));
     let mut stone = producer.create_stone();
     let state = if pieces.reset_stone(&mut stone) {
       State::Moving { stone }
@@ -406,15 +406,15 @@ struct PieceField {
   /// The matrix (2D array) of pieces.
   matrix: Matrix<Option<Piece>>,
   /// The texture to use for the entire inner back area.
-  back: Texture,
+  back: Rc<Texture>,
   /// The color to use for the background image.
   back_color: ColorMode,
   /// The texture to use for pieces.
-  piece: Texture,
+  piece: Rc<Texture>,
 }
 
 impl PieceField {
-  fn new(width: i16, height: i16, back: Texture, piece: Texture) -> Self {
+  fn new(width: i16, height: i16, back: Rc<Texture>, piece: Rc<Texture>) -> Self {
     Self {
       matrix: Matrix::new(width, height),
       back,

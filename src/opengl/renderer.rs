@@ -11,6 +11,7 @@ use std::ops::Add;
 use std::ops::DerefMut as _;
 use std::ops::Sub;
 use std::ptr::addr_of;
+use std::rc::Rc;
 
 use anyhow::Result;
 
@@ -214,25 +215,25 @@ impl Primitive {
 #[derive(Clone, Debug)]
 enum TextureState {
   /// The texture has been bound and will be used when rendering.
-  Bound { bound: Texture },
+  Bound { bound: Rc<Texture> },
   /// The texture is active but has not yet been bound. The most
   /// convenient way for ensuring that it is in fact bound once that is
   /// required is via the [`ensure_bound`][Self::ensure_bound] method.
   Unbound {
-    unbound: Texture,
-    still_bound: Option<Texture>,
+    unbound: Rc<Texture>,
+    still_bound: Option<Rc<Texture>>,
   },
 }
 
 impl TextureState {
   /// Mark the provided texture as active, but don't bind it yet.
-  fn activate(&mut self, texture: Texture) -> Texture {
+  fn activate(&mut self, texture: Rc<Texture>) -> Rc<Texture> {
     match self {
-      Self::Bound { bound } if texture == *bound => texture,
+      Self::Bound { bound } if Rc::ptr_eq(&texture, bound) => texture,
       Self::Bound { bound } => {
         let state = Self::Unbound {
           unbound: texture,
-          still_bound: Some(bound.clone()),
+          still_bound: Some(Rc::clone(bound)),
         };
         replace(self, state).into_texture()
       },
@@ -248,21 +249,25 @@ impl TextureState {
         unbound,
         still_bound,
       } => {
-        if Some(&unbound) != still_bound.as_mut().as_ref() {
+        if still_bound
+          .as_ref()
+          .map(|still_bound| !Rc::ptr_eq(unbound, still_bound))
+          .unwrap_or(true)
+        {
           let () = unbound.bind();
         }
 
         // The clone is reasonably cheap, but also entirely unnecessary at
         // a conceptual level. We just want to flip the enum variant from
         // `Unbound` to `Bound`. Thanks Rust...
-        let bound = unbound.clone();
+        let bound = Rc::clone(unbound);
         let _prev = replace(self, Self::Bound { bound });
       },
     }
   }
 
   /// Retrieve the "active" texture.
-  fn texture(&self) -> &Texture {
+  fn texture(&self) -> &Rc<Texture> {
     match self {
       Self::Bound { bound: texture }
       | Self::Unbound {
@@ -272,7 +277,7 @@ impl TextureState {
   }
 
   /// Destruct the object into the "active" texture.
-  fn into_texture(self) -> Texture {
+  fn into_texture(self) -> Rc<Texture> {
     match self {
       Self::Bound { bound: texture }
       | Self::Unbound {
@@ -307,7 +312,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
       origin: Cell::new(Point::default()),
       color: Cell::new(Color::black()),
       texture: RefCell::new(TextureState::Unbound {
-        unbound: renderer.empty_texture.clone(),
+        unbound: Rc::clone(&renderer.empty_texture),
         still_bound: None,
       }),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
@@ -331,19 +336,19 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   #[inline]
-  pub(crate) fn set_texture(&self, texture: &Texture) -> Guard<'_, impl FnOnce() + '_> {
-    fn set(renderer: &ActiveRenderer, texture: Texture) -> Texture {
+  pub(crate) fn set_texture(&self, texture: &Rc<Texture>) -> Guard<'_, impl FnOnce() + '_> {
+    fn set(renderer: &ActiveRenderer, texture: Rc<Texture>) -> Rc<Texture> {
       let mut state = renderer.texture.borrow_mut();
       let state = state.deref_mut();
 
-      if texture != *state.texture() {
+      if !Rc::ptr_eq(&texture, state.texture()) {
         let () = renderer.flush_vertex_buffer(state);
       }
 
       state.activate(texture)
     }
 
-    let texture = texture.clone();
+    let texture = Rc::clone(texture);
     let prev_texture = set(self, texture);
 
     Guard::new(move || {
@@ -547,7 +552,7 @@ pub struct Renderer {
   /// The projection matrix stack.
   projection: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
   /// An "empty" texture.
-  empty_texture: Texture,
+  empty_texture: Rc<Texture>,
 }
 
 impl Renderer {
@@ -575,7 +580,7 @@ impl Renderer {
       logic_h,
       modelview: RefCell::new(MatrixStack::new(Self::load_matrix)),
       projection: RefCell::new(MatrixStack::new(Self::load_matrix)),
-      empty_texture: empty_texture()?,
+      empty_texture: Rc::new(empty_texture()?),
     };
     Ok(slf)
   }

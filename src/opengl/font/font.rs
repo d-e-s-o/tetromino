@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Deref as _;
+use std::rc::Rc;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Point;
@@ -29,7 +30,7 @@ pub(crate) struct Font {
   /// character.
   invalid: usize,
   /// The texture to use for each and every "pixel".
-  texture: Texture,
+  texture: Rc<Texture>,
 }
 
 impl Font {
@@ -39,7 +40,7 @@ impl Font {
     spaces: &[u8; N],
     ascii_offset: u8,
     invalid_idx: usize,
-    texture: Texture,
+    texture: Rc<Texture>,
   ) -> Self {
     assert!(invalid_idx < N, "{invalid_idx} : {N}");
 
@@ -75,7 +76,7 @@ impl Font {
   }
 
   /// Instantiate the built-in font.
-  pub(crate) fn builtin(texture: Texture) -> Self {
+  pub(crate) fn builtin(texture: Rc<Texture>) -> Self {
     let invalid_idx = raster::GLYPHS.len() - 1;
     Self::load(&raster::GLYPHS, &raster::SPACES, b' ', invalid_idx, texture)
   }
@@ -138,7 +139,7 @@ mod tests {
   #[test]
   fn font_loading() {
     with_opengl_context(|| {
-      let font = Font::builtin(empty_texture().unwrap());
+      let font = Font::builtin(Rc::new(empty_texture().unwrap()));
       // Space has no coordinates to render.
       let (glyph, space) = &font.glyphs[0];
       assert!(glyph.is_empty());

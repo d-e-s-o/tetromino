@@ -57,6 +57,7 @@ use crate::opengl::ActiveRenderer;
 use crate::opengl::Color;
 use crate::opengl::Font;
 use crate::opengl::Texture;
+use crate::opengl::TextureBuilderExt;
 use crate::point::Point;
 use crate::rand::Rng;
 use crate::rect::Rect;
