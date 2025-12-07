@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::Ordering;
@@ -52,8 +52,6 @@ macro_rules! matrix {
   }};
 }
 
-pub(super) use matrix;
-
 
 macro_rules! field {
   ($field:literal) => {{
@@ -91,9 +89,6 @@ where
 
 #[cfg(test)]
 mod tests {
-  use super::*;
-
-
   /// Check that we can correctly create a `Matrix` object from a
   /// "textual description".
   #[test]

@@ -16,7 +16,7 @@ env:
   # marginal effects on the generated code, likely only in terms of
   # section arrangement. See
   # https://doc.rust-lang.org/rustc/codegen-options/index.html#debuginfo
-  RUSTFLAGS: '-C debuginfo=line-tables-only'
+  RUSTFLAGS: '-D warnings -C debuginfo=line-tables-only'
 
 jobs:
   build:

@@ -22,7 +22,6 @@ fn main() {
 
   #[cfg(feature = "generate-opengl-bindings")]
   {
-    use std::env;
     use std::fs::File;
     use std::path::Path;
 
