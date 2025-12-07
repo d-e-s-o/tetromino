@@ -15,6 +15,7 @@ use std::rc::Rc;
 
 use anyhow::Result;
 
+use xgl::sys;
 use xgl::MatrixStack;
 
 use crate::guard::Guard;
@@ -198,20 +199,6 @@ impl Sub<Color> for Color {
 }
 
 
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-#[repr(u32)]
-enum Primitive {
-  Line = gl::LINES,
-  Triangle = gl::TRIANGLES,
-}
-
-impl Primitive {
-  fn as_glenum(&self) -> gl::GLenum {
-    *self as _
-  }
-}
-
-
 #[derive(Clone, Debug)]
 enum TextureState {
   /// The texture has been bound and will be used when rendering.
@@ -302,7 +289,7 @@ pub struct ActiveRenderer<'renderer> {
   /// The vertex buffer we use.
   vertices: RefCell<Vec<Vertex>>,
   /// The type of primitive currently active for rendering.
-  primitive: Cell<Primitive>,
+  primitive: Cell<sys::Primitive>,
 }
 
 impl<'renderer> ActiveRenderer<'renderer> {
@@ -316,7 +303,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
         still_bound: None,
       }),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
-      primitive: Cell::new(Primitive::Triangle),
+      primitive: Cell::new(sys::Primitive::Triangles),
     }
   }
 
@@ -379,7 +366,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
     p1 += origin;
     p2 += origin;
 
-    let () = self.set_primitive(Primitive::Line, VERTEX_COUNT_LINE);
+    let () = self.set_primitive(sys::Primitive::Lines, VERTEX_COUNT_LINE);
     let color = self.color.get();
 
     let mut vertex = Vertex {
@@ -432,7 +419,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
     let origin = self.origin.get();
     rect += origin.into_other();
 
-    let () = self.set_primitive(Primitive::Triangle, VERTEX_COUNT_QUAD);
+    let () = self.set_primitive(sys::Primitive::Triangles, VERTEX_COUNT_QUAD);
     let color = self.color.get();
 
     let mut vertex = Vertex {
@@ -479,7 +466,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
   /// Set the type of primitive that we currently render and ensure that
   /// there is space for at least `vertex_cnt` vertices in our vertex
   /// buffer.
-  fn set_primitive(&self, primitive: Primitive, vertex_cnt: usize) {
+  fn set_primitive(&self, primitive: sys::Primitive, vertex_cnt: usize) {
     if primitive != self.primitive.get()
       || self.vertices.borrow_mut().spare_capacity_mut().len() < vertex_cnt
     {
@@ -518,7 +505,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
           addr_of!(buffer[0].u).cast(),
         );
 
-        let () = gl::DrawArrays(self.primitive.get().as_glenum(), 0, size);
+        let () = gl::DrawArrays(self.primitive.get() as _, 0, size);
         let () = gl::DisableClientState(gl::NORMAL_ARRAY);
         let () = gl::DisableClientState(gl::TEXTURE_COORD_ARRAY);
         let () = gl::DisableClientState(gl::VERTEX_ARRAY);
