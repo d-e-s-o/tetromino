@@ -39,39 +39,39 @@ const VERTEX_BUFFER_CAPACITY: usize = 1024;
 #[repr(C, packed)]
 struct Vertex {
   // texture coordinates
-  u: gl::GLfloat,
-  v: gl::GLfloat,
+  u: f32,
+  v: f32,
 
   // color
-  r: gl::GLubyte,
-  g: gl::GLubyte,
-  b: gl::GLubyte,
-  a: gl::GLubyte,
+  r: u8,
+  g: u8,
+  b: u8,
+  a: u8,
 
   // position
-  x: gl::GLfloat,
-  y: gl::GLfloat,
-  z: gl::GLfloat,
+  x: f32,
+  y: f32,
+  z: f32,
 }
 
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(C, packed)]
 pub(crate) struct Color {
-  pub(crate) r: gl::GLubyte,
-  pub(crate) g: gl::GLubyte,
-  pub(crate) b: gl::GLubyte,
-  pub(crate) a: gl::GLubyte,
+  pub(crate) r: u8,
+  pub(crate) g: u8,
+  pub(crate) b: u8,
+  pub(crate) a: u8,
 }
 
 impl Color {
   #[inline]
-  fn as_floats(&self) -> (gl::GLfloat, gl::GLfloat, gl::GLfloat, gl::GLfloat) {
+  fn as_floats(&self) -> (f32, f32, f32, f32) {
     (
-      self.r as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
-      self.g as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
-      self.b as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
-      self.a as gl::GLfloat / gl::GLubyte::MAX as gl::GLfloat,
+      self.r as f32 / u8::MAX as f32,
+      self.g as f32 / u8::MAX as f32,
+      self.b as f32 / u8::MAX as f32,
+      self.a as f32 / u8::MAX as f32,
     )
   }
 
@@ -99,50 +99,50 @@ impl Color {
   #[inline]
   pub(crate) const fn black() -> Self {
     Self {
-      r: gl::GLubyte::MIN,
-      g: gl::GLubyte::MIN,
-      b: gl::GLubyte::MIN,
-      a: gl::GLubyte::MAX,
+      r: u8::MIN,
+      g: u8::MIN,
+      b: u8::MIN,
+      a: u8::MAX,
     }
   }
 
   #[inline]
   pub(crate) const fn white() -> Self {
     Self {
-      r: gl::GLubyte::MAX,
-      g: gl::GLubyte::MAX,
-      b: gl::GLubyte::MAX,
-      a: gl::GLubyte::MAX,
+      r: u8::MAX,
+      g: u8::MAX,
+      b: u8::MAX,
+      a: u8::MAX,
     }
   }
 
   #[inline]
   pub(crate) const fn red() -> Self {
     Self {
-      r: gl::GLubyte::MAX,
-      g: gl::GLubyte::MIN,
-      b: gl::GLubyte::MIN,
-      a: gl::GLubyte::MAX,
+      r: u8::MAX,
+      g: u8::MIN,
+      b: u8::MIN,
+      a: u8::MAX,
     }
   }
 
   #[inline]
   pub(crate) const fn green() -> Self {
     Self {
-      r: gl::GLubyte::MIN,
-      g: gl::GLubyte::MAX,
-      b: gl::GLubyte::MIN,
-      a: gl::GLubyte::MAX,
+      r: u8::MIN,
+      g: u8::MAX,
+      b: u8::MIN,
+      a: u8::MAX,
     }
   }
 
   #[inline]
   pub(crate) const fn blue() -> Self {
     Self {
-      r: gl::GLubyte::MIN,
-      g: gl::GLubyte::MIN,
-      b: gl::GLubyte::MAX,
-      a: gl::GLubyte::MAX,
+      r: u8::MIN,
+      g: u8::MIN,
+      b: u8::MAX,
+      a: u8::MAX,
     }
   }
 
@@ -164,20 +164,20 @@ impl Color {
   #[inline]
   pub(crate) const fn orange() -> Self {
     Self {
-      r: gl::GLubyte::MAX,
-      g: gl::GLubyte::MAX / 2,
-      b: gl::GLubyte::MIN,
-      a: gl::GLubyte::MAX,
+      r: u8::MAX,
+      g: u8::MAX / 2,
+      b: u8::MIN,
+      a: u8::MAX,
     }
   }
 
   #[inline]
   pub(crate) const fn gray() -> Self {
     Self {
-      r: gl::GLubyte::MAX / 2,
-      g: gl::GLubyte::MAX / 2,
-      b: gl::GLubyte::MAX / 2,
-      a: gl::GLubyte::MAX,
+      r: u8::MAX / 2,
+      g: u8::MAX / 2,
+      b: u8::MAX / 2,
+      a: u8::MAX,
     }
   }
 }
@@ -533,13 +533,13 @@ impl Drop for ActiveRenderer<'_> {
 #[derive(Debug)]
 pub struct Renderer {
   /// The physical width of the window to which this renderer belongs.
-  phys_w: gl::GLsizei,
+  phys_w: u32,
   /// The physical height of the window to which this renderer belongs.
-  phys_h: gl::GLsizei,
+  phys_h: u32,
   /// The logical width of the view maintained by this renderer.
-  logic_w: gl::GLfloat,
+  logic_w: f32,
   /// The logical height of the view maintained by this renderer.
-  logic_h: gl::GLfloat,
+  logic_h: f32,
   /// The model-view matrix stack.
   modelview: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
   /// The projection matrix stack.
@@ -567,8 +567,8 @@ impl Renderer {
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     let slf = Self {
-      phys_w: gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX),
-      phys_h: gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX),
+      phys_w: phys_w.get(),
+      phys_h: phys_h.get(),
       logic_w,
       logic_h,
       modelview: RefCell::new(MatrixStack::new(Self::load_matrix)),
@@ -583,11 +583,11 @@ impl Renderer {
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
-  ) -> (gl::GLfloat, gl::GLfloat) {
-    let phys_w = phys_w.get() as gl::GLfloat;
-    let phys_h = phys_h.get() as gl::GLfloat;
-    let logic_w = logic_w.get() as gl::GLfloat;
-    let logic_h = logic_h.get() as gl::GLfloat;
+  ) -> (f32, f32) {
+    let phys_w = phys_w.get() as f32;
+    let phys_h = phys_h.get() as f32;
+    let logic_w = logic_w.get() as f32;
+    let logic_h = logic_h.get() as f32;
 
     let phys_ratio = phys_w / phys_h;
     let logic_ratio = logic_w / logic_h;
@@ -622,8 +622,8 @@ impl Renderer {
   ) {
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
-    self.phys_w = gl::GLsizei::try_from(phys_w.get()).unwrap_or(gl::GLsizei::MAX);
-    self.phys_h = gl::GLsizei::try_from(phys_h.get()).unwrap_or(gl::GLsizei::MAX);
+    self.phys_w = phys_w.get();
+    self.phys_h = phys_h.get();
     self.logic_w = logic_w;
     self.logic_h = logic_h;
   }
@@ -658,7 +658,7 @@ impl Renderer {
       gl::PointSize(1.0);
       gl::LineWidth(1.0);
 
-      gl::Viewport(0, 0, self.phys_w, self.phys_h);
+      gl::Viewport(0, 0, self.phys_w as _, self.phys_h as _);
 
       debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
     }
@@ -735,7 +735,7 @@ mod tests {
   #[test]
   fn color_float_conversion() {
     let (r, g, b, a) = Color::white().as_floats();
-    let e = gl::GLfloat::EPSILON;
+    let e = f32::EPSILON;
     assert!(1.0 - e <= r && r <= 1.0 + e);
     assert!(1.0 - e <= g && g <= 1.0 + e);
     assert!(1.0 - e <= b && b <= 1.0 + e);
