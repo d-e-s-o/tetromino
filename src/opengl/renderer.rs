@@ -202,7 +202,7 @@ impl Sub<Color> for Color {
 #[repr(u32)]
 enum Primitive {
   Line = gl::LINES,
-  Quad = gl::QUADS,
+  Triangle = gl::TRIANGLES,
 }
 
 impl Primitive {
@@ -316,7 +316,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
         still_bound: None,
       }),
       vertices: RefCell::new(Vec::with_capacity(VERTEX_BUFFER_CAPACITY)),
-      primitive: Cell::new(Primitive::Quad),
+      primitive: Cell::new(Primitive::Triangle),
     }
   }
 
@@ -427,12 +427,12 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
   /// Render a rectangle.
   fn render_rect_with_tex_coords_f32(&self, mut rect: Rect<f32>, coords: Rect<f32>) {
-    const VERTEX_COUNT_QUAD: usize = 4;
+    const VERTEX_COUNT_QUAD: usize = 6;
 
     let origin = self.origin.get();
     rect += origin.into_other();
 
-    let () = self.set_primitive(Primitive::Quad, VERTEX_COUNT_QUAD);
+    let () = self.set_primitive(Primitive::Triangle, VERTEX_COUNT_QUAD);
     let color = self.color.get();
 
     let mut vertex = Vertex {
@@ -449,7 +449,10 @@ impl<'renderer> ActiveRenderer<'renderer> {
 
     let mut buffer = self.vertices.borrow_mut();
     let vertices = buffer.spare_capacity_mut();
+
+    // lower left
     vertices[0].write(vertex);
+    vertices[5].write(vertex);
 
     // lower right
     vertex.u += coords.w;
@@ -461,10 +464,13 @@ impl<'renderer> ActiveRenderer<'renderer> {
     vertex.y += rect.h;
     vertices[2].write(vertex);
 
+    // upper right
+    vertices[3].write(vertex);
+
     // upper left
     vertex.u = coords.x;
     vertex.x = rect.x;
-    vertices[3].write(vertex);
+    vertices[4].write(vertex);
 
     let len = buffer.len();
     let () = unsafe { buffer.set_len(len + VERTEX_COUNT_QUAD) };
