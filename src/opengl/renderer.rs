@@ -13,10 +13,13 @@ use std::ops::Sub;
 use std::ptr::addr_of;
 use std::rc::Rc;
 
+use anyhow::Context as _;
 use anyhow::Result;
 
 use xgl::sys;
 use xgl::MatrixStack;
+use xgl::Program;
+use xgl::Shader;
 
 use crate::guard::Guard;
 use crate::Point;
@@ -540,6 +543,8 @@ pub struct Renderer {
   logic_w: f32,
   /// The logical height of the view maintained by this renderer.
   logic_h: f32,
+  /// The program.
+  _program: Program,
   /// The model-view matrix stack.
   modelview: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
   /// The projection matrix stack.
@@ -564,6 +569,79 @@ impl Renderer {
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) -> Result<Self> {
+    let context = sys::Context::default();
+
+    // The name of the model-view matrix uniform in the vertex shader.
+    let modelview_uniform = "modelview";
+    // The name of the projection matrix uniform in the vertex shader.
+    let projection_uniform = "projection";
+    // The name of the texture uniform in the fragment shader.
+    let texture_unit_uniform = "texture_unit";
+    // The name of the color input attribute in the vertex shader.
+    let color_attrib = "color";
+    // The name of the position input attribute in the vertex shader.
+    let position_attrib = "position";
+    // The name of the texture coordinate input attribute in the vertex shader.
+    let texture_coord_attrib = "texture_coord";
+    // The name of the color attribute transferred between vertex and
+    // fragment shader.
+    let color_in_out = "color_in_out";
+    // The name of the texture coordinate attribute transferred between
+    // vertex and fragment shader.
+    let texture_coord_in_out = "texture_coord_in_out";
+
+    let vertex_shader_file = format!(
+      r#"#version {glsl_version}
+
+      uniform mat4 {modelview_uniform};
+      uniform mat4 {projection_uniform};
+
+      in vec3 {position_attrib};
+      in vec4 {color_attrib};
+      in vec2 {texture_coord_attrib};
+
+      out vec4 {color_in_out};
+      out vec2 {texture_coord_in_out};
+
+      void main() {{
+        gl_Position = {projection_uniform} * {modelview_uniform} * vec4({position_attrib}, 1.0);
+
+        {color_in_out} = {color_attrib};
+        {texture_coord_in_out} = {texture_coord_attrib};
+      }}
+      "#,
+      glsl_version = Shader::glsl_version(),
+    );
+
+    let fragment_shader_file = format!(
+      r#"#version {glsl_version}
+
+      uniform sampler2D {texture_unit_uniform};
+
+      in vec4 {color_in_out};
+      in vec2 {texture_coord_in_out};
+
+      out vec4 fragment_color;
+
+      void main() {{
+        fragment_color = texture({texture_unit_uniform}, {texture_coord_in_out}) * {color_in_out};
+      }}
+      "#,
+      glsl_version = Shader::glsl_version(),
+    );
+
+    let vertex_shader = Shader::new(sys::ShaderType::Vertex, &vertex_shader_file, &context)
+      .context("failed to create vertex shader")?;
+    let fragment_shader = Shader::new(sys::ShaderType::Fragment, &fragment_shader_file, &context)
+      .context("failed to create fragment shader")?;
+    let program = Program::new(&[vertex_shader, fragment_shader], &context)?;
+    let texture_unit_loc = program.query_uniform_location(texture_unit_uniform)?;
+    let modelview_loc = program.query_uniform_location(modelview_uniform)?;
+    let projection_loc = program.query_uniform_location(projection_uniform)?;
+    let color_idx = program.query_attrib_location(color_attrib)?;
+    let position_idx = program.query_attrib_location(position_attrib)?;
+    let texture_coord_idx = program.query_attrib_location(texture_coord_attrib)?;
+
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     let slf = Self {
@@ -571,6 +649,7 @@ impl Renderer {
       phys_h: phys_h.get(),
       logic_w,
       logic_h,
+      _program: program,
       modelview: RefCell::new(MatrixStack::new(Self::load_matrix)),
       projection: RefCell::new(MatrixStack::new(Self::load_matrix)),
       empty_texture: Rc::new(empty_texture()?),
