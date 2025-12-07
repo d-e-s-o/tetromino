@@ -4,29 +4,34 @@
 use std::cell::Cell;
 use std::cell::RefCell;
 use std::mem::needs_drop;
+use std::mem::offset_of;
 use std::mem::replace;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 use std::ops::Add;
 use std::ops::DerefMut as _;
 use std::ops::Sub;
-use std::ptr::addr_of;
 use std::rc::Rc;
 
 use anyhow::Context as _;
 use anyhow::Result;
 
 use xgl::sys;
+use xgl::sys::Gl as _;
+use xgl::vertex::Attrib;
+use xgl::vertex::AttribType;
+use xgl::vertex::Attribs;
 use xgl::MatrixStack;
 use xgl::Program;
 use xgl::Shader;
+use xgl::VertexArray;
+use xgl::VertexBuffer;
 
 use crate::guard::Guard;
 use crate::Point;
 use crate::Rect;
 
 use super::empty_texture;
-use super::gl;
 use super::Context;
 use super::Mat4f;
 use super::Texture;
@@ -38,7 +43,7 @@ use super::Texture;
 const VERTEX_BUFFER_CAPACITY: usize = 1024;
 
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 #[repr(C, packed)]
 struct Vertex {
   // texture coordinates
@@ -55,6 +60,41 @@ struct Vertex {
   x: f32,
   y: f32,
   z: f32,
+}
+
+impl Attribs for Vertex {
+  const ATTRIBS: &'static [(AttribType, Attrib)] = &[
+    (
+      AttribType::Texture,
+      Attrib {
+        size: 2,
+        type_: sys::Type::Float,
+        normalize: false,
+        stride: size_of::<Self>() as _,
+        offset: 0,
+      },
+    ),
+    (
+      AttribType::Color,
+      Attrib {
+        size: 4,
+        type_: sys::Type::Float,
+        normalize: false,
+        stride: size_of::<Self>() as _,
+        offset: offset_of!(Self, r) as _,
+      },
+    ),
+    (
+      AttribType::Position,
+      Attrib {
+        size: 3,
+        type_: sys::Type::Float,
+        normalize: false,
+        stride: size_of::<Self>() as _,
+        offset: offset_of!(Self, x) as _,
+      },
+    ),
+  ];
 }
 
 
@@ -354,11 +394,8 @@ impl<'renderer> ActiveRenderer<'renderer> {
   /// Clear the screen using the given color.
   pub(crate) fn clear_screen(&self, color: Color) {
     let (r, g, b, a) = color.as_floats();
-
-    unsafe { gl::ClearColor(r, g, b, a) };
-    unsafe { gl::Clear(gl::COLOR_BUFFER_BIT) };
-
-    debug_assert_eq!(unsafe { gl::GetError() }, gl::NO_ERROR);
+    let () = self.renderer.context.set_clear_color(r, g, b, a);
+    let () = self.renderer.context.clear(sys::ClearMask::ColorBuffer);
   }
 
   /// Render a line.
@@ -484,37 +521,12 @@ impl<'renderer> ActiveRenderer<'renderer> {
     let size = buffer.len() as _;
     if size > 0 {
       let () = texture.ensure_bound();
-
-      unsafe {
-        let () = gl::EnableClientState(gl::COLOR_ARRAY);
-        let () = gl::ColorPointer(
-          4,
-          gl::FLOAT,
-          size_of_val(&buffer[0]) as _,
-          addr_of!(buffer[0].r).cast(),
-        );
-        let () = gl::EnableClientState(gl::VERTEX_ARRAY);
-        let () = gl::VertexPointer(
-          3,
-          gl::FLOAT,
-          size_of_val(&buffer[0]) as _,
-          addr_of!(buffer[0].x).cast(),
-        );
-        let () = gl::EnableClientState(gl::TEXTURE_COORD_ARRAY);
-        let () = gl::TexCoordPointer(
-          2,
-          gl::FLOAT,
-          size_of_val(&buffer[0]) as _,
-          addr_of!(buffer[0].u).cast(),
-        );
-
-        let () = gl::DrawArrays(self.primitive.get() as _, 0, size);
-        let () = gl::DisableClientState(gl::NORMAL_ARRAY);
-        let () = gl::DisableClientState(gl::TEXTURE_COORD_ARRAY);
-        let () = gl::DisableClientState(gl::VERTEX_ARRAY);
-
-        debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-      }
+      let () = self.renderer.vertices_vbo.update(&buffer, 0);
+      let () = self.renderer.vertices_vao.bind();
+      let () = self
+        .renderer
+        .context
+        .draw_arrays(self.primitive.get(), size);
 
       debug_assert!(const { !needs_drop::<Vertex>() });
       // SAFETY: We are strictly decreasing size and our vertices are
@@ -543,24 +555,23 @@ pub struct Renderer {
   logic_w: f32,
   /// The logical height of the view maintained by this renderer.
   logic_h: f32,
+  /// The OpenGL context.
+  context: sys::Context,
   /// The program.
   _program: Program,
   /// The model-view matrix stack.
-  modelview: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
+  modelview: RefCell<MatrixStack<Mat4f, 2, Box<dyn Fn(&Mat4f)>>>,
   /// The projection matrix stack.
-  projection: RefCell<MatrixStack<Mat4f, 2, fn(&Mat4f)>>,
+  projection: RefCell<MatrixStack<Mat4f, 2, Box<dyn Fn(&Mat4f)>>>,
   /// An "empty" texture.
   empty_texture: Rc<Texture>,
+  /// Vertices for rendering the scene.
+  vertices_vbo: VertexBuffer<Vertex>,
+  /// The vertex array object capturing the VBO state.
+  vertices_vao: VertexArray,
 }
 
 impl Renderer {
-  /// Convenience wrapper around `gl::LoadMatrixf` suitable for use with
-  /// a `MatrixStack`.
-  fn load_matrix(matrix: &Mat4f) {
-    // SAFETY: The pointer comes from a reference and is always valid.
-    unsafe { gl::LoadMatrixf(matrix.as_array().as_ptr()) }
-  }
-
   /// Create a new [`Renderer`] object assuming the provide "physical"
   /// and logical view dimensions.
   pub fn new(
@@ -642,17 +653,47 @@ impl Renderer {
     let position_idx = program.query_attrib_location(position_attrib)?;
     let texture_coord_idx = program.query_attrib_location(texture_coord_attrib)?;
 
+    // Bind the program so that we can set uniforms below.
+    let () = program.bind();
+
+    // All our texturing uses a single unit. Activate it.
+    let unit = 0;
+    let () = context.set_active_texture_unit(unit);
+    let () = context.set_uniform_1i(&texture_unit_loc, unit as _);
+
+    let context_clone1 = context.clone();
+    let context_clone2 = context.clone();
+
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
+
+    let attrib_indices = [
+      (texture_coord_idx, AttribType::Texture),
+      (color_idx, AttribType::Color),
+      (position_idx, AttribType::Position),
+    ];
+    let vertices_vbo = VertexBuffer::from_vertices(
+      &[Vertex::default(); VERTEX_BUFFER_CAPACITY],
+      sys::VertexBufferUsage::DynamicDraw,
+      &context,
+    )?;
+    let vertices_vao = VertexArray::new(&vertices_vbo, &attrib_indices, &context)?;
 
     let slf = Self {
       phys_w: phys_w.get(),
       phys_h: phys_h.get(),
       logic_w,
       logic_h,
+      context,
       _program: program,
-      modelview: RefCell::new(MatrixStack::new(Self::load_matrix)),
-      projection: RefCell::new(MatrixStack::new(Self::load_matrix)),
+      modelview: RefCell::new(MatrixStack::new(Box::new(move |matrix| {
+        context_clone1.set_uniform_matrix(&modelview_loc, matrix.as_array())
+      }))),
+      projection: RefCell::new(MatrixStack::new(Box::new(move |matrix| {
+        context_clone2.set_uniform_matrix(&projection_loc, matrix.as_array())
+      }))),
       empty_texture: Rc::new(empty_texture()?),
+      vertices_vbo,
+      vertices_vao,
     };
     Ok(slf)
   }
@@ -708,80 +749,30 @@ impl Renderer {
   }
 
   fn push_states(&self) {
-    unsafe {
-      gl::PushAttrib(
-        gl::CURRENT_BIT
-          | gl::COLOR_BUFFER_BIT
-          | gl::DEPTH_BUFFER_BIT
-          | gl::ENABLE_BIT
-          | gl::FOG_BIT
-          | gl::LIGHTING_BIT
-          | gl::LINE_BIT
-          | gl::POINT_BIT
-          | gl::SCISSOR_BIT
-          | gl::STENCIL_BUFFER_BIT
-          | gl::TEXTURE_BIT
-          | gl::TRANSFORM_BIT
-          | gl::VIEWPORT_BIT,
-      );
-
-      gl::Disable(gl::FOG);
-      gl::Disable(gl::LIGHTING);
-      gl::Disable(gl::COLOR_MATERIAL);
-      gl::Disable(gl::DEPTH_TEST);
-      gl::Disable(gl::SCISSOR_TEST);
-      gl::Disable(gl::CULL_FACE);
-
-      gl::Enable(gl::TEXTURE_2D);
-
-      gl::PointSize(1.0);
-      gl::LineWidth(1.0);
-
-      gl::Viewport(0, 0, self.phys_w as _, self.phys_h as _);
-
-      debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-    }
+    let () = self
+      .context
+      .set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
   }
 
-  fn pop_states(&self) {
-    unsafe {
-      gl::PopAttrib();
-
-      debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-    }
-  }
+  fn pop_states(&self) {}
 
   fn push_matrizes(&self) {
-    unsafe {
-      // We create an orthogonal projection matrix with bounds
-      // sufficient to contain the logical view.
-      gl::MatrixMode(gl::PROJECTION);
-      let () = self.projection.borrow_mut().push(|p| {
-        // Our renderer will render everything with z-coordinate of 0.0f,
-        // this must lie inside the range [zNear, zFar] (last two
-        // parameters).
-        *p = Mat4f::orthographic(0.0, self.logic_w, 0.0, self.logic_h, -0.5, 0.5);
-      });
-
-      gl::MatrixMode(gl::MODELVIEW);
-      let () = self.modelview.borrow_mut().push(|mv| {
-        *mv = Mat4f::identity();
-      });
-
-      debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-    }
+    // We create an orthogonal projection matrix with bounds
+    // sufficient to contain the logical view.
+    let () = self.projection.borrow_mut().push(|p| {
+      // Our renderer will render everything with z-coordinate of 0.0f,
+      // this must lie inside the range [zNear, zFar] (last two
+      // parameters).
+      *p = Mat4f::orthographic(0.0, self.logic_w, 0.0, self.logic_h, -0.5, 0.5);
+    });
+    let () = self.modelview.borrow_mut().push(|m| {
+      *m = Mat4f::identity();
+    });
   }
 
   fn pop_matrizes(&self) {
-    unsafe {
-      gl::MatrixMode(gl::MODELVIEW);
-      let () = self.modelview.borrow_mut().pop();
-
-      gl::MatrixMode(gl::PROJECTION);
-      let () = self.projection.borrow_mut().pop();
-
-      debug_assert_eq!(gl::GetError(), gl::NO_ERROR);
-    }
+    let () = self.modelview.borrow_mut().pop();
+    let () = self.projection.borrow_mut().pop();
   }
 
   /// Activate the renderer with the given [`Context`] in preparation
