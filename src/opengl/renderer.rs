@@ -43,10 +43,10 @@ struct Vertex {
   v: f32,
 
   // color
-  r: u8,
-  g: u8,
-  b: u8,
-  a: u8,
+  r: f32,
+  g: f32,
+  b: f32,
+  a: f32,
 
   // position
   x: f32,
@@ -367,15 +367,15 @@ impl<'renderer> ActiveRenderer<'renderer> {
     p2 += origin;
 
     let () = self.set_primitive(sys::Primitive::Lines, VERTEX_COUNT_LINE);
-    let color = self.color.get();
+    let (r, g, b, a) = self.color.get().as_floats();
 
     let mut vertex = Vertex {
       u: 0.0,
       v: 0.0,
-      r: color.r,
-      g: color.g,
-      b: color.b,
-      a: color.a,
+      r,
+      g,
+      b,
+      a,
       x: p1.x.into(),
       y: p1.y.into(),
       z: 0.0,
@@ -420,15 +420,15 @@ impl<'renderer> ActiveRenderer<'renderer> {
     rect += origin.into_other();
 
     let () = self.set_primitive(sys::Primitive::Triangles, VERTEX_COUNT_QUAD);
-    let color = self.color.get();
+    let (r, g, b, a) = self.color.get().as_floats();
 
     let mut vertex = Vertex {
       u: coords.x,
       v: coords.y,
-      r: color.r,
-      g: color.g,
-      b: color.b,
-      a: color.a,
+      r,
+      g,
+      b,
+      a,
       x: rect.x,
       y: rect.y,
       z: 0.0,
@@ -486,7 +486,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
         let () = gl::EnableClientState(gl::COLOR_ARRAY);
         let () = gl::ColorPointer(
           4,
-          gl::UNSIGNED_BYTE,
+          gl::FLOAT,
           size_of_val(&buffer[0]) as _,
           addr_of!(buffer[0].r).cast(),
         );
