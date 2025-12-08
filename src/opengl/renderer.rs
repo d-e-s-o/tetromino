@@ -602,7 +602,7 @@ impl Renderer {
     let texture_coord_in_out = "texture_coord_in_out";
 
     let vertex_shader_file = format!(
-      r#"#version {glsl_version}
+      r#"#version {glsl_version} core
 
       uniform mat4 {modelview_uniform};
       uniform mat4 {projection_uniform};
@@ -625,7 +625,7 @@ impl Renderer {
     );
 
     let fragment_shader_file = format!(
-      r#"#version {glsl_version}
+      r#"#version {glsl_version} core
 
       uniform sampler2D {texture_unit_uniform};
 

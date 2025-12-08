@@ -10,6 +10,7 @@ use glutin::config::Config;
 use glutin::config::ConfigTemplateBuilder;
 use glutin::context::ContextApi;
 use glutin::context::ContextAttributesBuilder;
+use glutin::context::GlProfile;
 use glutin::context::NotCurrentGlContext as _;
 use glutin::context::PossiblyCurrentContext;
 use glutin::context::Version;
@@ -146,6 +147,7 @@ impl Context {
     let (major, minor) = opengl_version();
     let context_attributes = ContextAttributesBuilder::new()
       .with_context_api(ContextApi::OpenGl(Some(Version::new(major, minor))))
+      .with_profile(GlProfile::Core)
       .build(Some(raw_window_handle));
     let attrs =
       SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
