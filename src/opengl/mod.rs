@@ -23,15 +23,3 @@ pub(crate) type Mat4f = vema::Matrix<f32, 4>;
 pub use renderer::Renderer;
 pub use window::Context;
 pub use window::Window;
-
-
-#[expect(unused_imports)]
-#[allow(clippy::allow_attributes, clippy::all)]
-mod gl {
-  #[link(name = "GL")]
-  extern "system" {}
-
-  include!("bindings.rs");
-
-  pub use self::types::*;
-}

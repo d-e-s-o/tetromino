@@ -36,6 +36,8 @@ use winit::raw_window_handle::XlibWindowHandle;
 use winit::window::Window as WinitWindow;
 use winit::window::WindowAttributes;
 
+use xgl::sys;
+
 
 fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
   let size = window.inner_size();
@@ -44,26 +46,6 @@ fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
   let phys_h =
     NonZeroU32::new(size.height).unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
   (phys_w, phys_h)
-}
-
-
-/// Retrieve the OpenGL version to use.
-fn opengl_version() -> (u8, u8) {
-  let major = env!(
-    "OPENGL_MAJOR",
-    "OPENGL_MAJOR environment variable not found"
-  )
-  .parse()
-  .expect("OPENGL_MAJOR environment variable does not contain a valid number");
-
-  let minor = env!(
-    "OPENGL_MINOR",
-    "OPENGL_MINOR environment variable not found"
-  )
-  .parse()
-  .expect("OPENGL_MINOR environment variable does not contain a valid number");
-
-  (major, minor)
 }
 
 
@@ -144,7 +126,7 @@ impl Context {
     phys_w: NonZeroU32,
     phys_h: NonZeroU32,
   ) -> Result<Self> {
-    let (major, minor) = opengl_version();
+    let (major, minor, _suffix) = sys::version();
     let context_attributes = ContextAttributesBuilder::new()
       .with_context_api(ContextApi::OpenGl(Some(Version::new(major, minor))))
       .with_profile(GlProfile::Core)
