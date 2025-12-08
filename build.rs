@@ -8,7 +8,7 @@ use std::env;
 use grev::git_revision_auto;
 
 const OPENGL_MAJOR: u8 = 3;
-const OPENGL_MINOR: u8 = 1;
+const OPENGL_MINOR: u8 = 3;
 
 
 fn main() {
