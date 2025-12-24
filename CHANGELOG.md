@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.2.3
+-----
 - Switched to using OpenGL 3.3 for rendering
 - Introduced `debug` feature for enabling debug related functionality
 
