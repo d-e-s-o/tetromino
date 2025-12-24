@@ -677,6 +677,7 @@ impl Renderer {
       &context,
     )?;
     let vertices_vao = VertexArray::new(&vertices_vbo, &attrib_indices, &context)?;
+    let empty_texture = Rc::new(empty_texture(&context)?);
 
     let slf = Self {
       phys_w: phys_w.get(),
@@ -691,7 +692,7 @@ impl Renderer {
       projection: RefCell::new(MatrixStack::new(Box::new(move |matrix| {
         context_clone2.set_uniform_matrix(&projection_loc, matrix.as_array())
       }))),
-      empty_texture: Rc::new(empty_texture()?),
+      empty_texture,
       vertices_vbo,
       vertices_vao,
     };

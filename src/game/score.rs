@@ -184,8 +184,8 @@ mod tests {
   #[fork]
   #[test]
   fn score_counting() {
-    with_opengl_context(|| {
-      let texture = Rc::new(empty_texture().unwrap());
+    with_opengl_context(|context| {
+      let texture = Rc::new(empty_texture(context).unwrap());
       let font = Font::builtin(texture);
       let mut score = Score::new(Point::new(0, 0), 1, 10, font);
       assert_eq!(score.level, 1);

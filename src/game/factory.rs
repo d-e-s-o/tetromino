@@ -98,8 +98,8 @@ mod tests {
   #[fork]
   #[test]
   fn stone_dimensions() {
-    with_opengl_context(|| {
-      let texture = Rc::new(empty_texture().unwrap());
+    with_opengl_context(|context| {
+      let texture = Rc::new(empty_texture(context).unwrap());
       let factory = StoneFactory::with_default_stones(texture);
 
       let (w, h) = factory.max_dimensions();

@@ -138,8 +138,8 @@ mod tests {
   #[fork]
   #[test]
   fn font_loading() {
-    with_opengl_context(|| {
-      let font = Font::builtin(Rc::new(empty_texture().unwrap()));
+    with_opengl_context(|context| {
+      let font = Font::builtin(Rc::new(empty_texture(context).unwrap()));
       // Space has no coordinates to render.
       let (glyph, space) = &font.glyphs[0];
       assert!(glyph.is_empty());

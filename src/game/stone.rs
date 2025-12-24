@@ -114,12 +114,14 @@ mod tests {
 
   use test_fork::fork;
 
+  use xgl::sys;
+
   use crate::opengl::empty_texture;
   use crate::opengl::with_opengl_context;
 
 
-  fn new_stone(template: &[Point<i8>]) -> Stone {
-    let texture = Rc::new(empty_texture().unwrap());
+  fn new_stone(template: &[Point<i8>], context: &sys::Context) -> Stone {
+    let texture = Rc::new(empty_texture(context).unwrap());
     Stone::new(texture, template, 0)
   }
 
@@ -128,23 +130,23 @@ mod tests {
   #[fork]
   #[test]
   fn stone_bounds() {
-    with_opengl_context(|| {
+    with_opengl_context(|context| {
       let template = [Point::new(1, 2)];
-      let bounds = new_stone(&template).bounds();
+      let bounds = new_stone(&template, context).bounds();
       assert_eq!(bounds.x, 1);
       assert_eq!(bounds.y, 2);
       assert_eq!(bounds.w, 1);
       assert_eq!(bounds.h, 1);
 
       let template = [Point::new(1, 2), Point::new(3, 2)];
-      let bounds = new_stone(&template).bounds();
+      let bounds = new_stone(&template, context).bounds();
       assert_eq!(bounds.x, 1);
       assert_eq!(bounds.y, 2);
       assert_eq!(bounds.w, 3);
       assert_eq!(bounds.h, 1);
 
       let template = [Point::new(1, 2), Point::new(0, 1)];
-      let bounds = new_stone(&template).bounds();
+      let bounds = new_stone(&template, context).bounds();
       assert_eq!(bounds.x, 0);
       assert_eq!(bounds.y, 1);
       assert_eq!(bounds.w, 2);
@@ -156,7 +158,7 @@ mod tests {
         Point::new(1, 0),
         Point::new(1, 1),
       ];
-      let bounds = new_stone(&template).bounds();
+      let bounds = new_stone(&template, context).bounds();
       assert_eq!(bounds.x, 0);
       assert_eq!(bounds.y, 0);
       assert_eq!(bounds.w, 2);
@@ -168,9 +170,9 @@ mod tests {
   #[fork]
   #[test]
   fn stone_movement() {
-    with_opengl_context(|| {
+    with_opengl_context(|context| {
       let template = [Point::new(1, 2), Point::new(0, 1)];
-      let mut stone = new_stone(&template);
+      let mut stone = new_stone(&template, context);
       let bounds = stone.bounds();
       assert_eq!(bounds.x, 0);
       assert_eq!(bounds.y, 1);
@@ -195,7 +197,7 @@ mod tests {
   #[fork]
   #[test]
   fn stone_rotation() {
-    with_opengl_context(|| {
+    with_opengl_context(|context| {
       // T stone
       let template = [
         Point::new(0, 0),
@@ -203,7 +205,7 @@ mod tests {
         Point::new(1, 1),
         Point::new(2, 0),
       ];
-      let mut stone = new_stone(&template);
+      let mut stone = new_stone(&template, context);
       let () = stone.move_to(Point::new(6, 4));
       let before = stone.pieces().collect::<Vec<_>>();
       let () = stone.rotate_left();
