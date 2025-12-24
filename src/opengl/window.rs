@@ -246,7 +246,7 @@ impl Window {
 #[expect(deprecated)]
 pub(crate) fn with_opengl_context<F>(f: F)
 where
-  F: FnOnce(),
+  F: FnOnce(&sys::Context),
 {
   use winit::event_loop::EventLoop;
   use winit::platform::x11::EventLoopBuilderExtX11 as _;
@@ -261,6 +261,7 @@ where
     event_loop.create_window(attrs)
   };
   let _window = Window::new(display_handle, create_window_fn).unwrap();
+  let context = sys::Context::default();
 
-  f()
+  f(&context)
 }

@@ -54,11 +54,7 @@ fn dynamic_image_to_tex_info(image: &DynamicImage) -> Result<TextureInfo, Error>
 
 
 /// Create a white ("empty") 1x1 texture.
-pub(crate) fn empty_texture() -> Result<Texture> {
-  // TODO: We must not create a context on demand pass one through
-  //       from somewhere.
-  let context = sys::Context::default();
-
+pub(crate) fn empty_texture(context: &sys::Context) -> Result<Texture> {
   let info = TextureInfo {
     width: 1,
     height: 1,
@@ -67,7 +63,7 @@ pub(crate) fn empty_texture() -> Result<Texture> {
     color_format: sys::Type::UnsignedByte,
   };
   let white = Texture::builder()
-    .set_context(&context)
+    .set_context(context)
     .from_image(&[255, 255, 255, 255], &info)?;
   Ok(white)
 }
