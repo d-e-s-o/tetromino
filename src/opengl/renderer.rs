@@ -59,7 +59,6 @@ struct Vertex {
   // position
   x: f32,
   y: f32,
-  z: f32,
 }
 
 impl Attribs for Vertex {
@@ -91,7 +90,7 @@ impl Attribs for Vertex {
     (
       AttribType::Position,
       Attrib {
-        size: 3,
+        size: 2,
         type_: sys::Type::Float,
         normalize: false,
         stride: size_of::<Self>() as _,
@@ -412,7 +411,6 @@ impl<'renderer> ActiveRenderer<'renderer> {
       a,
       x: p1.x.into(),
       y: p1.y.into(),
-      z: 0.0,
     };
 
     let mut buffer = self.vertices.borrow_mut();
@@ -465,7 +463,6 @@ impl<'renderer> ActiveRenderer<'renderer> {
       a,
       x: rect.x,
       y: rect.y,
-      z: 0.0,
     };
 
     let mut buffer = self.vertices.borrow_mut();
