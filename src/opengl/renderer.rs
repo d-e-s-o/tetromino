@@ -51,10 +51,10 @@ struct Vertex {
   v: f32,
 
   // color
-  r: f32,
-  g: f32,
-  b: f32,
-  a: f32,
+  r: u8,
+  g: u8,
+  b: u8,
+  a: u8,
 
   // position
   x: f32,
@@ -78,8 +78,12 @@ impl Attribs for Vertex {
       AttribType::Color,
       Attrib {
         size: 4,
-        type_: sys::Type::Float,
-        normalize: false,
+        type_: sys::Type::UnsignedByte,
+        // By performing normalization we effectively map:
+        // 0   -> 0.0
+        // ... -> ...
+        // 255 -> 1.0
+        normalize: true,
         stride: size_of::<Self>() as _,
         offset: offset_of!(Self, r) as _,
       },
@@ -407,7 +411,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
     p2 += origin;
 
     let () = self.set_primitive(sys::Primitive::Lines, VERTEX_COUNT_LINE);
-    let (r, g, b, a) = self.color.get().as_floats();
+    let Color { r, g, b, a } = self.color.get();
 
     let mut vertex = Vertex {
       u: 0.0,
@@ -460,7 +464,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
     rect += origin.into_other();
 
     let () = self.set_primitive(sys::Primitive::Triangles, VERTEX_COUNT_QUAD);
-    let (r, g, b, a) = self.color.get().as_floats();
+    let Color { r, g, b, a } = self.color.get();
 
     let mut vertex = Vertex {
       u: coords.x,
