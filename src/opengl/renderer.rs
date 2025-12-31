@@ -112,16 +112,6 @@ pub(crate) struct Color {
 }
 
 impl Color {
-  #[inline]
-  fn as_floats(&self) -> (f32, f32, f32, f32) {
-    (
-      self.r as f32 / u8::MAX as f32,
-      self.g as f32 / u8::MAX as f32,
-      self.b as f32 / u8::MAX as f32,
-      self.a as f32 / u8::MAX as f32,
-    )
-  }
-
   /// A `const` version of `Add::add`.
   const fn cadd(self, other: Color) -> Self {
     Self {
@@ -396,9 +386,9 @@ impl<'renderer> ActiveRenderer<'renderer> {
   }
 
   /// Clear the screen using the given color.
-  pub(crate) fn clear_screen(&self, color: Color) {
-    let (r, g, b, a) = color.as_floats();
-    let () = self.renderer.context.set_clear_color(r, g, b, a);
+  pub(crate) fn clear_screen(&self, color: (f32, f32, f32)) {
+    let (r, g, b) = color;
+    let () = self.renderer.context.set_clear_color(r, g, b, 1.0);
     let () = self.renderer.context.clear(sys::ClearMask::ColorBuffer);
   }
 
@@ -796,24 +786,5 @@ impl Renderer {
   fn on_post_render(&self) {
     let () = self.pop_matrizes();
     let () = self.pop_states();
-  }
-}
-
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-
-  /// Check that we can convert a `Color` into the corresponding
-  /// floating point representation.
-  #[test]
-  fn color_float_conversion() {
-    let (r, g, b, a) = Color::white().as_floats();
-    let e = f32::EPSILON;
-    assert!(1.0 - e <= r && r <= 1.0 + e);
-    assert!(1.0 - e <= g && g <= 1.0 + e);
-    assert!(1.0 - e <= b && b <= 1.0 + e);
-    assert!(1.0 - e <= a && a <= 1.0 + e);
   }
 }

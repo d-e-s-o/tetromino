@@ -13,7 +13,6 @@ use xgl::sys;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
-use crate::Color;
 use crate::ColorMode;
 use crate::ColorSet;
 use crate::Font;
@@ -35,19 +34,17 @@ use super::StoneFactory;
 
 
 /// The color set used when clearing the screen.
-const SCREEN_CLEAR_COLOR: ColorSet = ColorSet::new(
-  Color {
-    r: 0xee,
-    g: 0xee,
-    b: 0xee,
-    a: 0xff,
-  },
-  Color {
-    r: 0x11,
-    g: 0x11,
-    b: 0x11,
-    a: 0xff,
-  },
+const SCREEN_CLEAR_COLOR: ColorSet<(f32, f32, f32)> = ColorSet::new(
+  (
+    0xee as f32 / 0xff as f32,
+    0xee as f32 / 0xff as f32,
+    0xee as f32 / 0xff as f32,
+  ),
+  (
+    0x11 as f32 / 0xff as f32,
+    0x11 as f32 / 0xff as f32,
+    0x11 as f32 / 0xff as f32,
+  ),
 );
 
 /// Space between the left screen side and the field.
@@ -71,8 +68,8 @@ const CLEAR_TIME: Duration = Duration::from_millis(200);
 /// A type representing a game of Tetris.
 #[derive(Debug)]
 pub struct Game {
-  /// The color to use for clearing the screen with.
-  screen_clear_color: ColorMode,
+  /// The color to use for clearing the screen.
+  screen_clear_color: ColorMode<(f32, f32, f32)>,
   /// The Tetris field.
   field: Field,
   /// The preview stones.
