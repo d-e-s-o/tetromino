@@ -47,8 +47,8 @@ const VERTEX_BUFFER_CAPACITY: usize = 1024;
 #[repr(C, packed)]
 struct Vertex {
   // texture coordinates
-  u: f32,
-  v: f32,
+  u: i16,
+  v: i16,
 
   // color
   r: u8,
@@ -67,7 +67,7 @@ impl Attribs for Vertex {
       AttribType::Texture,
       Attrib {
         size: 2,
-        type_: sys::Type::Float,
+        type_: sys::Type::Short,
         normalize: false,
         stride: size_of::<Self>() as _,
         offset: 0,
@@ -403,8 +403,8 @@ impl<'renderer> ActiveRenderer<'renderer> {
     let Color { r, g, b, a } = self.color.get();
 
     let mut vertex = Vertex {
-      u: 0.0,
-      v: 0.0,
+      u: 0,
+      v: 0,
       r,
       g,
       b,
@@ -435,17 +435,12 @@ impl<'renderer> ActiveRenderer<'renderer> {
   pub(crate) fn render_rect_f32(&self, rect: Rect<f32>) {
     // Texture coordinates for the quad. We always map the complete
     // texture on it.
-    let coords = Rect::new(0.0, 0.0, 1.0, 1.0);
-    let () = self.render_rect_with_tex_coords_f32(rect, coords);
+    let coords = Rect::new(0, 0, 1, 1);
+    let () = self.render_rect_with_tex_coords(rect, coords);
   }
 
   /// Render a rectangle.
-  pub(crate) fn render_rect_with_tex_coords(&self, rect: Rect<i16>, coords: Rect<f32>) {
-    self.render_rect_with_tex_coords_f32(rect.into_other(), coords)
-  }
-
-  /// Render a rectangle.
-  fn render_rect_with_tex_coords_f32(&self, mut rect: Rect<f32>, coords: Rect<f32>) {
+  pub(crate) fn render_rect_with_tex_coords(&self, mut rect: Rect<f32>, coords: Rect<i16>) {
     const VERTEX_COUNT_QUAD: usize = 6;
 
     let origin = self.origin.get();

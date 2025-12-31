@@ -301,10 +301,10 @@ impl Field {
     let _guard = renderer.set_color(self.wall_color.color());
 
     let left = Rect::new(0, 0, WALL_WIDTH, self.height());
-    let () = renderer.render_rect_with_tex_coords(left, left.into_other());
+    let () = renderer.render_rect_with_tex_coords(left.into_other(), left);
 
     let bottom = Rect::new(0, 0, self.width(), WALL_WIDTH);
-    let () = renderer.render_rect_with_tex_coords(bottom, bottom.into_other());
+    let () = renderer.render_rect_with_tex_coords(bottom.into_other(), bottom);
 
     let right = Rect::new(
       WALL_WIDTH + self.pieces.width(),
@@ -312,7 +312,7 @@ impl Field {
       WALL_WIDTH,
       self.height(),
     );
-    let () = renderer.render_rect_with_tex_coords(right, right.into_other());
+    let () = renderer.render_rect_with_tex_coords(right.into_other(), right);
   }
 
   /// Render the currently active stone (if any).
