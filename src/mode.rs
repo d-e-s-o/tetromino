@@ -1,4 +1,4 @@
-// Copyright (C) 2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2024-2025 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::Color;
@@ -46,10 +46,13 @@ impl ColorMode<()> {
   }
 }
 
-impl ColorMode<Color> {
+impl<T> ColorMode<T>
+where
+  T: Copy,
+{
   /// Toggle the currently active color.
   #[inline]
-  pub fn toggle_with(&mut self, colors: &ColorSet) {
+  pub fn toggle_with(&mut self, colors: &ColorSet<T>) {
     match self {
       Self::Light(..) => *self = Self::Dark(colors.dark),
       Self::Dark(..) => *self = Self::Light(colors.light),
@@ -65,20 +68,23 @@ impl Default for ColorMode<()> {
 
 
 /// A set of two colors, one for light mode and another for dark mode.
-pub(crate) struct ColorSet {
-  pub light: Color,
-  pub dark: Color,
+pub(crate) struct ColorSet<T = Color> {
+  pub light: T,
+  pub dark: T,
 }
 
-impl ColorSet {
+impl<T> ColorSet<T> {
   #[inline]
-  pub const fn new(light: Color, dark: Color) -> Self {
+  pub const fn new(light: T, dark: T) -> Self {
     Self { light, dark }
   }
 
   /// Retrieve the appropriate color based on the provided mode.
   #[inline]
-  pub fn select(&self, mode: &ColorMode<()>) -> Color {
+  pub fn select(&self, mode: &ColorMode<()>) -> T
+  where
+    T: Copy,
+  {
     match mode {
       ColorMode::Light(()) => self.light,
       ColorMode::Dark(()) => self.dark,
