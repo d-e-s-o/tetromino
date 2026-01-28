@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::MaybeUninit;
@@ -6,13 +6,12 @@ use std::os::raw::c_uint;
 use std::ptr::null;
 
 use anyhow::ensure;
-use anyhow::Context as _;
 use anyhow::Result;
 
 use serde::Deserialize;
 use serde::Serialize;
 
-use x11_dl::xlib;
+use x11::xlib;
 
 pub use keypeat::KeyRepeat;
 pub use keypeat::Keys;
@@ -36,21 +35,21 @@ impl Config {
     // exported anywhere. Gorgeous!
     let xkb_use_core_kbd = 0x0100;
 
-    let xlib = xlib::Xlib::open().context("failed to open xlib")?;
     // We could conceivably get the display passed in from our window or
     // some such, but the reality is that it's a royal mess to convert
     // one into the other.
-    let display = unsafe { (xlib.XOpenDisplay)(null()) };
+    let display = unsafe { xlib::XOpenDisplay(null()) };
     ensure!(!display.is_null(), "failed to open X display");
 
     let result = unsafe {
-      (xlib.XkbGetAutoRepeatRate)(
+      xlib::XkbGetAutoRepeatRate(
         display,
         xkb_use_core_kbd,
         timeout.as_mut_ptr(),
         interval.as_mut_ptr(),
       )
     };
+    let _rc = unsafe { xlib::XCloseDisplay(display) };
     ensure!(result != 0, "failed to query keyboard auto repeat settings");
 
     let timeout = unsafe { timeout.assume_init() };

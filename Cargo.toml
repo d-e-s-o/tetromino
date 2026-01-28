@@ -102,7 +102,7 @@ serde = {version = "1.0.182", default-features = false, features = ["derive", "s
 toml = {version = "0.9", default-features = false, features = ["display", "parse", "serde"]}
 vema = {version = "0.1"}
 winit = {version = "0.30", default-features = false, features = ["rwh_06", "x11"]}
-x11-dl = {version = "2.21.0", default-features = false}
+x11 = {version = "2.21.0", default-features = false, features = ["xlib"]}
 xgl = {version = "0.2"}
 
 [dev-dependencies]

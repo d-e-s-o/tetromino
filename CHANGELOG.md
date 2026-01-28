@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Switch to using static X11 bindings via `x11` crate
+
+
 0.2.3
 -----
 - Switched to using OpenGL 3.3 for rendering
