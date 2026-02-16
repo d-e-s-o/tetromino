@@ -19,10 +19,8 @@ mod opengl;
 mod point;
 mod rand;
 mod rect;
+mod tick;
 mod winit;
-
-use std::cmp::Ordering;
-use std::time::Instant;
 
 use anyhow::Result;
 
@@ -43,44 +41,9 @@ pub use crate::config::Config;
 pub use crate::game::Config as GameConfig;
 pub use crate::game::Game;
 pub use crate::opengl::Renderer;
+pub use crate::tick::Tick;
 pub use crate::winit::Context;
 pub use crate::winit::Window;
-
-
-/// An enumeration describing when the next program "tick" should occur.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum Tick {
-  /// The next tick should happen at the given instant.
-  At(Instant),
-  /// No additional tick is necessary at this point.
-  None,
-}
-
-impl From<Option<Instant>> for Tick {
-  fn from(other: Option<Instant>) -> Self {
-    match other {
-      Some(instant) => Tick::At(instant),
-      None => Tick::None,
-    }
-  }
-}
-
-impl PartialOrd<Tick> for Tick {
-  fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-    Some(self.cmp(other))
-  }
-}
-
-impl Ord for Tick {
-  fn cmp(&self, other: &Self) -> Ordering {
-    match (self, other) {
-      (Self::None, Self::None) => Ordering::Equal,
-      (Self::At(_instant), Self::None) => Ordering::Less,
-      (Self::None, Self::At(_instant)) => Ordering::Greater,
-      (Self::At(instant1), Self::At(instant2)) => instant1.cmp(instant2),
-    }
-  }
-}
 
 
 // This function is really only meant to be used by the main program.
