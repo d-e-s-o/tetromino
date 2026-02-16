@@ -174,6 +174,132 @@ struct State {
   was_paused: bool,
 }
 
+impl State {
+  fn new(window: Window, game: Game, renderer: Renderer, keys: Keys<Key>) -> Self {
+    let was_paused = game.is_paused();
+    Self {
+      window,
+      game,
+      renderer,
+      keys,
+      was_paused,
+    }
+  }
+
+  fn on_key_press(&mut self, key: Key, now: Instant) {
+    let () = self.keys.on_key_press(now, key);
+  }
+
+  fn on_key_release(&mut self, key: Key, now: Instant) {
+    let () = self.keys.on_key_release(now, key);
+  }
+
+  fn on_focus_event(&mut self, focused: bool) {
+    if focused {
+      if !self.was_paused {
+        // The game was not paused when we lost focus. That means
+        // we ended up pausing it. Unpause it again.
+        let () = self.game.pause(false);
+      }
+    } else {
+      self.was_paused = self.game.is_paused();
+      if !self.was_paused {
+        // The game is currently running but we are about to loose
+        // focus. Pause it, as the user will no longer have a
+        // chance to control it and it's not great to have it
+        // actively running in the background.
+        let () = self.game.pause(true);
+      }
+
+      // We may not get informed about key releases once unfocused.
+      // So just treat such an event as clearing all pressed keys
+      // eagerly.
+      let () = self.keys.clear();
+    }
+  }
+
+  fn on_window_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
+    let () = self.window.on_resize(phys_w, phys_h);
+    let () = self
+      .renderer
+      .update_view(phys_w, phys_h, self.game.width(), self.game.height());
+  }
+
+  fn handle_key(key: &Key, repeat: &mut KeyRepeat, game: &mut Game) -> Change {
+    match key {
+      Key::Digit1 => {
+        *repeat = KeyRepeat::Disabled;
+        game.on_rotate_left()
+      },
+      Key::Digit2 => {
+        *repeat = KeyRepeat::Disabled;
+        game.on_rotate_right()
+      },
+      Key::KeyH => game.on_move_left(),
+      Key::KeyJ => game.on_move_down(),
+      Key::KeyL => game.on_move_right(),
+      Key::KeyQ => Change::Quit,
+      Key::Backspace => {
+        *repeat = KeyRepeat::Disabled;
+        let () = game.restart();
+        Change::Changed
+      },
+      Key::ArrowDown => game.on_move_down(),
+      Key::ArrowLeft => game.on_move_left(),
+      Key::ArrowRight => game.on_move_right(),
+      Key::Space => {
+        *repeat = KeyRepeat::Disabled;
+        game.on_drop()
+      },
+      Key::F2 => {
+        let () = game.auto_play(!game.is_auto_playing());
+        *repeat = KeyRepeat::Disabled;
+        Change::Unchanged
+      },
+      Key::F3 => {
+        let () = game.pause(!game.is_paused());
+        *repeat = KeyRepeat::Disabled;
+        Change::Unchanged
+      },
+      Key::F4 => {
+        let () = game.toggle_color_mode();
+        *repeat = KeyRepeat::Disabled;
+        Change::Changed
+      },
+      #[cfg(feature = "debug")]
+      Key::F11 => {
+        let () = game.dump_state();
+        Change::Unchanged
+      },
+      _ => Change::Unchanged,
+    }
+  }
+
+  fn tick(&mut self) -> (Change, Tick) {
+    let now = Instant::now();
+    let (keys_change, keys_wait) = self.keys.tick(now, |key, repeat| {
+      Self::handle_key(key, repeat, &mut self.game)
+    });
+    let (game_change, game_wait) = self.game.tick(now);
+
+    let change = keys_change | game_change;
+    let tick = min(game_wait, Tick::from(keys_wait));
+    (change, tick)
+  }
+
+  fn render(&mut self) {
+    let context = self.window.context_mut();
+    let renderer = self.renderer.on_pre_render(context);
+    let () = self.game.render(&renderer);
+    let () = drop(renderer);
+    let () = context.swap_buffers();
+  }
+
+  fn request_redraw(&self) {
+    let () = self.window.request_redraw();
+  }
+}
+
 
 #[derive(Default)]
 struct Handler {
@@ -209,15 +335,8 @@ impl ApplicationHandler for Handler {
       let timeout = Duration::from_millis(config.keyboard.auto_repeat_timeout_ms.into());
       let interval = Duration::from_millis(config.keyboard.auto_repeat_interval_ms.into());
       let keys = Keys::new(timeout, interval);
-      let was_paused = game.is_paused();
 
-      let state = State {
-        window,
-        game,
-        renderer,
-        keys,
-        was_paused,
-      };
+      let state = State::new(window, game, renderer, keys);
       Ok(state)
     }
 
@@ -233,38 +352,10 @@ impl ApplicationHandler for Handler {
     _window_id: WindowId,
     event: WindowEvent,
   ) {
-    if let Some(State {
-      ref mut window,
-      ref mut game,
-      ref mut renderer,
-      ref mut keys,
-      ref mut was_paused,
-      ..
-    }) = self.state(event_loop)
-    {
+    if let Some(state) = self.state(event_loop) {
       let change = match event {
         WindowEvent::Focused(focused) => {
-          if focused {
-            if !*was_paused {
-              // The game was not paused when we lost focus. That means
-              // we ended up pausing it. Unpause it again.
-              let () = game.pause(false);
-            }
-          } else {
-            *was_paused = game.is_paused();
-            if !*was_paused {
-              // The game is currently running but we are about to loose
-              // focus. Pause it, as the user will no longer have a
-              // chance to control it and it's not great to have it
-              // actively running in the background.
-              let () = game.pause(true);
-            }
-
-            // We may not get informed about key releases once unfocused.
-            // So just treat such an event as clearing all pressed keys
-            // eagerly.
-            let () = keys.clear();
-          }
+          let () = state.on_focus_event(focused);
           Change::Unchanged
         },
         WindowEvent::CloseRequested => {
@@ -272,11 +363,7 @@ impl ApplicationHandler for Handler {
           return
         },
         WindowEvent::RedrawRequested => {
-          let context = window.context_mut();
-          let renderer = renderer.on_pre_render(context);
-          let () = game.render(&renderer);
-          let () = drop(renderer);
-          let () = context.swap_buffers();
+          let () = state.render();
           Change::Unchanged
         },
         WindowEvent::Resized(phys_size) => {
@@ -285,15 +372,14 @@ impl ApplicationHandler for Handler {
           let phys_h = NonZeroU32::new(phys_size.height)
             .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
 
-          let () = window.on_resize(phys_w, phys_h);
-          let () = renderer.update_view(phys_w, phys_h, game.width(), game.height());
+          let () = state.on_window_resize(phys_w, phys_h);
           Change::Changed
         },
         _ => Change::Unchanged,
       };
 
       match change {
-        Change::Changed => window.request_redraw(),
+        Change::Changed => state.request_redraw(),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
@@ -306,91 +392,32 @@ impl ApplicationHandler for Handler {
     _device_id: DeviceId,
     event: DeviceEvent,
   ) {
-    if let Some(State { ref mut keys, .. }) = self.state(event_loop) {
+    if let Some(state) = self.state(event_loop) {
       if let DeviceEvent::Key(RawKeyEvent {
         physical_key: PhysicalKey::Code(key),
-        state,
+        state: key_state,
       }) = event
       {
         let now = Instant::now();
-        match state {
-          ElementState::Pressed => keys.on_key_press(now, key),
-          ElementState::Released => keys.on_key_release(now, key),
+        match key_state {
+          ElementState::Pressed => state.on_key_press(key, now),
+          ElementState::Released => state.on_key_release(key, now),
         }
       }
     }
   }
 
   fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-    if let Some(State {
-      ref mut window,
-      ref mut game,
-      ref mut keys,
-      ..
-    }) = self.state(event_loop)
-    {
-      let handle_key = |key: &Key, repeat: &mut KeyRepeat| match key {
-        Key::Digit1 => {
-          *repeat = KeyRepeat::Disabled;
-          game.on_rotate_left()
-        },
-        Key::Digit2 => {
-          *repeat = KeyRepeat::Disabled;
-          game.on_rotate_right()
-        },
-        Key::KeyH => game.on_move_left(),
-        Key::KeyJ => game.on_move_down(),
-        Key::KeyL => game.on_move_right(),
-        Key::KeyQ => Change::Quit,
-        Key::Backspace => {
-          *repeat = KeyRepeat::Disabled;
-          let () = game.restart();
-          Change::Changed
-        },
-        Key::ArrowDown => game.on_move_down(),
-        Key::ArrowLeft => game.on_move_left(),
-        Key::ArrowRight => game.on_move_right(),
-        Key::Space => {
-          *repeat = KeyRepeat::Disabled;
-          game.on_drop()
-        },
-        Key::F2 => {
-          let () = game.auto_play(!game.is_auto_playing());
-          *repeat = KeyRepeat::Disabled;
-          Change::Unchanged
-        },
-        Key::F3 => {
-          let () = game.pause(!game.is_paused());
-          *repeat = KeyRepeat::Disabled;
-          Change::Unchanged
-        },
-        Key::F4 => {
-          let () = game.toggle_color_mode();
-          *repeat = KeyRepeat::Disabled;
-          Change::Changed
-        },
-        #[cfg(feature = "debug")]
-        Key::F11 => {
-          let () = game.dump_state();
-          Change::Unchanged
-        },
-        _ => Change::Unchanged,
-      };
-
-      let now = Instant::now();
-      let (keys_change, keys_wait) = keys.tick(now, handle_key);
-      let (game_change, game_wait) = game.tick(now);
-
-      let control_flow = match min(game_wait, Tick::from(keys_wait)) {
+    if let Some(state) = self.state(event_loop) {
+      let (change, tick) = state.tick();
+      let control_flow = match tick {
         Tick::None => ControlFlow::Wait,
         Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
       };
       let () = event_loop.set_control_flow(control_flow);
 
-      let change = keys_change | game_change;
-
       match change {
-        Change::Changed => window.request_redraw(),
+        Change::Changed => state.request_redraw(),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
