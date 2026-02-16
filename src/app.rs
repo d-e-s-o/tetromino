@@ -10,8 +10,8 @@ use winit::keyboard::KeyCode as Key;
 use crate::game::Game;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
-use crate::opengl::Context;
 use crate::opengl::Renderer;
+use crate::winit::Context;
 use crate::Change;
 use crate::Tick;
 

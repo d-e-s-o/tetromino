@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Deref as _;
@@ -130,7 +130,7 @@ mod tests {
   use test_fork::fork;
 
   use crate::opengl::empty_texture;
-  use crate::opengl::with_opengl_context;
+  use crate::winit::with_opengl_context;
 
 
   /// Make sure that we can load a font correctly by spot-checking some

@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::Cell;
@@ -28,11 +28,11 @@ use xgl::VertexArray;
 use xgl::VertexBuffer;
 
 use crate::guard::Guard;
+use crate::winit::Context;
 use crate::Point;
 use crate::Rect;
 
 use super::empty_texture;
-use super::Context;
 use super::Mat4f;
 use super::Texture;
 

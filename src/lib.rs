@@ -42,9 +42,9 @@ use crate::rect::Rect;
 pub use crate::config::Config;
 pub use crate::game::Config as GameConfig;
 pub use crate::game::Game;
-pub use crate::opengl::Context;
 pub use crate::opengl::Renderer;
-pub use crate::opengl::Window;
+pub use crate::winit::Context;
+pub use crate::winit::Window;
 
 
 /// An enumeration of possible state changes performed/desired by lower

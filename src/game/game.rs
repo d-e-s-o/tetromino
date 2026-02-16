@@ -524,7 +524,7 @@ mod tests {
 
   use crate::game::Config;
   use crate::opengl::Renderer;
-  use crate::opengl::Window;
+  use crate::winit::Window;
 
 
   /// Benchmark the performance of the rendering path.

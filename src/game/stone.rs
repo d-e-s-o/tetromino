@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::iter;
@@ -117,7 +117,7 @@ mod tests {
   use xgl::sys;
 
   use crate::opengl::empty_texture;
-  use crate::opengl::with_opengl_context;
+  use crate::winit::with_opengl_context;
 
 
   fn new_stone(template: &[Point<i8>], context: &sys::Context) -> Stone {

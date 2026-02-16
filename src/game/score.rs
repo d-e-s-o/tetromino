@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::Write as _;
@@ -177,7 +177,7 @@ mod tests {
   use test_fork::fork;
 
   use crate::opengl::empty_texture;
-  use crate::opengl::with_opengl_context;
+  use crate::winit::with_opengl_context;
 
 
   /// Check that we can keep track of scores correctly.

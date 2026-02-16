@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Note: Most of the font functionality is independent of the OpenGL
@@ -7,7 +7,6 @@
 mod font;
 mod renderer;
 mod texture;
-mod window;
 
 pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;
@@ -15,11 +14,7 @@ pub(crate) use renderer::Color;
 pub(crate) use texture::empty_texture;
 pub(crate) use texture::Texture;
 pub(crate) use texture::TextureBuilderExt;
-#[cfg(test)]
-pub(crate) use window::with_opengl_context;
 
 pub(crate) type Mat4f = vema::Matrix<f32, 4>;
 
 pub use renderer::Renderer;
-pub use window::Context;
-pub use window::Window;
