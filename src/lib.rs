@@ -176,11 +176,11 @@ struct State {
 
 
 #[derive(Default)]
-struct App {
+struct Handler {
   state: OnceCell<Result<State>>,
 }
 
-impl App {
+impl Handler {
   fn state<'slf>(&'slf mut self, event_loop: &ActiveEventLoop) -> Option<&'slf mut State> {
     match self.state.get_mut()? {
       Ok(state) => Some(state),
@@ -192,7 +192,7 @@ impl App {
   }
 }
 
-impl ApplicationHandler for App {
+impl ApplicationHandler for Handler {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
     fn create_state(event_loop: &ActiveEventLoop) -> Result<State> {
       let config = load_config().context("failed to load program configuration")?;
@@ -404,9 +404,9 @@ impl ApplicationHandler for App {
 pub fn run() -> Result<()> {
   let event_loop = EventLoop::new().context("failed to create event loop")?;
   let () = event_loop.set_control_flow(ControlFlow::Wait);
-  let mut app = App::default();
-  let () = event_loop.run_app(&mut app)?;
-  if let Some(result) = app.state.into_inner() {
+  let mut handler = Handler::default();
+  let () = event_loop.run_app(&mut handler)?;
+  if let Some(result) = handler.state.into_inner() {
     result.map(|_state| ())
   } else {
     Ok(())
