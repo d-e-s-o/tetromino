@@ -9,6 +9,7 @@
 extern crate test;
 
 mod app;
+mod change;
 mod config;
 mod game;
 mod guard;
@@ -21,8 +22,6 @@ mod rect;
 mod winit;
 
 use std::cmp::Ordering;
-use std::ops::BitOr;
-use std::ops::BitOrAssign;
 use std::time::Instant;
 
 use anyhow::Result;
@@ -38,6 +37,7 @@ use crate::point::Point;
 use crate::rand::Rng;
 use crate::rect::Rect;
 
+pub use crate::change::Change;
 #[doc(hidden)]
 pub use crate::config::Config;
 pub use crate::game::Config as GameConfig;
@@ -45,38 +45,6 @@ pub use crate::game::Game;
 pub use crate::opengl::Renderer;
 pub use crate::winit::Context;
 pub use crate::winit::Window;
-
-
-/// An enumeration of possible state changes performed/desired by lower
-/// level parts of the program.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum Change {
-  /// Some state was changed that necessitates a redraw.
-  Changed,
-  /// A desire to quite the program has been made.
-  Quit,
-  /// No visible state has changed.
-  #[default]
-  Unchanged,
-}
-
-impl BitOr<Change> for Change {
-  type Output = Change;
-
-  fn bitor(self, rhs: Change) -> Self::Output {
-    match (self, rhs) {
-      (Self::Quit, _) | (_, Self::Quit) => Self::Quit,
-      (Self::Changed, _) | (_, Self::Changed) => Self::Changed,
-      (Self::Unchanged, Self::Unchanged) => Self::Unchanged,
-    }
-  }
-}
-
-impl BitOrAssign<Change> for Change {
-  fn bitor_assign(&mut self, rhs: Change) {
-    *self = *self | rhs;
-  }
-}
 
 
 /// An enumeration describing when the next program "tick" should occur.
