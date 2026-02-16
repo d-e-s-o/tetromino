@@ -166,7 +166,7 @@ fn load_config() -> Result<Config> {
 
 
 /// Our application's state.
-struct State {
+struct App {
   window: Window,
   game: Game,
   renderer: Renderer,
@@ -174,7 +174,7 @@ struct State {
   was_paused: bool,
 }
 
-impl State {
+impl App {
   fn new(window: Window, game: Game, renderer: Renderer, keys: Keys<Key>) -> Self {
     let was_paused = game.is_paused();
     Self {
@@ -303,12 +303,12 @@ impl State {
 
 #[derive(Default)]
 struct Handler {
-  state: OnceCell<Result<State>>,
+  app: OnceCell<Result<App>>,
 }
 
 impl Handler {
-  fn state<'slf>(&'slf mut self, event_loop: &ActiveEventLoop) -> Option<&'slf mut State> {
-    match self.state.get_mut()? {
+  fn app<'slf>(&'slf mut self, event_loop: &ActiveEventLoop) -> Option<&'slf mut App> {
+    match self.app.get_mut()? {
       Ok(state) => Some(state),
       Err(..) => {
         let () = event_loop.exit();
@@ -320,7 +320,7 @@ impl Handler {
 
 impl ApplicationHandler for Handler {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
-    fn create_state(event_loop: &ActiveEventLoop) -> Result<State> {
+    fn create_app(event_loop: &ActiveEventLoop) -> Result<App> {
       let config = load_config().context("failed to load program configuration")?;
       let display_handle = event_loop
         .display_handle()
@@ -336,14 +336,14 @@ impl ApplicationHandler for Handler {
       let interval = Duration::from_millis(config.keyboard.auto_repeat_interval_ms.into());
       let keys = Keys::new(timeout, interval);
 
-      let state = State::new(window, game, renderer, keys);
-      Ok(state)
+      let app = App::new(window, game, renderer, keys);
+      Ok(app)
     }
 
-    let _state = self.state.get_or_init(|| create_state(event_loop));
-    // "Check" the state and potentially trigger an event loop exit if
+    let _app = self.app.get_or_init(|| create_app(event_loop));
+    // "Check" the app and potentially trigger an event loop exit if
     // we failed part of the initialization.
-    let _state = self.state(event_loop);
+    let _app = self.app(event_loop);
   }
 
   fn window_event(
@@ -352,10 +352,10 @@ impl ApplicationHandler for Handler {
     _window_id: WindowId,
     event: WindowEvent,
   ) {
-    if let Some(state) = self.state(event_loop) {
+    if let Some(app) = self.app(event_loop) {
       let change = match event {
         WindowEvent::Focused(focused) => {
-          let () = state.on_focus_event(focused);
+          let () = app.on_focus_event(focused);
           Change::Unchanged
         },
         WindowEvent::CloseRequested => {
@@ -363,7 +363,7 @@ impl ApplicationHandler for Handler {
           return
         },
         WindowEvent::RedrawRequested => {
-          let () = state.render();
+          let () = app.render();
           Change::Unchanged
         },
         WindowEvent::Resized(phys_size) => {
@@ -372,14 +372,14 @@ impl ApplicationHandler for Handler {
           let phys_h = NonZeroU32::new(phys_size.height)
             .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
 
-          let () = state.on_window_resize(phys_w, phys_h);
+          let () = app.on_window_resize(phys_w, phys_h);
           Change::Changed
         },
         _ => Change::Unchanged,
       };
 
       match change {
-        Change::Changed => state.request_redraw(),
+        Change::Changed => app.request_redraw(),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
@@ -392,7 +392,7 @@ impl ApplicationHandler for Handler {
     _device_id: DeviceId,
     event: DeviceEvent,
   ) {
-    if let Some(state) = self.state(event_loop) {
+    if let Some(app) = self.app(event_loop) {
       if let DeviceEvent::Key(RawKeyEvent {
         physical_key: PhysicalKey::Code(key),
         state: key_state,
@@ -400,16 +400,16 @@ impl ApplicationHandler for Handler {
       {
         let now = Instant::now();
         match key_state {
-          ElementState::Pressed => state.on_key_press(key, now),
-          ElementState::Released => state.on_key_release(key, now),
+          ElementState::Pressed => app.on_key_press(key, now),
+          ElementState::Released => app.on_key_release(key, now),
         }
       }
     }
   }
 
   fn about_to_wait(&mut self, event_loop: &ActiveEventLoop) {
-    if let Some(state) = self.state(event_loop) {
-      let (change, tick) = state.tick();
+    if let Some(app) = self.app(event_loop) {
+      let (change, tick) = app.tick();
       let control_flow = match tick {
         Tick::None => ControlFlow::Wait,
         Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
@@ -417,7 +417,7 @@ impl ApplicationHandler for Handler {
       let () = event_loop.set_control_flow(control_flow);
 
       match change {
-        Change::Changed => state.request_redraw(),
+        Change::Changed => app.request_redraw(),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
@@ -433,8 +433,8 @@ pub fn run() -> Result<()> {
   let () = event_loop.set_control_flow(ControlFlow::Wait);
   let mut handler = Handler::default();
   let () = event_loop.run_app(&mut handler)?;
-  if let Some(result) = handler.state.into_inner() {
-    result.map(|_state| ())
+  if let Some(result) = handler.app.into_inner() {
+    result.map(|_app| ())
   } else {
     Ok(())
   }
