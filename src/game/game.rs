@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::io::Cursor;
@@ -507,5 +507,49 @@ impl Game {
     let height = BOTTOM_SPACE + self.field.height() + TOP_SPACE;
     // SAFETY: The provided height is guaranteed to be greater than zero.
     unsafe { NonZeroU16::new_unchecked(height as u16) }
+  }
+}
+
+
+#[cfg(test)]
+#[cfg(feature = "nightly")]
+mod tests {
+  use super::*;
+
+  use test::Bencher;
+
+  use winit::event_loop::EventLoop;
+  use winit::platform::x11::EventLoopBuilderExtX11 as _;
+  use winit::raw_window_handle::HasDisplayHandle as _;
+
+  use crate::game::Config;
+  use crate::opengl::Renderer;
+  use crate::opengl::Window;
+
+
+  /// Benchmark the performance of the rendering path.
+  // TODO: It would be good to use `with_opengl_context` in one form or
+  //       another instead of repeating a lot of what it does.
+  #[allow(deprecated)]
+  #[bench]
+  fn bench_render(b: &mut Bencher) {
+    let event_loop = EventLoop::builder().with_any_thread(true).build().unwrap();
+    let display_handle = event_loop.display_handle().unwrap();
+    let raw_display_handle = display_handle.into();
+    let create_window_fn = |attrs| event_loop.create_window(attrs);
+    let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
+
+    let (phys_w, phys_h) = window.size();
+    let config = Config::default();
+    let game = Game::with_config(&config).unwrap();
+    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height()).unwrap();
+
+    let () = b.iter(|| {
+      let context = window.context_mut();
+      let renderer = renderer.on_pre_render(context);
+      let () = game.render(&renderer);
+      let () = drop(renderer);
+      let () = context.swap_buffers();
+    });
   }
 }

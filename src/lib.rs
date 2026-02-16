@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A graphical Tetris clone.
@@ -410,43 +410,5 @@ pub fn run() -> Result<()> {
     result.map(|_state| ())
   } else {
     Ok(())
-  }
-}
-
-
-#[cfg(test)]
-#[cfg(feature = "nightly")]
-mod tests {
-  use super::*;
-
-  use crate::game::Config;
-
-  use test::Bencher;
-
-  use winit::platform::x11::EventLoopBuilderExtX11 as _;
-
-
-  /// Benchmark the performance of the rendering path.
-  #[allow(deprecated)]
-  #[bench]
-  fn bench_render(b: &mut Bencher) {
-    let event_loop = EventLoop::builder().with_any_thread(true).build().unwrap();
-    let display_handle = event_loop.display_handle().unwrap();
-    let raw_display_handle = display_handle.into();
-    let create_window_fn = |attrs| event_loop.create_window(attrs);
-    let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
-
-    let (phys_w, phys_h) = window.size();
-    let config = Config::default();
-    let game = Game::with_config(&config).unwrap();
-    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height()).unwrap();
-
-    let () = b.iter(|| {
-      let context = window.context_mut();
-      let renderer = renderer.on_pre_render(context);
-      let () = game.render(&renderer);
-      let () = drop(renderer);
-      let () = context.swap_buffers();
-    });
   }
 }
