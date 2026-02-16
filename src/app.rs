@@ -10,26 +10,35 @@ use winit::keyboard::KeyCode as Key;
 use crate::game::Game;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
+use crate::opengl::Context;
 use crate::opengl::Renderer;
-use crate::opengl::Window;
 use crate::Change;
 use crate::Tick;
 
 
+/// An abstraction over operations provided by the windowing system (or
+/// similar), as required by the application.
+pub(crate) trait Ops {
+  fn context_mut(&mut self) -> &mut Context;
+}
+
 /// Our application's state.
-pub(crate) struct App {
-  window: Window,
+pub(crate) struct App<O> {
+  ops: O,
   game: Game,
   renderer: Renderer,
   keys: Keys<Key>,
   was_paused: bool,
 }
 
-impl App {
-  pub fn new(window: Window, game: Game, renderer: Renderer, keys: Keys<Key>) -> Self {
+impl<O> App<O>
+where
+  O: Ops,
+{
+  pub fn new(ops: O, game: Game, renderer: Renderer, keys: Keys<Key>) -> Self {
     let was_paused = game.is_paused();
     Self {
-      window,
+      ops,
       game,
       renderer,
       keys,
@@ -70,7 +79,6 @@ impl App {
   }
 
   pub fn on_window_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
-    let () = self.window.on_resize(phys_w, phys_h);
     let () = self
       .renderer
       .update_view(phys_w, phys_h, self.game.width(), self.game.height());
@@ -139,14 +147,20 @@ impl App {
   }
 
   pub fn render(&mut self) {
-    let context = self.window.context_mut();
+    let context = self.ops.context_mut();
     let renderer = self.renderer.on_pre_render(context);
     let () = self.game.render(&renderer);
     let () = drop(renderer);
     let () = context.swap_buffers();
   }
 
-  pub fn request_redraw(&self) {
-    let () = self.window.request_redraw();
+  #[inline]
+  pub fn ops(&self) -> &O {
+    &self.ops
+  }
+
+  #[inline]
+  pub fn ops_mut(&mut self) -> &mut O {
+    &mut self.ops
   }
 }

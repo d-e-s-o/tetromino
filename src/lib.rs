@@ -48,7 +48,8 @@ use winit::keyboard::PhysicalKey;
 use winit::raw_window_handle::HasDisplayHandle as _;
 use winit::window::WindowId;
 
-use crate::app::App;
+use crate::app::App as AppT;
+use crate::app::Ops;
 use crate::keys::Keys;
 use crate::mode::ColorMode;
 use crate::mode::ColorSet;
@@ -68,6 +69,8 @@ pub use crate::game::Game;
 pub use crate::opengl::Context;
 pub use crate::opengl::Renderer;
 pub use crate::opengl::Window;
+
+type App = AppT<Window>;
 
 
 /// An enumeration of possible state changes performed/desired by lower
@@ -164,6 +167,13 @@ fn load_config() -> Result<Config> {
 }
 
 
+impl Ops for Window {
+  fn context_mut(&mut self) -> &mut Context {
+    Window::context_mut(self)
+  }
+}
+
+
 #[derive(Default)]
 struct Handler {
   app: OnceCell<Result<App>>,
@@ -235,6 +245,7 @@ impl ApplicationHandler for Handler {
           let phys_h = NonZeroU32::new(phys_size.height)
             .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
 
+          let () = app.ops_mut().on_resize(phys_w, phys_h);
           let () = app.on_window_resize(phys_w, phys_h);
           Change::Changed
         },
@@ -242,7 +253,7 @@ impl ApplicationHandler for Handler {
       };
 
       match change {
-        Change::Changed => app.request_redraw(),
+        Change::Changed => app.ops().request_redraw(),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
@@ -280,7 +291,7 @@ impl ApplicationHandler for Handler {
       let () = event_loop.set_control_flow(control_flow);
 
       match change {
-        Change::Changed => app.request_redraw(),
+        Change::Changed => app.ops().request_redraw(),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
