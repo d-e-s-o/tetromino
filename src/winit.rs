@@ -128,7 +128,9 @@ pub struct Context {
   //       likely requires a larger API redesign, because texture
   //       creation and similar would need to be somehow tied to the
   //       window with an active context.
-  context: PossiblyCurrentContext,
+  render_context: PossiblyCurrentContext,
+  /// The "virtual" OpenGL state context.
+  gl_context: sys::Context,
 }
 
 impl Context {
@@ -193,7 +195,7 @@ impl Context {
       SurfaceAttributesBuilder::<WindowSurface>::default().build(raw_window_handle, phys_w, phys_h);
     let surface = unsafe { display.create_window_surface(config, &attrs) }
       .context("failed to create window surface")?;
-    let context = unsafe { display.create_context(config, &context_attributes) }
+    let render_context = unsafe { display.create_context(config, &context_attributes) }
       .context("failed to create context")?
       .make_current(&surface)
       .context("failed to make context current")?;
@@ -202,17 +204,23 @@ impl Context {
     // would cause artificial delays by synchronizing buffer swaps to
     // some video frame.
     let () = surface
-      .set_swap_interval(&context, SwapInterval::DontWait)
+      .set_swap_interval(&render_context, SwapInterval::DontWait)
       .context("failed to disable vsync")?;
 
-    let slf = Self { surface, context };
+    let gl_context = sys::Context::default();
+
+    let slf = Self {
+      surface,
+      render_context,
+      gl_context,
+    };
     Ok(slf)
   }
 
   /// Inform the surface that the window has been resized.
   #[inline]
   pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
-    let () = self.surface.resize(&self.context, phys_w, phys_h);
+    let () = self.surface.resize(&self.render_context, phys_w, phys_h);
   }
 
   /// Swap the rendering buffers to activate the one that any rendering
@@ -224,8 +232,14 @@ impl Context {
   pub fn swap_buffers(&mut self) {
     let () = self
       .surface
-      .swap_buffers(&self.context)
+      .swap_buffers(&self.render_context)
       .expect("failed to swap OpenGL buffers");
+  }
+
+  /// Retrieve the underlying OpenGL "state" context.
+  #[inline]
+  pub fn gl_context(&self) -> &sys::Context {
+    &self.gl_context
   }
 }
 
