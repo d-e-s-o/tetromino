@@ -522,6 +522,7 @@ mod tests {
   use winit::platform::x11::EventLoopBuilderExtX11 as _;
   use winit::raw_window_handle::HasDisplayHandle as _;
 
+  use crate::app::Ops as _;
   use crate::game::Config;
   use crate::opengl::Renderer;
   use crate::winit::Window;
@@ -545,11 +546,10 @@ mod tests {
     let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height()).unwrap();
 
     let () = b.iter(|| {
-      let context = window.context_mut();
-      let renderer = renderer.on_pre_render(context);
+      let renderer = renderer.on_pre_render(window.context());
       let () = game.render(&renderer);
       let () = drop(renderer);
-      let () = context.swap_buffers();
+      let () = window.render_context_mut().swap_buffers();
     });
   }
 }

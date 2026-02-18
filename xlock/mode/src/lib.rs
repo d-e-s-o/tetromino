@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! An xlock "mode" using Tetromino and its auto-playing AI.
@@ -127,7 +127,7 @@ fn tick(state: &mut State, force_render: bool) {
     let (change, _wait) = game.tick(now);
 
     if change == Change::Changed || force_render {
-      let renderer = renderer.on_pre_render(context);
+      let renderer = renderer.on_pre_render(context.gl_context());
       let () = game.render(&renderer);
       let () = drop(renderer);
       let () = context.swap_buffers();

@@ -280,9 +280,9 @@ impl Window {
     Ok(slf)
   }
 
-  /// Retrieve the window's OpenGL context.
+  /// Retrieve a mutable reference to the window's render context.
   #[inline]
-  pub fn context_mut(&mut self) -> &mut Context {
+  pub fn render_context_mut(&mut self) -> &mut Context {
     &mut self.context
   }
 
@@ -309,8 +309,9 @@ impl Window {
 }
 
 impl Ops for Window {
-  fn context_mut(&mut self) -> &mut Context {
-    Window::context_mut(self)
+  #[inline]
+  fn context(&self) -> &sys::Context {
+    self.context.gl_context()
   }
 }
 
@@ -378,6 +379,7 @@ impl ApplicationHandler for Handler {
         },
         WindowEvent::RedrawRequested => {
           let () = app.render();
+          let () = app.ops_mut().render_context_mut().swap_buffers();
           Change::Unchanged
         },
         WindowEvent::Resized(phys_size) => {

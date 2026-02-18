@@ -7,11 +7,12 @@ use std::time::Instant;
 
 use winit::keyboard::KeyCode as Key;
 
+use xgl::sys;
+
 use crate::game::Game;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
 use crate::opengl::Renderer;
-use crate::winit::Context;
 use crate::Change;
 use crate::Tick;
 
@@ -19,7 +20,7 @@ use crate::Tick;
 /// An abstraction over operations provided by the windowing system (or
 /// similar), as required by the application.
 pub(crate) trait Ops {
-  fn context_mut(&mut self) -> &mut Context;
+  fn context(&self) -> &sys::Context;
 }
 
 /// Our application's state.
@@ -147,11 +148,10 @@ where
   }
 
   pub fn render(&mut self) {
-    let context = self.ops.context_mut();
-    let renderer = self.renderer.on_pre_render(context);
+    let gl_context = self.ops.context();
+    let renderer = self.renderer.on_pre_render(gl_context);
     let () = self.game.render(&renderer);
     let () = drop(renderer);
-    let () = context.swap_buffers();
   }
 
   #[inline]
