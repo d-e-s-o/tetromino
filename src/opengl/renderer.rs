@@ -312,9 +312,11 @@ impl TextureState {
 
 /// A type directly usable to render graphics primitives.
 #[derive(Debug)]
-pub struct ActiveRenderer<'renderer> {
+pub struct ActiveRenderer<'ctx> {
+  /// The OpenGL context.
+  context: &'ctx sys::Context,
   /// The `Renderer` this object belongs to.
-  renderer: &'renderer Renderer,
+  renderer: &'ctx Renderer,
   /// The origin relative to which rendering happens.
   origin: Cell<Point<i16>>,
   /// The currently set color.
@@ -327,9 +329,10 @@ pub struct ActiveRenderer<'renderer> {
   primitive: Cell<sys::Primitive>,
 }
 
-impl<'renderer> ActiveRenderer<'renderer> {
-  fn new(renderer: &'renderer Renderer) -> Self {
+impl<'ctx> ActiveRenderer<'ctx> {
+  fn new(context: &'ctx sys::Context, renderer: &'ctx Renderer) -> Self {
     Self {
+      context,
       renderer,
       origin: Cell::new(Point::default()),
       color: Cell::new(Color::black()),
@@ -386,8 +389,8 @@ impl<'renderer> ActiveRenderer<'renderer> {
   /// Clear the screen using the given color.
   pub(crate) fn clear_screen(&self, color: (f32, f32, f32)) {
     let (r, g, b) = color;
-    let () = self.renderer.context.set_clear_color(r, g, b, 1.0);
-    let () = self.renderer.context.clear(sys::ClearMask::ColorBuffer);
+    let () = self.context.set_clear_color(r, g, b, 1.0);
+    let () = self.context.clear(sys::ClearMask::ColorBuffer);
   }
 
   /// Render a line.
@@ -508,10 +511,7 @@ impl<'renderer> ActiveRenderer<'renderer> {
       let () = texture.ensure_bound();
       let () = self.renderer.vertices_vbo.update(&buffer, 0);
       let () = self.renderer.vertices_vao.bind();
-      let () = self
-        .renderer
-        .context
-        .draw_arrays(self.primitive.get(), size);
+      let () = self.context.draw_arrays(self.primitive.get(), size);
 
       debug_assert!(const { !needs_drop::<Vertex>() });
       // SAFETY: We are strictly decreasing size and our vertices are
@@ -540,8 +540,6 @@ pub struct Renderer {
   logic_w: f32,
   /// The logical height of the view maintained by this renderer.
   logic_h: f32,
-  /// The OpenGL context.
-  context: sys::Context,
   /// The program.
   _program: Program,
   /// The model-view matrix stack.
@@ -669,7 +667,6 @@ impl Renderer {
       phys_h: phys_h.get(),
       logic_w,
       logic_h,
-      context,
       _program: program,
       modelview: RefCell::new(MatrixStack::new(Box::new(move |matrix| {
         context_clone1.set_uniform_matrix(&modelview_loc, matrix.as_array())
@@ -734,10 +731,8 @@ impl Renderer {
     self.logic_h = logic_h;
   }
 
-  fn push_states(&self) {
-    let () = self
-      .context
-      .set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
+  fn push_states(&self, context: &sys::Context) {
+    let () = context.set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
   }
 
   fn pop_states(&self) {}
@@ -764,11 +759,10 @@ impl Renderer {
   /// Activate the renderer with the given [`sys::Context`] in
   /// preparation for rendering to take place.
   pub fn on_pre_render<'ctx>(&'ctx self, context: &'ctx sys::Context) -> ActiveRenderer<'ctx> {
-    let _ = context;
-    let () = self.push_states();
+    let () = self.push_states(context);
     let () = self.push_matrizes();
 
-    ActiveRenderer::new(self)
+    ActiveRenderer::new(context, self)
   }
 
   fn on_post_render(&self) {
