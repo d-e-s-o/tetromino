@@ -280,6 +280,12 @@ impl Window {
     Ok(slf)
   }
 
+  /// Retrieve a reference to the window's render context.
+  #[inline]
+  pub fn render_context(&self) -> &Context {
+    &self.context
+  }
+
   /// Retrieve a mutable reference to the window's render context.
   #[inline]
   pub fn render_context_mut(&mut self) -> &mut Context {
@@ -344,8 +350,10 @@ impl ApplicationHandler for Handler {
       let window =
         Window::new(display_handle, create_window_fn).context("failed to create OpenGL window")?;
       let (phys_w, phys_h) = window.size();
-      let game = Game::with_config(&config.game).context("failed to instantiate game object")?;
-      let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height())
+      let gl_context = window.render_context().gl_context();
+      let game =
+        Game::with_config(&config.game, gl_context).context("failed to instantiate game object")?;
+      let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height(), gl_context)
         .context("failed to create OpenGL renderer")?;
       let timeout = Duration::from_millis(config.keyboard.auto_repeat_timeout_ms.into());
       let interval = Duration::from_millis(config.keyboard.auto_repeat_interval_ms.into());

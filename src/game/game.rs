@@ -86,14 +86,11 @@ pub struct Game {
 
 impl Game {
   /// Instantiate a new game of Tetris with the given configuration.
-  pub fn with_config(config: &Config) -> Result<Self> {
-    // TODO: We must not create a context on demand pass one through
-    //       from somewhere.
-    let context = sys::Context::default();
+  pub fn with_config(config: &Config, context: &sys::Context) -> Result<Self> {
     let reader = Cursor::new(data::TETRIS_FIELD_PIECE_TEXTURE);
     let piece = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::builder()
-      .set_context(&context)
+      .set_context(context)
       .from_dynamic_image(&piece)?;
     let piece = Rc::new(piece);
 
@@ -112,7 +109,7 @@ impl Game {
     let reader = Cursor::new(data::TETRIS_FIELD_BACK_TEXTURE);
     let field_back = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
     let field_back = Texture::builder()
-      .set_context(&context)
+      .set_context(context)
       .from_dynamic_image(&field_back)?;
     let field_back = Rc::new(field_back);
     let field = Field::new(
@@ -539,11 +536,11 @@ mod tests {
     let raw_display_handle = display_handle.into();
     let create_window_fn = |attrs| event_loop.create_window(attrs);
     let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
-
+    let context = window.context();
     let (phys_w, phys_h) = window.size();
     let config = Config::default();
-    let game = Game::with_config(&config).unwrap();
-    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height()).unwrap();
+    let game = Game::with_config(&config, context).unwrap();
+    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height(), context).unwrap();
 
     let () = b.iter(|| {
       let renderer = renderer.on_pre_render(window.context());

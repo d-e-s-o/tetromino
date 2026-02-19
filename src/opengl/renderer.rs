@@ -562,9 +562,8 @@ impl Renderer {
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
+    context: &sys::Context,
   ) -> Result<Self> {
-    let context = sys::Context::default();
-
     // The name of the model-view matrix uniform in the vertex shader.
     let modelview_uniform = "modelview";
     // The name of the projection matrix uniform in the vertex shader.
@@ -624,11 +623,11 @@ impl Renderer {
       glsl_version = Shader::glsl_version(),
     );
 
-    let vertex_shader = Shader::new(sys::ShaderType::Vertex, &vertex_shader_file, &context)
+    let vertex_shader = Shader::new(sys::ShaderType::Vertex, &vertex_shader_file, context)
       .context("failed to create vertex shader")?;
-    let fragment_shader = Shader::new(sys::ShaderType::Fragment, &fragment_shader_file, &context)
+    let fragment_shader = Shader::new(sys::ShaderType::Fragment, &fragment_shader_file, context)
       .context("failed to create fragment shader")?;
-    let program = Program::new(&[vertex_shader, fragment_shader], &context)?;
+    let program = Program::new(&[vertex_shader, fragment_shader], context)?;
     let texture_unit_loc = program.query_uniform_location(texture_unit_uniform)?;
     let modelview_loc = program.query_uniform_location(modelview_uniform)?;
     let projection_loc = program.query_uniform_location(projection_uniform)?;
@@ -657,10 +656,10 @@ impl Renderer {
     let vertices_vbo = VertexBuffer::from_vertices(
       &[Vertex::default(); VERTEX_BUFFER_CAPACITY],
       sys::VertexBufferUsage::DynamicDraw,
-      &context,
+      context,
     )?;
-    let vertices_vao = VertexArray::new(&vertices_vbo, &attrib_indices, &context)?;
-    let empty_texture = Rc::new(empty_texture(&context)?);
+    let vertices_vao = VertexArray::new(&vertices_vbo, &attrib_indices, context)?;
+    let empty_texture = Rc::new(empty_texture(context)?);
 
     let slf = Self {
       phys_w: phys_w.get(),
