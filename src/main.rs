@@ -8,8 +8,8 @@ use std::env::args_os;
 use anyhow::bail;
 use anyhow::Result;
 
-use tetromino_impl::run;
-use tetromino_impl::Config;
+use tetromino::run;
+use tetromino::Config;
 
 
 fn default_config() -> String {

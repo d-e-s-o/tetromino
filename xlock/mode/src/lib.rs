@@ -14,11 +14,11 @@ use std::time::Instant;
 use raw_window_handle::XlibDisplayHandle;
 use raw_window_handle::XlibWindowHandle;
 
-use tetromino_impl::Change;
-use tetromino_impl::Context;
-use tetromino_impl::Game;
-use tetromino_impl::GameConfig;
-use tetromino_impl::Renderer;
+use tetromino::Change;
+use tetromino::Context;
+use tetromino::Game;
+use tetromino::GameConfig;
+use tetromino::Renderer;
 
 
 // SAFETY: `ModeSpecOpt` is just a C-style POD with all bit patterns
