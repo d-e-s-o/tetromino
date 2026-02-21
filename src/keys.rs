@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::MaybeUninit;
@@ -16,6 +16,27 @@ use x11_dl::xlib;
 
 pub use keypeat::KeyRepeat;
 pub use keypeat::Keys;
+
+
+mod imp {
+  pub(crate) use winit::keyboard::KeyCode as Key;
+
+  pub(crate) const KEY_ROTATE_LEFT: Key = Key::Digit1;
+  pub(crate) const KEY_ROTATE_RIGHT: Key = Key::Digit2;
+  pub(crate) const KEY_MOVE_LEFT: Key = Key::KeyH;
+  pub(crate) const KEY_MOVE_DOWN: Key = Key::KeyJ;
+  pub(crate) const KEY_MOVE_RIGHT: Key = Key::KeyL;
+  pub(crate) const KEY_DROP: Key = Key::Space;
+  pub(crate) const KEY_RESTART: Key = Key::Backspace;
+  pub(crate) const KEY_AUTO_PLAY: Key = Key::F2;
+  pub(crate) const KEY_PAUSE: Key = Key::F3;
+  pub(crate) const KEY_MODE: Key = Key::F4;
+  #[cfg(feature = "debug")]
+  pub(crate) const KEY_DEBUG: Key = Key::F11;
+  pub(crate) const KEY_QUIT: Key = Key::KeyQ;
+}
+
+pub(crate) use imp::*;
 
 
 #[derive(Debug, Deserialize, Serialize)]

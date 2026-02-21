@@ -5,11 +5,11 @@ use std::cmp::min;
 use std::num::NonZeroU32;
 use std::time::Instant;
 
-use winit::keyboard::KeyCode as Key;
-
 use xgl::sys;
 
 use crate::game::Game;
+use crate::keys;
+use crate::keys::Key;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
 use crate::opengl::Renderer;
@@ -87,47 +87,44 @@ where
 
   fn handle_key(key: &Key, repeat: &mut KeyRepeat, game: &mut Game) -> Change {
     match key {
-      Key::Digit1 => {
+      k if *k == keys::KEY_ROTATE_LEFT => {
         *repeat = KeyRepeat::Disabled;
         game.on_rotate_left()
       },
-      Key::Digit2 => {
+      k if *k == keys::KEY_ROTATE_RIGHT => {
         *repeat = KeyRepeat::Disabled;
         game.on_rotate_right()
       },
-      Key::KeyH => game.on_move_left(),
-      Key::KeyJ => game.on_move_down(),
-      Key::KeyL => game.on_move_right(),
-      Key::KeyQ => Change::Quit,
-      Key::Backspace => {
+      k if *k == keys::KEY_MOVE_LEFT => game.on_move_left(),
+      k if *k == keys::KEY_MOVE_DOWN => game.on_move_down(),
+      k if *k == keys::KEY_MOVE_RIGHT => game.on_move_right(),
+      k if *k == keys::KEY_QUIT => Change::Quit,
+      k if *k == keys::KEY_RESTART => {
         *repeat = KeyRepeat::Disabled;
         let () = game.restart();
         Change::Changed
       },
-      Key::ArrowDown => game.on_move_down(),
-      Key::ArrowLeft => game.on_move_left(),
-      Key::ArrowRight => game.on_move_right(),
-      Key::Space => {
+      k if *k == keys::KEY_DROP => {
         *repeat = KeyRepeat::Disabled;
         game.on_drop()
       },
-      Key::F2 => {
+      k if *k == keys::KEY_AUTO_PLAY => {
         let () = game.auto_play(!game.is_auto_playing());
         *repeat = KeyRepeat::Disabled;
         Change::Unchanged
       },
-      Key::F3 => {
+      k if *k == keys::KEY_PAUSE => {
         let () = game.pause(!game.is_paused());
         *repeat = KeyRepeat::Disabled;
         Change::Unchanged
       },
-      Key::F4 => {
+      k if *k == keys::KEY_MODE => {
         let () = game.toggle_color_mode();
         *repeat = KeyRepeat::Disabled;
         Change::Changed
       },
       #[cfg(feature = "debug")]
-      Key::F11 => {
+      k if *k == keys::KEY_DEBUG => {
         let () = game.dump_state();
         Change::Unchanged
       },
