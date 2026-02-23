@@ -155,7 +155,7 @@ impl Context {
   }
 
   /// Create a new OpenGL context on the given window.
-  pub fn new(display: &Display, config: &GlConfig, window: &WinitWindow) -> Result<Self> {
+  fn new(display: &Display, config: &GlConfig, window: &WinitWindow) -> Result<Self> {
     let window_handle = window
       .window_handle()
       .context("failed to retrieve window handle")?;
@@ -219,7 +219,7 @@ impl Context {
 
   /// Inform the surface that the window has been resized.
   #[inline]
-  pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
+  fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
     let () = self.surface.resize(&self.render_context, phys_w, phys_h);
   }
 
@@ -282,25 +282,25 @@ impl Window {
 
   /// Retrieve a reference to the window's render context.
   #[inline]
-  pub fn render_context(&self) -> &Context {
+  fn render_context(&self) -> &Context {
     &self.context
   }
 
   /// Retrieve a mutable reference to the window's render context.
   #[inline]
-  pub fn render_context_mut(&mut self) -> &mut Context {
+  pub(crate) fn render_context_mut(&mut self) -> &mut Context {
     &mut self.context
   }
 
   /// Retrieve the window's inner size (i.e., the size of the drawable
   /// area).
-  pub fn size(&self) -> (NonZeroU32, NonZeroU32) {
+  pub(crate) fn size(&self) -> (NonZeroU32, NonZeroU32) {
     window_size(&self.window)
   }
 
   /// Inform the window that it has been resized.
   #[inline]
-  pub fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
+  fn on_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
     let () = self.context.on_resize(phys_w, phys_h);
   }
 
@@ -309,7 +309,7 @@ impl Window {
   /// This method informs the system that the window's contents may be
   /// out-of-date to ultimately send a redraw event.
   #[inline]
-  pub(crate) fn request_redraw(&self) {
+  fn request_redraw(&self) {
     self.window.request_redraw()
   }
 }
@@ -451,7 +451,7 @@ impl ApplicationHandler for Handler {
 }
 
 
-pub fn run_app() -> Result<()> {
+pub(crate) fn run_app() -> Result<()> {
   let event_loop = EventLoop::new().context("failed to create event loop")?;
   let () = event_loop.set_control_flow(ControlFlow::Wait);
   let mut handler = Handler::default();
