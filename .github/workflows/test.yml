@@ -1,4 +1,4 @@
-# Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+# Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 name: Test
@@ -47,6 +47,18 @@ jobs:
         toolchain: ${{ matrix.rust }}
     - name: Build ${{ matrix.profile }}
       run: cargo build --profile=${{ matrix.profile }} --all-targets ${{ matrix.args }}
+  build-wasm32:
+    name: Build for wasm32
+    runs-on: ubuntu-latest
+    env:
+      # TODO: Disallow warnings once Wasm support is complete.
+      RUSTFLAGS: '-A warnings'
+    steps:
+    - uses: actions/checkout@v6
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        target: wasm32-unknown-unknown
+    - run: cargo build --lib --target=wasm32-unknown-unknown
   test:
     name: Test
     runs-on: ubuntu-latest

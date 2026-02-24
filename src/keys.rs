@@ -1,23 +1,17 @@
 // Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use std::mem::MaybeUninit;
-use std::os::raw::c_uint;
-use std::ptr::null;
-
-use anyhow::Context as _;
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
-use anyhow::ensure;
 
 use serde::Deserialize;
 use serde::Serialize;
-
-use x11_dl::xlib;
 
 pub use keypeat::KeyRepeat;
 pub use keypeat::Keys;
 
 
+#[cfg(not(target_arch = "wasm32"))]
 mod imp {
   pub(crate) use winit::keyboard::KeyCode as Key;
 
@@ -36,6 +30,25 @@ mod imp {
   pub(crate) const KEY_QUIT: Key = Key::KeyQ;
 }
 
+#[cfg(target_arch = "wasm32")]
+mod imp {
+  pub(crate) type Key = String;
+
+  pub(crate) const KEY_ROTATE_LEFT: &str = "1";
+  pub(crate) const KEY_ROTATE_RIGHT: &str = "2";
+  pub(crate) const KEY_MOVE_LEFT: &str = "h";
+  pub(crate) const KEY_MOVE_DOWN: &str = "j";
+  pub(crate) const KEY_MOVE_RIGHT: &str = "l";
+  pub(crate) const KEY_DROP: &str = " ";
+  pub(crate) const KEY_RESTART: &str = "Backspace";
+  pub(crate) const KEY_AUTO_PLAY: &str = "F2";
+  pub(crate) const KEY_PAUSE: &str = "F3";
+  pub(crate) const KEY_MODE: &str = "F4";
+  #[cfg(feature = "debug")]
+  pub(crate) const KEY_DEBUG: &str = "F11";
+  pub(crate) const KEY_QUIT: &str = "q";
+}
+
 pub(crate) use imp::*;
 
 
@@ -50,7 +63,15 @@ pub struct Config {
 
 impl Config {
   /// Instantiate a `Config` object using system defaults.
+  #[cfg(not(target_arch = "wasm32"))]
   pub(crate) fn with_system_defaults() -> Result<Self> {
+    use anyhow::Context as _;
+    use anyhow::ensure;
+    use std::mem::MaybeUninit;
+    use std::os::raw::c_uint;
+    use std::ptr::null;
+    use x11_dl::xlib;
+
     let mut timeout = MaybeUninit::<c_uint>::uninit();
     let mut interval = MaybeUninit::<c_uint>::uninit();
     // Value XkbUseCoreKbd constant defined somewhere in XKB.h and not
@@ -86,6 +107,7 @@ impl Config {
 }
 
 impl Default for Config {
+  #[cfg(not(target_arch = "wasm32"))]
   fn default() -> Self {
     match Self::with_system_defaults() {
       Ok(config) => config,
@@ -99,6 +121,14 @@ impl Default for Config {
           auto_repeat_interval_ms: 50,
         }
       },
+    }
+  }
+
+  #[cfg(target_arch = "wasm32")]
+  fn default() -> Self {
+    Self {
+      auto_repeat_timeout_ms: 100,
+      auto_repeat_interval_ms: 50,
     }
   }
 }

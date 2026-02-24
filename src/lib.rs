@@ -20,8 +20,10 @@ mod point;
 mod rand;
 mod rect;
 mod tick;
+#[cfg(not(target_arch = "wasm32"))]
 mod winit;
 
+#[cfg(not(target_arch = "wasm32"))]
 use anyhow::Result;
 
 use crate::mode::ColorMode;
@@ -42,12 +44,15 @@ pub use crate::game::Config as GameConfig;
 pub use crate::game::Game;
 pub use crate::opengl::Renderer;
 pub use crate::tick::Tick;
+#[cfg(not(target_arch = "wasm32"))]
 pub use crate::winit::Context;
+#[cfg(not(target_arch = "wasm32"))]
 pub use crate::winit::Window;
 
 
 // This function is really only meant to be used by the main program.
 #[doc(hidden)]
+#[cfg(not(target_arch = "wasm32"))]
 pub fn run() -> Result<()> {
   winit::run_app()
 }

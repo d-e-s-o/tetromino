@@ -3,6 +3,9 @@
 
 //! A graphical Tetris clone.
 
+#[cfg(target_arch = "wasm32")]
+compile_error!("Wasm target does only support library target; build with --lib");
+
 use std::env::args_os;
 
 use anyhow::Result;
