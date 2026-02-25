@@ -64,8 +64,8 @@ use crate::Tick;
 use crate::app::App as AppT;
 use crate::app::Ops;
 use crate::game::Game;
+use crate::gl::Renderer;
 use crate::keys::Keys;
-use crate::opengl::Renderer;
 
 
 type App = AppT<Window>;

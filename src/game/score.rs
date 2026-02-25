@@ -176,7 +176,7 @@ mod tests {
 
   use test_fork::fork;
 
-  use crate::opengl::empty_texture;
+  use crate::gl::empty_texture;
   use crate::winit::with_opengl_context;
 
 

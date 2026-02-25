@@ -10,11 +10,11 @@ use xgl::sys;
 use crate::Change;
 use crate::Tick;
 use crate::game::Game;
+use crate::gl::Renderer;
 use crate::keys;
 use crate::keys::Key;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
-use crate::opengl::Renderer;
 
 
 /// An abstraction over operations provided by the windowing system (or

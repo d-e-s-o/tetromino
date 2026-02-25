@@ -521,7 +521,7 @@ mod tests {
 
   use crate::app::Ops as _;
   use crate::game::Config;
-  use crate::opengl::Renderer;
+  use crate::gl::Renderer;
   use crate::winit::Window;
 
 
