@@ -14,6 +14,7 @@ mod config;
 mod game;
 mod gl;
 mod guard;
+mod instant;
 mod keys;
 mod mode;
 mod point;
@@ -43,6 +44,7 @@ pub use crate::config::Config;
 pub use crate::game::Config as GameConfig;
 pub use crate::game::Game;
 pub use crate::gl::Renderer;
+pub use crate::instant::Instant;
 pub use crate::tick::Tick;
 #[cfg(not(target_arch = "wasm32"))]
 pub use crate::winit::Context;

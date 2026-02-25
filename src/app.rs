@@ -3,18 +3,20 @@
 
 use std::cmp::min;
 use std::num::NonZeroU32;
-use std::time::Instant;
 
 use xgl::sys;
 
 use crate::Change;
+use crate::Instant;
 use crate::Tick;
 use crate::game::Game;
 use crate::gl::Renderer;
 use crate::keys;
 use crate::keys::Key;
 use crate::keys::KeyRepeat;
-use crate::keys::Keys;
+use crate::keys::Keys as KeysT;
+
+type Keys<K> = KeysT<K, Instant>;
 
 
 /// An abstraction over operations provided by the windowing system (or

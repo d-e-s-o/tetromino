@@ -7,7 +7,6 @@ use std::io::ErrorKind;
 use std::num::NonZeroU32;
 use std::path::PathBuf;
 use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::Context as _;
 use anyhow::Result;
@@ -60,6 +59,7 @@ use xgl::sys;
 
 use crate::Change;
 use crate::Config;
+use crate::Instant;
 use crate::Tick;
 use crate::app::App as AppT;
 use crate::app::Ops;

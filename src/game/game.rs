@@ -5,7 +5,6 @@ use std::io::Cursor;
 use std::num::NonZeroU16;
 use std::rc::Rc;
 use std::time::Duration;
-use std::time::Instant;
 
 use anyhow::Result;
 
@@ -16,6 +15,7 @@ use crate::Change;
 use crate::ColorMode;
 use crate::ColorSet;
 use crate::Font;
+use crate::Instant;
 use crate::Point;
 use crate::Texture;
 use crate::TextureBuilderExt as _;

@@ -114,6 +114,9 @@ glutin = {version = "0.32", default-features = false, features = ["glx", "x11"]}
 winit = {version = "0.30", default-features = false, features = ["rwh_06", "x11"]}
 x11-dl = {version = "2.21.0", default-features = false}
 
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = {version = "0.2", default-features = false, features = ["std"]}
+
 [dev-dependencies]
 test-fork = {version = "0.1.2"}
 

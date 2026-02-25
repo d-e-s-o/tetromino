@@ -7,11 +7,11 @@ use std::ops::IndexMut;
 use std::ops::Range;
 use std::rc::Rc;
 use std::time::Duration;
-use std::time::Instant;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
 use crate::Color;
+use crate::Instant;
 use crate::Point;
 use crate::Rect;
 use crate::Texture;

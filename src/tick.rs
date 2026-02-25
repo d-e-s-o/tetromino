@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::Ordering;
-use std::time::Instant;
+
+use crate::Instant;
 
 
 /// An enumeration describing when the next program "tick" should occur.

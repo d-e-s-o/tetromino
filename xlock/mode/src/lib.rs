@@ -9,7 +9,6 @@ use std::num::NonZeroU32;
 use std::os::raw::c_char;
 use std::ptr;
 use std::ptr::NonNull;
-use std::time::Instant;
 
 use raw_window_handle::XlibDisplayHandle;
 use raw_window_handle::XlibWindowHandle;
@@ -18,6 +17,7 @@ use tetromino::Change;
 use tetromino::Context;
 use tetromino::Game;
 use tetromino::GameConfig;
+use tetromino::Instant;
 use tetromino::Renderer;
 
 
