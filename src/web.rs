@@ -17,6 +17,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::JsValue;
 use wasm_bindgen::prelude::wasm_bindgen;
 
+use web_sys::AddEventListenerOptions;
 use web_sys::Document;
 use web_sys::Event;
 use web_sys::HtmlCanvasElement;
@@ -202,10 +203,18 @@ impl StateInner {
       let () = state.tick(now);
     }) as Box<dyn FnMut(KeyboardEvent)>);
 
+    let options = AddEventListenerOptions::new();
+    let () = options.set_capture(false);
+    let () = options.set_passive(false);
+
     let () = slf
       .borrow()
       .window
-      .add_event_listener_with_callback("keydown", on_down.as_ref().unchecked_ref())
+      .add_event_listener_with_callback_and_add_event_listener_options(
+        "keydown",
+        on_down.as_ref().unchecked_ref(),
+        &options,
+      )
       .map_err(|_| anyhow!("failed to register 'keydown' event listener"))?;
 
     Ok(on_down)
@@ -221,10 +230,18 @@ impl StateInner {
       let () = state.tick(now);
     }) as Box<dyn FnMut(KeyboardEvent)>);
 
+    let options = AddEventListenerOptions::new();
+    let () = options.set_capture(false);
+    let () = options.set_passive(false);
+
     let () = slf
       .borrow()
       .window
-      .add_event_listener_with_callback("keyup", on_up.as_ref().unchecked_ref())
+      .add_event_listener_with_callback_and_add_event_listener_options(
+        "keyup",
+        on_up.as_ref().unchecked_ref(),
+        &options,
+      )
       .map_err(|_| anyhow!("failed to register 'keyup' event listener"))?;
 
     Ok(on_up)

@@ -126,6 +126,7 @@ x11-dl = {version = "2.21.0", default-features = false}
 wasm-bindgen = {version = "0.2", default-features = false, features = ["std"]}
 web-sys = {version = "0.3", default-features = false, features = [
   "console",
+  "AddEventListenerOptions",
   "Document",
   "HtmlCanvasElement",
   "KeyboardEvent",
