@@ -1,5 +1,6 @@
 [alias]
 deploy = "run -p make -- exec cargo build --lib --features=debug --target=wasm32-unknown-unknown && cargo build --lib --features=deploy,debug --target=wasm32-unknown-unknown"
 d = "deploy"
+deployr = "run -p make -- exec cargo build --release --lib --target=wasm32-unknown-unknown && cargo build --release --lib --features=deploy,debug --target=wasm32-unknown-unknown"
 serve = "run -p make -- serve www/"
 s = "serve"
