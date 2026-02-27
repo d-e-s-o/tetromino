@@ -1,12 +1,10 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 // Permuted congruential generator implementation, based on
 // https://en.wikipedia.org/w/index.php?title=Permuted_congruential_generator&oldid=1167029503#Example_code
 
 use std::cell::Cell;
-use std::time::SystemTime;
-use std::time::UNIX_EPOCH;
 
 const MULTIPLIER: u64 = 6364136223846793005;
 const INCREMENT: u64 = 1442695040888963407;
@@ -18,13 +16,25 @@ pub(crate) struct Rng {
 }
 
 impl Rng {
+  #[cfg(not(target_arch = "wasm32"))]
   pub(crate) fn new() -> Self {
+    use std::time::SystemTime;
+    use std::time::UNIX_EPOCH;
+
     // SANITY: `UNIX_EPOCH` is earlier than *any* other `SystemTime`.
     let seed = SystemTime::now()
       .duration_since(UNIX_EPOCH)
       .unwrap()
       .as_nanos() as u64;
 
+    Self::with_seed(seed)
+  }
+
+  #[cfg(target_arch = "wasm32")]
+  pub(crate) fn new() -> Self {
+    use crate::Instant;
+
+    let seed = Instant::now().as_millis() as u64;
     Self::with_seed(seed)
   }
 
