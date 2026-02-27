@@ -26,18 +26,21 @@ jobs:
       fail-fast: false
       matrix:
         rust: [stable]
-        profile: [dev, release]
-        args: ['']
+        profile: [dev]
+        args: [--all-targets]
         include:
         - rust: stable
           profile: dev
-          args: --features=debug
+          args: --all-targets --features=debug
         - rust: stable
           profile: dev
-          args: --workspace --features=download-xlock-source,generate-xlock-bindings
+          args: --all-targets --workspace --features=download-xlock-source,generate-xlock-bindings
+        - rust: stable
+          profile: release
+          args: --all-targets --workspace
         - rust: nightly
           profile: dev
-          args: --features=nightly
+          args: --all-targets --features=nightly
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
@@ -46,7 +49,7 @@ jobs:
       with:
         toolchain: ${{ matrix.rust }}
     - name: Build ${{ matrix.profile }}
-      run: cargo build --profile=${{ matrix.profile }} --all-targets ${{ matrix.args }}
+      run: cargo build --profile=${{ matrix.profile }} ${{ matrix.args }}
   build-wasm32:
     name: Build for wasm32
     runs-on: ubuntu-latest
