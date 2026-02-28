@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! Build script for `tetromino-xlock-bindings`.
@@ -49,9 +49,9 @@ fn download_file(url: &str) -> Option<File> {
   use std::io::Write as _;
   use std::time::Duration;
 
-  use reqwest::blocking::Client;
   use reqwest::StatusCode;
   use reqwest::Url;
+  use reqwest::blocking::Client;
   use tempfile::tempfile;
 
   let mut dst = tempfile().expect("failed to create temporary file");

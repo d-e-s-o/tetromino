@@ -21,9 +21,6 @@ use crate::Texture;
 use crate::TextureBuilderExt as _;
 use crate::Tick;
 
-use super::ai;
-use super::data;
-use super::field::State;
 use super::Config;
 use super::Field;
 use super::MoveResult;
@@ -31,6 +28,9 @@ use super::PreviewStones;
 use super::Score;
 use super::Stone;
 use super::StoneFactory;
+use super::ai;
+use super::data;
+use super::field::State;
 
 
 /// The color set used when clearing the screen.

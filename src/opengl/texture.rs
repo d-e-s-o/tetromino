@@ -1,15 +1,15 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-use anyhow::bail;
 use anyhow::Error;
 use anyhow::Result;
+use anyhow::bail;
 
 use image::DynamicImage;
 
-use xgl::sys;
 use xgl::TextureBuilder;
 use xgl::TextureInfo;
+use xgl::sys;
 
 pub(crate) use xgl::Texture;
 

@@ -13,9 +13,9 @@ use crate::ColorMode;
 use crate::Point;
 use crate::Texture;
 
-use super::ai;
 use super::Piece;
 use super::Stonelike;
+use super::ai;
 
 
 /// The representation of a Tetris stone.

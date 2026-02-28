@@ -1,15 +1,15 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 //! A graphical Tetris clone.
 
 use std::env::args_os;
 
-use anyhow::bail;
 use anyhow::Result;
+use anyhow::bail;
 
-use tetromino::run;
 use tetromino::Config;
+use tetromino::run;
 
 
 fn default_config() -> String {

@@ -28,7 +28,7 @@ static TETROMINO_OPTS: xlock::ModeSpecOpt =
 
 /// The "description" of the module as required by xlock proper. It
 /// describes relevant callbacks and contains some other data.
-#[no_mangle]
+#[unsafe(no_mangle)]
 static tetromino_description: xlock::ModStruct = xlock::ModStruct {
   cmdline_arg: b"tetromino\0" as *const _ as *const c_char,
   init_name: b"init_tetromino\0" as *const _ as *const c_char,
@@ -62,7 +62,7 @@ struct State {
 
 
 /// Handler for the "init" callback.
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
   // SAFETY: The hook is always called with a valid `ModeInfo` object.
   let mode_info = unsafe { &*mode_info };
@@ -137,7 +137,7 @@ fn tick(state: &mut State, force_render: bool) {
 }
 
 /// Handler for the "render" callback.
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn render_tetromino(mode_info: *const xlock::ModeInfo) {
   // SAFETY: The hook is always called with a valid `ModeInfo` object.
   let mode_info = unsafe { &*mode_info };
@@ -152,7 +152,7 @@ extern "C" fn render_tetromino(mode_info: *const xlock::ModeInfo) {
 }
 
 /// Handler for the "refresh" callback.
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn refresh_tetromino(mode_info: *const xlock::ModeInfo) {
   // SAFETY: The hook is always called with a valid `ModeInfo` object.
   let mode_info = unsafe { &*mode_info };
@@ -169,7 +169,7 @@ extern "C" fn refresh_tetromino(mode_info: *const xlock::ModeInfo) {
 /// Handler for the "change" callback.
 ///
 /// We restart the game when receiving this callback.
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn change_tetromino(mode_info: *const xlock::ModeInfo) {
   // SAFETY: The hook is always called with a valid `ModeInfo` object.
   let mode_info = unsafe { &*mode_info };
@@ -185,7 +185,7 @@ extern "C" fn change_tetromino(mode_info: *const xlock::ModeInfo) {
 }
 
 /// Handler for the "release" callback.
-#[no_mangle]
+#[unsafe(no_mangle)]
 extern "C" fn release_tetromino(mode_info: *const xlock::ModeInfo) {
   // SAFETY: The hook is always called with a valid `ModeInfo` object.
   let mode_info = unsafe { &*mode_info };

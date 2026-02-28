@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::Ordering;
@@ -47,25 +47,19 @@ pub(super) fn parse_matrix(description: &str) -> Matrix<Option<()>> {
 // 2) there is no name collision between a variable `field` and a
 //    function of the same name, for example
 macro_rules! matrix {
-  ($matrix:literal) => {{
-    $crate::game::ai::util::parse_matrix($matrix)
-  }};
+  ($matrix:literal) => {{ $crate::game::ai::util::parse_matrix($matrix) }};
 }
 
 
 macro_rules! field {
-  ($field:literal) => {{
-    $crate::game::ai::Field::from_matrix(&$crate::game::ai::util::parse_matrix($field))
-  }};
+  ($field:literal) => {{ $crate::game::ai::Field::from_matrix(&$crate::game::ai::util::parse_matrix($field)) }};
 }
 
 pub(super) use field;
 
 
 macro_rules! stone {
-  ($stone:literal) => {{
-    $crate::game::ai::Stone::from_matrix(&$crate::game::ai::util::parse_matrix($stone))
-  }};
+  ($stone:literal) => {{ $crate::game::ai::Stone::from_matrix(&$crate::game::ai::util::parse_matrix($stone)) }};
 }
 
 pub(super) use stone;

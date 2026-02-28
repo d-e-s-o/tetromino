@@ -11,9 +11,9 @@ mod texture;
 pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Color;
-pub(crate) use texture::empty_texture;
 pub(crate) use texture::Texture;
 pub(crate) use texture::TextureBuilderExt;
+pub(crate) use texture::empty_texture;
 
 pub(crate) type Mat4f = vema::Matrix<f32, 4>;
 

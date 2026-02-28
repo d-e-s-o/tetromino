@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Switched to using Rust 2024 Edition
+
+
 0.2.3
 -----
 - Switched to using OpenGL 3.3 for rendering

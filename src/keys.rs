@@ -5,9 +5,9 @@ use std::mem::MaybeUninit;
 use std::os::raw::c_uint;
 use std::ptr::null;
 
-use anyhow::ensure;
 use anyhow::Context as _;
 use anyhow::Result;
+use anyhow::ensure;
 
 use serde::Deserialize;
 use serde::Serialize;

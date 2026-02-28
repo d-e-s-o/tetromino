@@ -1,14 +1,14 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 #[cfg(debug_assertions)]
 use std::rc::Rc;
 
-use super::actions;
-use super::search;
 use super::Action;
 use super::Field;
 use super::Stone;
+use super::actions;
+use super::search;
 
 
 /// A type used for calculating and managing the estimated best actions

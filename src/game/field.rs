@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::mem::replace;
@@ -9,22 +9,22 @@ use std::rc::Rc;
 use std::time::Duration;
 use std::time::Instant;
 
-use crate::mode::ColorMode;
-use crate::mode::ColorSet;
 use crate::ActiveRenderer as Renderer;
 use crate::Change;
 use crate::Color;
 use crate::Point;
 use crate::Rect;
 use crate::Texture;
+use crate::mode::ColorMode;
+use crate::mode::ColorSet;
 
-use super::ai;
 use super::Fieldlike;
 use super::Matrix;
 use super::Piece;
 use super::Stone;
 use super::StoneProducer;
 use super::Stonelike as _;
+use super::ai;
 
 
 /// The width of each wall.

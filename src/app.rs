@@ -7,14 +7,14 @@ use std::time::Instant;
 
 use xgl::sys;
 
+use crate::Change;
+use crate::Tick;
 use crate::game::Game;
 use crate::keys;
 use crate::keys::Key;
 use crate::keys::KeyRepeat;
 use crate::keys::Keys;
 use crate::opengl::Renderer;
-use crate::Change;
-use crate::Tick;
 
 
 /// An abstraction over operations provided by the windowing system (or

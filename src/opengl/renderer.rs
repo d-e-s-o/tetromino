@@ -16,24 +16,24 @@ use std::rc::Rc;
 use anyhow::Context as _;
 use anyhow::Result;
 
-use xgl::sys;
-use xgl::sys::Gl as _;
-use xgl::vertex::Attrib;
-use xgl::vertex::AttribType;
-use xgl::vertex::Attribs;
 use xgl::MatrixStack;
 use xgl::Program;
 use xgl::Shader;
 use xgl::VertexArray;
 use xgl::VertexBuffer;
+use xgl::sys;
+use xgl::sys::Gl as _;
+use xgl::vertex::Attrib;
+use xgl::vertex::AttribType;
+use xgl::vertex::Attribs;
 
-use crate::guard::Guard;
 use crate::Point;
 use crate::Rect;
+use crate::guard::Guard;
 
-use super::empty_texture;
 use super::Mat4f;
 use super::Texture;
+use super::empty_texture;
 
 
 /// The capacity of our vertex buffer.

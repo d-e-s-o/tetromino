@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Switched to using Rust 2024 Edition
+
+
 0.1.2
 -----
 - Switched over to using "dark mode"

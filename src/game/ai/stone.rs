@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::iter;
@@ -7,10 +7,10 @@ use std::vec;
 
 use crate::Point;
 
+use super::super::Stonelike;
 #[cfg(test)]
 use super::super::matrix::Matrix;
 use super::super::stonelike::rotate;
-use super::super::Stonelike;
 use super::Orientation;
 
 

@@ -43,8 +43,8 @@ use winit::event_loop::ActiveEventLoop;
 use winit::event_loop::ControlFlow;
 use winit::event_loop::EventLoop;
 use winit::keyboard::PhysicalKey;
-use winit::platform::x11::register_xlib_error_hook;
 use winit::platform::x11::WindowAttributesExtX11 as _;
+use winit::platform::x11::register_xlib_error_hook;
 use winit::raw_window_handle::DisplayHandle;
 use winit::raw_window_handle::HasDisplayHandle as _;
 use winit::raw_window_handle::HasWindowHandle as _;
@@ -58,14 +58,14 @@ use winit::window::WindowId;
 
 use xgl::sys;
 
+use crate::Change;
+use crate::Config;
+use crate::Tick;
 use crate::app::App as AppT;
 use crate::app::Ops;
 use crate::game::Game;
 use crate::keys::Keys;
 use crate::opengl::Renderer;
-use crate::Change;
-use crate::Config;
-use crate::Tick;
 
 
 type App = AppT<Window>;

@@ -7,7 +7,7 @@ members = [
 
 [workspace.package]
 authors = ["Daniel Mueller <deso@posteo.net>"]
-edition = "2021"
+edition = "2024"
 license = "GPL-3.0-or-later"
 homepage = "https://github.com/d-e-s-o/tetromino"
 repository = "https://github.com/d-e-s-o/tetromino.git"
