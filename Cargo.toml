@@ -5,6 +5,13 @@ members = [
   "xlock/mode",
 ]
 
+[workspace.package]
+authors = ["Daniel Mueller <deso@posteo.net>"]
+edition = "2021"
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/d-e-s-o/tetromino"
+repository = "https://github.com/d-e-s-o/tetromino.git"
+
 [workspace.lints.rust]
 deprecated-safe = "warn"
 future-incompatible = "warn"
@@ -40,11 +47,11 @@ wildcard-imports = "warn"
 [package]
 name = "tetromino"
 version = "0.2.3"
-authors = ["Daniel Mueller <deso@posteo.net>"]
-edition = "2021"
-license = "GPL-3.0-or-later"
-homepage = "https://github.com/d-e-s-o/tetromino"
-repository = "https://github.com/d-e-s-o/tetromino.git"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 readme = "README.md"
 categories = [
   "games",

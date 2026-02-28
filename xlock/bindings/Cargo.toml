@@ -1,11 +1,11 @@
 [package]
 name = "tetromino-xlock-bindings"
 version = "0.1.0+v5.77"
-edition = "2021"
-authors = ["Daniel Mueller <deso@posteo.net>"]
-license = "GPL-3.0-or-later"
-homepage = "https://github.com/d-e-s-o/tetromino"
-repository = "https://github.com/d-e-s-o/tetromino.git"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 readme = "README.md"
 categories = [
   "api-bindings",
