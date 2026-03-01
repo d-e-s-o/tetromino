@@ -37,7 +37,11 @@ jobs:
           args: --all-targets --workspace --features=download-xlock-source,generate-xlock-bindings
         - rust: stable
           profile: release
-          args: --all-targets --workspace
+          # Don't use `--all-targets` here, because with our
+          # `panic=abort` setting we'd end up with tests building with
+          # `panic=unwind`, causing tests to be built twice, resulting
+          # in duplicate target warnings.
+          args: --lib --bins --workspace
         - rust: nightly
           profile: dev
           args: --all-targets --features=nightly

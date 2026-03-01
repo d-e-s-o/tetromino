@@ -74,6 +74,7 @@ A graphical Tetris clone.
 
 [lib]
 name = "tetromino"
+crate-type = ["cdylib", "rlib"]
 
 [features]
 default = []
@@ -84,6 +85,11 @@ debug = []
 # meant to be used for testing and benchmarking purposes. The game
 # itself is expected to work on stable.
 nightly = []
+# We misuse a feature here to actually prepare the WASM part of the
+# project. Ideally we could use something along the lines of a
+# post-build stage, but discussions surrounding that feature are still
+# ongoing (https://github.com/rust-lang/cargo/issues/545).
+deploy = ["dep:wasm-bindgen-cli-support"]
 
 [profile.release]
 opt-level = "z"
@@ -97,6 +103,7 @@ debug = true
 
 [build-dependencies]
 grev = {version = "0.1.3", default-features = false}
+wasm-bindgen-cli-support = {version = "0.2", default-features = false, optional = true}
 
 [dependencies]
 anyhow = {version = "1.0.72", default-features = false, features = ["std"]}
