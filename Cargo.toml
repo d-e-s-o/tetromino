@@ -1,6 +1,7 @@
 [workspace]
 members = [
   ".",
+  "make",
   "xlock/bindings",
   "xlock/mode",
 ]
