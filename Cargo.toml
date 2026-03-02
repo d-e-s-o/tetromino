@@ -108,7 +108,7 @@ wasm-bindgen-cli-support = {version = "0.2", default-features = false, optional 
 
 [dependencies]
 anyhow = {version = "1.0.72", default-features = false, features = ["std"]}
-bufio = {version = "0.1"}
+bufio = {version = "0.2"}
 image = {version = "0.25", default-features = false, features = ["png"]}
 keypeat = {version = "0.1"}
 serde = {version = "1.0.182", default-features = false, features = ["derive", "std"]}
