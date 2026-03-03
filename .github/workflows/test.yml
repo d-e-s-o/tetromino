@@ -57,9 +57,6 @@ jobs:
   build-wasm32:
     name: Build for wasm32
     runs-on: ubuntu-latest
-    env:
-      # TODO: Disallow warnings once Wasm support is complete.
-      RUSTFLAGS: '-A warnings'
     steps:
     - uses: actions/checkout@v6
     - uses: dtolnay/rust-toolchain@stable

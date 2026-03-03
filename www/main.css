@@ -1,0 +1,130 @@
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  /* prevent scrollbars */
+  overflow: hidden;
+}
+
+canvas {
+  width: 100vw;
+  height: 100vh;
+  /* remove inline spacing */
+  display: block;
+}
+
+:root {
+  --overlay-bg: #f5f7fa;
+  --card-bg: #ffffff;
+  --text-primary: #1f2933;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --details-bg: #f1f3f5;
+  --details-text: #374151;
+  --button-bg: #2563eb;
+  --button-bg-hover: #1d4ed8;
+  --button-text: #ffffff;
+  --shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --overlay-bg: #0f1115;
+    --card-bg: #181b21;
+    --text-primary: #e6e8eb;
+    --text-secondary: #cfd3d8;
+    --text-muted: #9aa1aa;
+    --details-bg: #0f1115;
+    --details-text: #aeb4bc;
+    --button-bg: #3b82f6;
+    --button-bg-hover: #2563eb;
+    --button-text: #ffffff;
+    --shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+  }
+}
+
+#error {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay-bg);
+  display: grid;
+  place-items: center;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  color: var(--text-primary);
+}
+
+#error.hidden {
+  display: none;
+}
+
+#error .card {
+  max-width: 420px;
+  padding: 24px 28px;
+  background: var(--card-bg);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.header h1 {
+  font-size: 1.25rem;
+  margin: 0;
+}
+
+.icon {
+  font-size: 1.5rem;
+}
+
+.summary {
+  margin: 16px 0;
+  color: var(--text-secondary);
+}
+
+.details summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+.details pre {
+  background: var(--details-bg);
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  color: var(--details-text);
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.actions button {
+  background: var(--button-bg);
+  color: var(--button-text);
+  border: none;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+}
+
+.actions button:hover {
+  background: var(--button-bg-hover);
+}
+
+.actions a {
+  color: var(--text-muted);
+  text-decoration: none;
+  align-self: center;
+}
+
+.actions a:hover {
+  text-decoration: underline;
+}

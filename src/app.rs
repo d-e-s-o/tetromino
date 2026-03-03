@@ -134,8 +134,12 @@ where
     }
   }
 
+  #[cfg(not(target_arch = "wasm32"))]
   pub fn tick(&mut self) -> (Change, Tick) {
-    let now = Instant::now();
+    self.tick_at(Instant::now())
+  }
+
+  pub fn tick_at(&mut self, now: Instant) -> (Change, Tick) {
     let (keys_change, keys_wait) = self.keys.tick(now, |key, repeat| {
       Self::handle_key(key, repeat, &mut self.game)
     });
@@ -153,6 +157,7 @@ where
     let () = drop(renderer);
   }
 
+  #[cfg(not(target_arch = "wasm32"))]
   #[inline]
   pub fn ops(&self) -> &O {
     &self.ops

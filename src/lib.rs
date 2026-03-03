@@ -8,6 +8,9 @@
 #[cfg(all(feature = "nightly", test))]
 extern crate test;
 
+#[macro_use]
+mod redefine;
+
 mod app;
 mod change;
 mod config;
@@ -21,6 +24,8 @@ mod point;
 mod rand;
 mod rect;
 mod tick;
+#[cfg(target_arch = "wasm32")]
+mod web;
 #[cfg(not(target_arch = "wasm32"))]
 mod winit;
 

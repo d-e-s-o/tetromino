@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+  <head>
+  <title>Tetromino</title>
+    <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
+    <link rel="stylesheet" href="main.css">
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <div id="error" class="hidden" role="alert">
+      <div class="card">
+        <div class="header">
+          <span class="icon">⚠️</span>
+          <h1>Tetromino Could Not Start</h1>
+        </div>
+
+        <p class="summary">
+          Tetromino failed to initialize. Please note that the program
+          requires WebGL 2 support in your browser and will not be able
+          to start without it.
+        </p>
+
+        <details class="details">
+          <summary>Technical details</summary>
+          <pre id="error-details"></pre>
+        </details>
+
+        <div class="actions">
+          <button onclick="location.reload()">Try again</button>
+        </div>
+      </div>
+    </div>
+
+    <script type="module">
+      const showError = (err) => {
+        const error = document.getElementById("error");
+        const details = document.getElementById("error-details");
+
+        details.textContent = err;
+        error.classList.remove("hidden");
+      }
+
+      try {
+        const { default: init, run } = await import("./pkg/tetromino.js");
+
+        await init("./pkg/tetromino_bg.wasm");
+        var canvas = document.getElementById("canvas");
+        run(canvas)
+      } catch(err) {
+        showError(err)
+      }
+    </script>
+  </body>
+</html>
