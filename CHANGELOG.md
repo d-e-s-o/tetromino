@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.2.4
+-----
 - Added Wasm + WebGL support
 - Switched to using Rust 2024 Edition
 
