@@ -200,7 +200,7 @@ impl Color {
   pub(crate) const fn orange() -> Self {
     Self {
       r: u8::MAX,
-      g: u8::MAX / 2,
+      g: u8::MAX / 4,
       b: u8::MIN,
       a: u8::MAX,
     }
@@ -209,9 +209,9 @@ impl Color {
   #[inline]
   pub(crate) const fn gray() -> Self {
     Self {
-      r: u8::MAX / 2,
-      g: u8::MAX / 2,
-      b: u8::MAX / 2,
+      r: u8::MAX / 4,
+      g: u8::MAX / 4,
+      b: u8::MAX / 4,
       a: u8::MAX,
     }
   }
@@ -619,8 +619,14 @@ impl Renderer {
 
       out vec4 fragment_color;
 
+      vec3 linear_to_srgb(vec3 color) {{
+        float gamma = 2.2;
+        return pow(color, vec3(1.0 / gamma));
+      }}
+
       void main() {{
         fragment_color = texture({texture_unit_uniform}, {texture_coord_in_out}) * {color_in_out};
+        fragment_color.rgb = linear_to_srgb(fragment_color.rgb);
       }}
       "#,
       glsl_version = Shader::glsl_version(),

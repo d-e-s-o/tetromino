@@ -305,8 +305,15 @@ pub fn run(canvas: JsValue) -> Result<(), JsValue> {
     let opts = Object::new();
     let _result = Reflect::set(
       &opts,
-      &JsValue::from_str("colorSpace"),
-      &JsValue::from_str("srgb"),
+      &JsValue::from_str("premultipliedAlpha"),
+      &JsValue::from_bool(false),
+    );
+    let _result = Reflect::set(
+      &opts,
+      &JsValue::from_str("preserveDrawingBuffer"),
+      // Do not preserve the drawing buffer after `glFlush`, which
+      // allows for some optimizations.
+      &JsValue::from_bool(false),
     );
     let _result = Reflect::set(
       &opts,
@@ -318,18 +325,11 @@ pub fn run(canvas: JsValue) -> Result<(), JsValue> {
     );
     let _result = Reflect::set(
       &opts,
-      &JsValue::from_str("premultipliedAlpha"),
-      &JsValue::from_bool(false),
-    );
-    let _result = Reflect::set(
-      &opts,
-      &JsValue::from_str("preserveDrawingBuffer"),
-      &JsValue::from_bool(true),
-    );
-    let _result = Reflect::set(
-      &opts,
       &JsValue::from_str("alpha"),
-      &JsValue::from_bool(true),
+      // `alpha` here basically is only concerned with blending between
+      // the canvas contents and the page. We want to treat the canvas
+      // as fully opaque, or colors will be off.
+      &JsValue::from_bool(false),
     );
     let _result = Reflect::set(
       &opts,

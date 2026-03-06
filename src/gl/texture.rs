@@ -30,12 +30,12 @@ impl TextureBuilderExt for TextureBuilder<sys::Context> {
 fn dynamic_image_to_tex_info(image: &DynamicImage) -> Result<TextureInfo, Error> {
   let (intern_format, pixel_format, color_format) = match image {
     DynamicImage::ImageRgb8(..) => (
-      sys::TextureInternalFormat::RGB8,
+      sys::TextureInternalFormat::SRGB8,
       sys::TexturePixelFormat::RGB,
       sys::Type::UnsignedByte,
     ),
     DynamicImage::ImageRgba8(..) => (
-      sys::TextureInternalFormat::RGBA8,
+      sys::TextureInternalFormat::SRGBA8,
       sys::TexturePixelFormat::RGBA,
       sys::Type::UnsignedByte,
     ),
@@ -58,7 +58,7 @@ pub(crate) fn empty_texture(context: &sys::Context) -> Result<Texture> {
   let info = TextureInfo {
     width: 1,
     height: 1,
-    intern_format: sys::TextureInternalFormat::RGBA8,
+    intern_format: sys::TextureInternalFormat::SRGBA8,
     pixel_format: sys::TexturePixelFormat::RGBA,
     color_format: sys::Type::UnsignedByte,
   };
