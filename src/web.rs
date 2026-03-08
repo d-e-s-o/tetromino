@@ -305,8 +305,15 @@ macro_rules! parse_and_set_int_param {
   };
 }
 
-fn game_config(params: &UrlSearchParams) -> Result<game::Config> {
+fn game_config(params: &UrlSearchParams, window: &Window) -> Result<game::Config> {
   let mut config = game::Config::default();
+
+  config.enable_dark_mode = window
+    .match_media("(prefers-color-scheme: dark)")
+    .ok()
+    .flatten()
+    .map(|m| m.matches())
+    .unwrap_or(false);
 
   let () = parse_and_set_int_param!(params => config.start_level);
   let () = parse_and_set_int_param!(params => config.lines_for_level);
@@ -404,7 +411,7 @@ pub fn run(canvas: JsValue) -> Result<(), JsValue> {
     let params = UrlSearchParams::new_with_str(&search)
       .map_err(|_| anyhow!("failed parse URL search parameters"))?;
 
-    let config = game_config(&params).context("failed to create game configuration")?;
+    let config = game_config(&params, &window).context("failed to create game configuration")?;
     let game = Game::with_config(&config, &context).context("failed to instantiate game object")?;
     let (width, height) = window_size(&window);
     let renderer = Renderer::new(width, height, game.width(), game.height(), &context)
