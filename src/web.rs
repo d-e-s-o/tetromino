@@ -21,6 +21,7 @@ use web_sys::Document;
 use web_sys::Event;
 use web_sys::HtmlCanvasElement;
 use web_sys::KeyboardEvent;
+use web_sys::UrlSearchParams;
 use web_sys::WebGl2RenderingContext;
 use web_sys::Window;
 use web_sys::js_sys::Object;
@@ -288,6 +289,46 @@ impl State {
 }
 
 
+/// Parses an optional parameter from a map into a config field,
+/// using the field name as both the map key and the error message.
+///
+/// Usage:
+///   parse_param!(params => config.start_level);
+macro_rules! parse_and_set_int_param {
+  ($params:ident => $config:ident . $field:ident) => {
+    if let Some(value) = $params.get(stringify!($field)) {
+      $config.$field =
+        value
+          .parse()
+          .context(concat!("failed to parse `", stringify!($field), "`"))?;
+    }
+  };
+}
+
+fn game_config(params: &UrlSearchParams) -> Result<game::Config> {
+  let mut config = game::Config::default();
+
+  let () = parse_and_set_int_param!(params => config.start_level);
+  let () = parse_and_set_int_param!(params => config.lines_for_level);
+  let () = parse_and_set_int_param!(params => config.field_width);
+  let () = parse_and_set_int_param!(params => config.field_height);
+  let () = parse_and_set_int_param!(params => config.preview_stone_count);
+  let () = parse_and_set_int_param!(params => config.enable_ai);
+  let () = parse_and_set_int_param!(params => config.enable_dark_mode);
+
+  Ok(config)
+}
+
+fn keys_config(params: &UrlSearchParams) -> Result<keys::Config> {
+  let mut config = keys::Config::default();
+
+  let () = parse_and_set_int_param!(params => config.auto_repeat_timeout_ms);
+  let () = parse_and_set_int_param!(params => config.auto_repeat_interval_ms);
+
+  Ok(config)
+}
+
+
 #[wasm_bindgen]
 pub fn run(canvas: JsValue) -> Result<(), JsValue> {
   fn init_impl(canvas: JsValue) -> Result<()> {
@@ -356,14 +397,26 @@ pub fn run(canvas: JsValue) -> Result<(), JsValue> {
 
     let context = sys::Context::new(gl);
 
-    let config = game::Config::default();
+    let location = window.location();
+    let search = location
+      .search()
+      .map_err(|_| anyhow!("failed to retrieve window location"))?;
+    let params = UrlSearchParams::new_with_str(&search)
+      .map_err(|_| anyhow!("failed parse URL search parameters"))?;
+
+    let config = game_config(&params).context("failed to create game configuration")?;
     let game = Game::with_config(&config, &context).context("failed to instantiate game object")?;
     let (width, height) = window_size(&window);
     let renderer = Renderer::new(width, height, game.width(), game.height(), &context)
       .context("failed to create WebGL renderer")?;
-    let config = keys::Config::default();
-    let timeout = Duration::from_millis(config.auto_repeat_timeout_ms.into());
-    let interval = Duration::from_millis(config.auto_repeat_interval_ms.into());
+
+    let config = keys_config(&params).context("failed to create key configuration")?;
+    let keys::Config {
+      auto_repeat_timeout_ms,
+      auto_repeat_interval_ms,
+    } = config;
+    let timeout = Duration::from_millis(auto_repeat_timeout_ms.into());
+    let interval = Duration::from_millis(auto_repeat_interval_ms.into());
     let keys = Keys::new(timeout, interval);
 
     let ops_state = (document.clone(), canvas, context);

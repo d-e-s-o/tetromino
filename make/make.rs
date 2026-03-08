@@ -69,7 +69,14 @@ fn serve(root: PathBuf) -> Result<()> {
       Err(err) => break Err(err),
     };
 
-    let path = req.url().trim_start_matches('/');
+    // Strip the query string.
+    let path = req
+      .url()
+      .split('?')
+      .next()
+      .unwrap_or("")
+      .trim_start_matches('/');
+
     let result = if path.is_empty() {
       let response = Response::new_empty(StatusCode(308));
       let header = Header::from_bytes(b"Location", b"index.html").unwrap();
