@@ -7,6 +7,8 @@ use std::env;
 use std::path::Path;
 #[cfg(feature = "deploy")]
 use std::path::PathBuf;
+#[cfg(feature = "deploy")]
+use std::process::Command;
 
 use grev::git_revision_auto;
 
@@ -37,26 +39,60 @@ fn generate_pkg(input_wasm: &Path, output_dir: &Path, debug: bool) {
 
 
 #[cfg(feature = "deploy")]
+fn find_target_dir() -> PathBuf {
+  let cargo = env::var_os("CARGO").expect("failed to read CARGO variable");
+  let output = Command::new(cargo)
+    .args(["metadata", "--format-version=1", "--no-deps"])
+    .output()
+    .expect("failed to run `cargo metadata`");
+  if !output.status.success() {
+    panic!("`cargo metadata` failed")
+  }
+
+  let stdout =
+    String::from_utf8(output.stdout).expect("`cargo metadata` output is not valid UTF-8");
+
+  // Extract "target_directory":"<path>" from JSON.
+  let marker = "\"target_directory\":\"";
+  let start = stdout
+    .find(marker)
+    .expect("`target_directory` not found in `cargo metadata` output")
+    + marker.len();
+  // Read until the next unescaped quote.
+  let rest = &stdout[start..];
+  let mut end = 0;
+  let bytes = rest.as_bytes();
+  while end < bytes.len() {
+    if bytes[end] == b'"' {
+      break;
+    }
+    if bytes[end] == b'\\' {
+      // Skip escaped character.
+      end += 1;
+    }
+    end += 1;
+  }
+  let raw = &rest[..end];
+  // Unescape basic JSON sequences.
+  let path = raw.replace("\\\\", "\\").replace("\\/", "/");
+  PathBuf::from(path)
+}
+
+
+#[cfg(feature = "deploy")]
 fn deploy_package(manifest_dir: &Path) {
   let name = env::var("CARGO_PKG_NAME")
     .expect("failed to read CARGO_PKG_NAME variable")
     .replace("-", "_");
-  // Cargo's OUT_DIR is where it stores build artifacts and so that is
-  // where we can find the created .*wasm we need.
-  let out_dir = env::var_os("OUT_DIR").expect("failed to read `OUT_DIR` variable");
+  let profile = env::var_os("PROFILE").expect("failed to read PROFILE variable");
+  let target = env::var_os("TARGET").expect("failed to read TARGET variable");
 
-  // OUT_DIR is something like
-  // <some-dir>/target/<target>/debug/build/<name>-<hash>/out
-  // but the generated .wasm resides in
-  // <some-dir>/target/<target>/debug/deps/
-  // directly. So pop the last three directories.
-  let mut input_wasm = PathBuf::from(out_dir);
-  input_wasm.pop();
-  input_wasm.pop();
-  input_wasm.pop();
-  input_wasm.push("deps");
-  input_wasm.push(name);
-  input_wasm.set_extension("wasm");
+  let target_dir = find_target_dir();
+  let input_wasm = target_dir
+    .join(&target)
+    .join(&profile)
+    .join(&name)
+    .with_extension("wasm");
 
   let mut output_dir = manifest_dir.to_path_buf();
   output_dir.push("www");
