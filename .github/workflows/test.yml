@@ -42,9 +42,12 @@ jobs:
           # `panic=unwind`, causing tests to be built twice, resulting
           # in duplicate target warnings.
           args: --lib --bins --workspace
-        - rust: nightly
-          profile: dev
-          args: --all-targets --features=nightly
+        # TODO: Re-enable testing on nightly once false-positive
+        #       "feature `test` is declared but not used" has been
+        #       resolved.
+        #- rust: nightly
+        #  profile: dev
+        #  args: --all-targets --features=nightly
     steps:
     - uses: actions/checkout@v6
     - name: Install dependencies
