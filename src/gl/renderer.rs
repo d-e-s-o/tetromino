@@ -583,8 +583,10 @@ impl Renderer {
     // vertex and fragment shader.
     let texture_coord_in_out = "texture_coord_in_out";
 
+    let shader_line = line!() + 2;
     let vertex_shader_file = format!(
       r#"#version {glsl_version}
+      #line {shader_line}
 
       uniform mat4 {modelview_uniform};
       uniform mat4 {projection_uniform};
@@ -606,8 +608,10 @@ impl Renderer {
       glsl_version = Shader::glsl_version(),
     );
 
+    let shader_line = line!() + 2;
     let fragment_shader_file = format!(
       r#"#version {glsl_version}
+      #line {shader_line}
 
       precision highp float;
       precision highp sampler2D;
