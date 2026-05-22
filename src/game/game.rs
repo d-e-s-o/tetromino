@@ -122,13 +122,14 @@ impl Game {
       field_back,
     );
 
-    let font = Font::builtin(piece);
+    let font = Font::builtin();
     let score_location = preview_location - Point::new(0, preview.height() + PREVIEW_SCORE_SPACE);
     let score = Score::new(
       score_location,
       config.start_level,
       config.lines_for_level,
       font,
+      piece,
     );
 
     let ai = if config.enable_ai {

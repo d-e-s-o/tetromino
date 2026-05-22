@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Deref as _;
-use std::rc::Rc;
 
 use crate::ActiveRenderer as Renderer;
 use crate::Point;
 use crate::Rect;
-use crate::Texture;
 
 use super::raster;
 
@@ -29,8 +27,6 @@ pub(crate) struct Font {
   /// The index of the glyph used for rendering an unsupported
   /// character.
   invalid: usize,
-  /// The texture to use for each and every "pixel".
-  texture: Rc<Texture>,
 }
 
 impl Font {
@@ -40,7 +36,6 @@ impl Font {
     spaces: &[u8; N],
     ascii_offset: u8,
     invalid_idx: usize,
-    texture: Rc<Texture>,
   ) -> Self {
     assert!(invalid_idx < N, "{invalid_idx} : {N}");
 
@@ -71,14 +66,13 @@ impl Font {
       point_size: SIZE as u8,
       offset: ascii_offset,
       invalid: invalid_idx,
-      texture,
     }
   }
 
   /// Instantiate the built-in font.
-  pub(crate) fn builtin(texture: Rc<Texture>) -> Self {
+  pub(crate) fn builtin() -> Self {
     let invalid_idx = raster::GLYPHS.len() - 1;
-    Self::load(&raster::GLYPHS, &raster::SPACES, b' ', invalid_idx, texture)
+    Self::load(&raster::GLYPHS, &raster::SPACES, b' ', invalid_idx)
   }
 
   /// Renderer a string using the provided font size, in game units.
@@ -96,7 +90,6 @@ impl Font {
     let mut location = location;
     let start_x = location.x;
     let factor = size / f32::from(self.point_size);
-    let _guard = renderer.set_texture(&self.texture);
 
     for c in s {
       let (glyph, space) = c
@@ -127,31 +120,23 @@ impl Font {
 mod tests {
   use super::*;
 
-  use test_fork::fork;
-
-  use crate::gl::empty_texture;
-  use crate::winit::with_opengl_context;
-
 
   /// Make sure that we can load a font correctly by spot-checking some
   /// calculated glyph coordinates.
-  #[fork]
   #[test]
   fn font_loading() {
-    with_opengl_context(|context| {
-      let font = Font::builtin(Rc::new(empty_texture(context).unwrap()));
-      // Space has no coordinates to render.
-      let (glyph, space) = &font.glyphs[0];
-      assert!(glyph.is_empty());
-      assert_eq!(*space, 3);
+    let font = Font::builtin();
+    // Space has no coordinates to render.
+    let (glyph, space) = &font.glyphs[0];
+    assert!(glyph.is_empty());
+    assert_eq!(*space, 3);
 
-      // Apostrophe.
-      let (glyph, space) = &font.glyphs[7];
-      assert_eq!(
-        glyph.deref(),
-        &[Point::new(0, 8), Point::new(0, 9), Point::new(0, 10)],
-      );
-      assert_eq!(*space, 2);
-    })
+    // Apostrophe.
+    let (glyph, space) = &font.glyphs[7];
+    assert_eq!(
+      glyph.deref(),
+      &[Point::new(0, 8), Point::new(0, 9), Point::new(0, 10)],
+    );
+    assert_eq!(*space, 2);
   }
 }

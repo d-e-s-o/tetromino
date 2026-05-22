@@ -3,6 +3,7 @@
 
 use std::io::Write as _;
 use std::mem::MaybeUninit;
+use std::rc::Rc;
 
 use bufio::Writer as StackWriter;
 
@@ -10,6 +11,7 @@ use crate::ActiveRenderer as Renderer;
 use crate::Color;
 use crate::Font;
 use crate::Point;
+use crate::Texture;
 
 /// The font size to use, in game units.
 const FONT_SIZE: f32 = 2.0;
@@ -34,6 +36,9 @@ pub(super) struct Score {
   lines_since_up: u16,
   /// The font to use for rendering the current score.
   font: Font,
+  /// The texture to use for each and every "pixel" of each rendered
+  /// glyph.
+  texture: Rc<Texture>,
 }
 
 impl Score {
@@ -42,6 +47,7 @@ impl Score {
     start_level: u16,
     lines_for_level: u16,
     font: Font,
+    texture: Rc<Texture>,
   ) -> Self {
     Self {
       location,
@@ -52,12 +58,14 @@ impl Score {
       lines_for_level,
       lines_since_up: 0,
       font,
+      texture,
     }
   }
 
   /// Render the object.
   pub fn render(&self, renderer: &Renderer) {
     let _guard = renderer.set_color(Color::orange());
+    let _guard = renderer.set_texture(&self.texture);
 
     let location = self.location.into_other::<f32>();
 
@@ -186,8 +194,8 @@ mod tests {
   fn score_counting() {
     with_opengl_context(|context| {
       let texture = Rc::new(empty_texture(context).unwrap());
-      let font = Font::builtin(texture);
-      let mut score = Score::new(Point::new(0, 0), 1, 10, font);
+      let font = Font::builtin();
+      let mut score = Score::new(Point::new(0, 0), 1, 10, font, texture);
       assert_eq!(score.level, 1);
       assert_eq!(score.points, 0);
       assert_eq!(score.lines, 0);
