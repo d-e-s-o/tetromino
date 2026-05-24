@@ -11,10 +11,11 @@ use crate::ActiveRenderer as Renderer;
 use crate::Color;
 use crate::Font;
 use crate::Point;
+use crate::Rect;
 use crate::Texture;
 
 /// The font size to use, in game units.
-const FONT_SIZE: f32 = 2.0;
+const FONT_SIZE: i16 = 2;
 
 
 /// A type helping with keeping track of score in a Tetris game.
@@ -64,64 +65,53 @@ impl Score {
 
   /// Render the object.
   pub fn render(&self, renderer: &Renderer) {
+    let factor = f32::from(FONT_SIZE) / f32::from(self.font.size());
+    let render_pixel = |point: Point<i16>| {
+      let () = renderer.render_rect_f32(Rect::new(
+        f32::from(point.x) * factor,
+        f32::from(point.y) * factor,
+        factor,
+        factor,
+      ));
+    };
+
     let _guard = renderer.set_color(Color::orange());
     let _guard = renderer.set_texture(&self.texture);
 
-    let location = self.location.into_other::<f32>();
+    let w = {
+      let _guard = renderer.set_origin(self.location);
+      let level_w = self.font.render_str(b"Level:  ", render_pixel);
 
-    let (level_w, level_h) = self.font.render_str(
-      renderer,
-      location + Point::new(0.0, 0.0),
-      b"Level:  ",
-      FONT_SIZE,
-    );
+      let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
+      let points_w = self.font.render_str(b"Points:  ", render_pixel);
 
-    let (points_w, points_h) = self.font.render_str(
-      renderer,
-      location + Point::new(0.0, -level_h),
-      b"Points:  ",
-      FONT_SIZE,
-    );
+      let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
+      let lines_w = self.font.render_str(b"Lines:  ", render_pixel);
 
-    let (lines_w, _lines_h) = self.font.render_str(
-      renderer,
-      location + Point::new(0.0, -level_h - points_h),
-      b"Lines:  ",
-      FONT_SIZE,
-    );
-
-    let w = level_w.max(points_w).max(lines_w);
+      level_w.max(points_w).max(lines_w)
+    };
 
     // 256 bytes of stack buffer ought to be enough to format all the
     // strings we care about, with a rather large margin.
     let mut buffer = [MaybeUninit::<u8>::uninit(); 256];
     let mut writer = StackWriter::new(&mut buffer);
 
+    let _guard = renderer.set_origin(self.location + Point::new((f32::from(w) * factor) as i16, 0));
     let () = write!(writer, "{}", self.level).unwrap();
     let string = writer.written();
-    let (_w, _h) = self
-      .font
-      .render_str(renderer, location + Point::new(w, 0.0), string, FONT_SIZE);
+    let _w = self.font.render_str(string, render_pixel);
 
+    let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
     let () = writer.reset();
     let () = write!(writer, "{}", self.points).unwrap();
     let string = writer.written();
-    let (_w, _h) = self.font.render_str(
-      renderer,
-      location + Point::new(w, -level_h),
-      string,
-      FONT_SIZE,
-    );
+    let _w = self.font.render_str(string, render_pixel);
 
+    let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
     let () = writer.reset();
     let () = write!(writer, "{}", self.lines).unwrap();
     let string = writer.written();
-    let (_w, _h) = self.font.render_str(
-      renderer,
-      location + Point::new(w, -level_h - points_h),
-      string,
-      FONT_SIZE,
-    );
+    let _w = self.font.render_str(string, render_pixel);
   }
 
   /// Add the given number of lines to the score.

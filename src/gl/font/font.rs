@@ -3,9 +3,7 @@
 
 use std::ops::Deref as _;
 
-use crate::ActiveRenderer as Renderer;
 use crate::Point;
-use crate::Rect;
 
 use super::raster;
 
@@ -80,16 +78,11 @@ impl Font {
   /// # Notes
   /// If the string contains non-ASCII characters the result may not be
   /// as expected.
-  pub(crate) fn render_str(
-    &self,
-    renderer: &Renderer,
-    location: Point<f32>,
-    s: &[u8],
-    size: f32,
-  ) -> (f32, f32) {
-    let mut location = location;
-    let start_x = location.x;
-    let factor = size / f32::from(self.point_size);
+  pub(crate) fn render_str<R>(&self, s: &[u8], mut render: R) -> i16
+  where
+    R: FnMut(Point<i16>),
+  {
+    let mut x = 0i16;
 
     for c in s {
       let (glyph, space) = c
@@ -99,19 +92,19 @@ impl Font {
         .unwrap();
 
       for coord in glyph.deref() {
-        let () = renderer.render_rect_f32(Rect::new(
-          location.x + f32::from(coord.x) * factor,
-          location.y + f32::from(coord.y) * factor,
-          factor,
-          factor,
-        ));
+        let () = render(coord.into_other() + Point::new(x, 0));
       }
 
-      location.x += f32::from(*space) * factor;
+      x += i16::from(*space);
     }
 
-    let w = location.x - start_x;
-    (w, size)
+    x
+  }
+
+  /// Retrieve the font's size, in "points".
+  #[inline]
+  pub(crate) fn size(&self) -> u8 {
+    self.point_size
   }
 }
 
