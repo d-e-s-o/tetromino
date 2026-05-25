@@ -47,7 +47,6 @@ impl Score {
     location: Point<i16>,
     start_level: u16,
     lines_for_level: u16,
-    font: Font,
     texture: Rc<Texture>,
   ) -> Self {
     Self {
@@ -58,7 +57,7 @@ impl Score {
       lines: 0,
       lines_for_level,
       lines_since_up: 0,
-      font,
+      font: Font::builtin(),
       texture,
     }
   }
@@ -184,8 +183,7 @@ mod tests {
   fn score_counting() {
     with_opengl_context(|context| {
       let texture = Rc::new(empty_texture(context).unwrap());
-      let font = Font::builtin();
-      let mut score = Score::new(Point::new(0, 0), 1, 10, font, texture);
+      let mut score = Score::new(Point::new(0, 0), 1, 10, texture);
       assert_eq!(score.level, 1);
       assert_eq!(score.points, 0);
       assert_eq!(score.lines, 0);
