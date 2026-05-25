@@ -79,13 +79,13 @@ impl Score {
 
     let w = {
       let _guard = renderer.set_origin(self.location);
-      let level_w = self.font.render_str(b"Level:  ", render_pixel);
+      let level_w = self.font.render_str(b"Level:", render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
-      let points_w = self.font.render_str(b"Points:  ", render_pixel);
+      let points_w = self.font.render_str(b"Points:", render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
-      let lines_w = self.font.render_str(b"Lines:  ", render_pixel);
+      let lines_w = self.font.render_str(b"Lines:", render_pixel);
 
       level_w.max(points_w).max(lines_w)
     };
@@ -95,7 +95,8 @@ impl Score {
     let mut buffer = [MaybeUninit::<u8>::uninit(); 256];
     let mut writer = StackWriter::new(&mut buffer);
 
-    let _guard = renderer.set_origin(self.location + Point::new((f32::from(w) * factor) as i16, 0));
+    let _guard =
+      renderer.set_origin(self.location + Point::new((f32::from(w) * factor).ceil() as i16, 0));
     let () = write!(writer, "{}", self.level).unwrap();
     let string = writer.written();
     let _w = self.font.render_str(string, render_pixel);
