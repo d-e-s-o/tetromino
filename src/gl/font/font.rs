@@ -101,6 +101,20 @@ impl Font {
     x
   }
 
+  // Determine the width of the given string when rendered.
+  #[cfg(test)]
+  pub(crate) fn str_width(&self, s: &[u8]) -> i16 {
+    s.iter()
+      .map(|c| {
+        c.checked_sub(self.offset)
+          .and_then(|idx| self.glyphs.get(usize::from(idx)))
+          .or_else(|| self.glyphs.get(self.invalid))
+          .map(|(_glyph, space)| i16::from(*space))
+          .unwrap()
+      })
+      .sum()
+  }
+
   /// Retrieve the font's size, in "points".
   #[inline]
   pub(crate) fn size(&self) -> u8 {
@@ -131,5 +145,15 @@ mod tests {
       &[Point::new(0, 8), Point::new(0, 9), Point::new(0, 10)],
     );
     assert_eq!(*space, 2);
+  }
+
+  /// Check that we can determine the width of a string when rendered
+  /// via a `Font` object.
+  #[test]
+  fn string_width_determination() {
+    let font = Font::builtin();
+    assert_eq!(font.str_width(b""), 0);
+    assert_eq!(font.str_width(b"A"), 7);
+    assert_eq!(font.str_width(b"AA"), 14);
   }
 }
