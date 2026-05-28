@@ -17,6 +17,17 @@ use crate::Texture;
 /// The font size to use, in game units.
 const FONT_SIZE: i16 = 2;
 
+static LEVEL_STR: &[u8] = b"Level:";
+static POINTS_STR: &[u8] = b"Points:";
+static LINES_STR: &[u8] = b"Lines:";
+
+#[cfg(test)]
+static FIXED_STRS: [&[u8]; 3] = [LEVEL_STR, POINTS_STR, LINES_STR];
+
+/// The pre-calculated maximum width of the strings above when rendered
+/// using `Font::builtin`.
+const MAX_FIXED_STR_WIDTH: i16 = 33;
+
 
 /// A type helping with keeping track of score in a Tetris game.
 #[derive(Debug)]
@@ -77,26 +88,25 @@ impl Score {
     let _guard = renderer.set_color(Color::orange());
     let _guard = renderer.set_texture(&self.texture);
 
-    let w = {
+    {
       let _guard = renderer.set_origin(self.location);
-      let level_w = self.font.render_str(b"Level:", render_pixel);
+      let _w = self.font.render_str(LEVEL_STR, render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
-      let points_w = self.font.render_str(b"Points:", render_pixel);
+      let _w = self.font.render_str(POINTS_STR, render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
-      let lines_w = self.font.render_str(b"Lines:", render_pixel);
-
-      level_w.max(points_w).max(lines_w)
-    };
+      let _w = self.font.render_str(LINES_STR, render_pixel);
+    }
 
     // 256 bytes of stack buffer ought to be enough to format all the
     // strings we care about, with a rather large margin.
     let mut buffer = [MaybeUninit::<u8>::uninit(); 256];
     let mut writer = StackWriter::new(&mut buffer);
 
-    let _guard =
-      renderer.set_origin(self.location + Point::new((f32::from(w) * factor).ceil() as i16, 0));
+    let _guard = renderer.set_origin(
+      self.location + Point::new((f32::from(MAX_FIXED_STR_WIDTH) * factor).ceil() as i16, 0),
+    );
     let () = write!(writer, "{}", self.level).unwrap();
     let string = writer.written();
     let _w = self.font.render_str(string, render_pixel);
@@ -177,6 +187,16 @@ mod tests {
   use crate::gl::empty_texture;
   use crate::winit::with_opengl_context;
 
+
+  /// Check that our pre-calculated `FIXED_STR_MAX_WIDTH` constant is
+  /// correct.
+  #[test]
+  fn max_fixed_string_width_checking() {
+    let font = Font::builtin();
+    let max_w = FIXED_STRS.iter().map(|s| font.str_width(s)).max().unwrap();
+
+    assert_eq!(max_w, MAX_FIXED_STR_WIDTH);
+  }
 
   /// Check that we can keep track of scores correctly.
   #[fork]
