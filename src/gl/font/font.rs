@@ -78,7 +78,7 @@ impl Font {
   /// # Notes
   /// If the string contains non-ASCII characters the result may not be
   /// as expected.
-  pub(crate) fn render_str<R>(&self, s: &[u8], mut render: R) -> i16
+  pub(crate) fn render_str<R>(&self, s: &[u8], mut render: R)
   where
     R: FnMut(Point<i16>),
   {
@@ -97,8 +97,6 @@ impl Font {
 
       x += i16::from(*space);
     }
-
-    x
   }
 
   // Determine the width of the given string when rendered.

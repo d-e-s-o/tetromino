@@ -90,13 +90,13 @@ impl Score {
 
     {
       let _guard = renderer.set_origin(self.location);
-      let _w = self.font.render_str(LEVEL_STR, render_pixel);
+      let () = self.font.render_str(LEVEL_STR, render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
-      let _w = self.font.render_str(POINTS_STR, render_pixel);
+      let () = self.font.render_str(POINTS_STR, render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
-      let _w = self.font.render_str(LINES_STR, render_pixel);
+      let () = self.font.render_str(LINES_STR, render_pixel);
     }
 
     // 256 bytes of stack buffer ought to be enough to format all the
@@ -109,19 +109,19 @@ impl Score {
     );
     let () = write!(writer, "{}", self.level).unwrap();
     let string = writer.written();
-    let _w = self.font.render_str(string, render_pixel);
+    let () = self.font.render_str(string, render_pixel);
 
     let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
     let () = writer.reset();
     let () = write!(writer, "{}", self.points).unwrap();
     let string = writer.written();
-    let _w = self.font.render_str(string, render_pixel);
+    let () = self.font.render_str(string, render_pixel);
 
     let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
     let () = writer.reset();
     let () = write!(writer, "{}", self.lines).unwrap();
     let string = writer.written();
-    let _w = self.font.render_str(string, render_pixel);
+    let () = self.font.render_str(string, render_pixel);
   }
 
   /// Add the given number of lines to the score.
