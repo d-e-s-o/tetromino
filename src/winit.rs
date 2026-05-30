@@ -32,6 +32,7 @@ use glutin::surface::SwapInterval;
 use glutin::surface::WindowSurface;
 
 use winit::application::ApplicationHandler;
+use winit::dpi::PhysicalSize;
 use winit::error::OsError;
 use winit::event::DeviceEvent;
 use winit::event::DeviceId;
@@ -337,6 +338,16 @@ impl Handler {
       },
     }
   }
+
+  fn on_resize(phys_size: PhysicalSize<u32>, app: &mut App) {
+    let phys_w =
+      NonZeroU32::new(phys_size.width).unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
+    let phys_h =
+      NonZeroU32::new(phys_size.height).unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
+
+    let () = app.ops_mut().on_resize(phys_w, phys_h);
+    let () = app.on_window_resize(phys_w, phys_h);
+  }
 }
 
 impl ApplicationHandler for Handler {
@@ -391,13 +402,7 @@ impl ApplicationHandler for Handler {
           Change::Unchanged
         },
         WindowEvent::Resized(phys_size) => {
-          let phys_w = NonZeroU32::new(phys_size.width)
-            .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
-          let phys_h = NonZeroU32::new(phys_size.height)
-            .unwrap_or_else(|| unsafe { NonZeroU32::new_unchecked(1) });
-
-          let () = app.ops_mut().on_resize(phys_w, phys_h);
-          let () = app.on_window_resize(phys_w, phys_h);
+          let () = Self::on_resize(phys_size, app);
           Change::Changed
         },
         _ => Change::Unchanged,
