@@ -13,6 +13,9 @@ pub enum Change {
   Changed,
   /// A desire to quite the program has been made.
   Quit,
+  /// Some object changed its size in a way that necessitates resizing
+  /// the overall surface.
+  Resize,
   /// No visible state has changed.
   #[default]
   Unchanged,
@@ -24,6 +27,7 @@ impl BitOr<Change> for Change {
   fn bitor(self, rhs: Change) -> Self::Output {
     match (self, rhs) {
       (Self::Quit, _) | (_, Self::Quit) => Self::Quit,
+      (Self::Resize, _) | (_, Self::Resize) => Self::Resize,
       (Self::Changed, _) | (_, Self::Changed) => Self::Changed,
       (Self::Unchanged, Self::Unchanged) => Self::Unchanged,
     }

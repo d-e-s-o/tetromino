@@ -347,6 +347,7 @@ impl Handler {
 
     let () = app.ops_mut().on_resize(phys_w, phys_h);
     let () = app.on_window_resize(phys_w, phys_h);
+    let () = app.ops().request_redraw();
   }
 }
 
@@ -401,15 +402,13 @@ impl ApplicationHandler for Handler {
           let () = app.ops_mut().render_context_mut().swap_buffers();
           Change::Unchanged
         },
-        WindowEvent::Resized(phys_size) => {
-          let () = Self::on_resize(phys_size, app);
-          Change::Changed
-        },
+        WindowEvent::Resized(_phys_size) => Change::Resize,
         _ => Change::Unchanged,
       };
 
       match change {
         Change::Changed => app.ops().request_redraw(),
+        Change::Resize => Self::on_resize(app.ops().window.inner_size(), app),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }
@@ -448,6 +447,7 @@ impl ApplicationHandler for Handler {
 
       match change {
         Change::Changed => app.ops().request_redraw(),
+        Change::Resize => Self::on_resize(app.ops().window.inner_size(), app),
         Change::Quit => event_loop.exit(),
         Change::Unchanged => (),
       }

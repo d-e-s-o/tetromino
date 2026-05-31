@@ -145,9 +145,8 @@ impl StateInner {
     let (change, tick) = self.app.tick_at(now);
 
     match change {
-      Change::Changed => {
-        let () = self.app.render();
-      },
+      Change::Changed => self.app.render(),
+      Change::Resize => self.on_resize(),
       Change::Quit => return,
       Change::Unchanged => (),
     }

@@ -498,7 +498,7 @@ impl Game {
       + PREVIEW_FIELD_SPACE
       + max(self.preview.width(), self.score.width())
       + RIGHT_SPACE;
-    // SAFETY: The provided height is guaranteed to be greater than zero.
+    // SAFETY: The provided width is guaranteed to be greater than zero.
     unsafe { NonZeroU16::new_unchecked(width as u16) }
   }
 
