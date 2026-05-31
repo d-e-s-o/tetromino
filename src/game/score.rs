@@ -20,13 +20,25 @@ const FONT_SIZE: i16 = 2;
 static LEVEL_STR: &[u8] = b"Level:";
 static POINTS_STR: &[u8] = b"Points:";
 static LINES_STR: &[u8] = b"Lines:";
-
-#[cfg(test)]
 static FIXED_STRS: [&[u8]; 3] = [LEVEL_STR, POINTS_STR, LINES_STR];
 
 /// The pre-calculated maximum width of the strings above when rendered
 /// using `Font::builtin`.
 const MAX_FIXED_STR_WIDTH: i16 = 33;
+/// The pre-calculated maximum width of any single digit (0-9) when
+/// rendered using `Font::builtin`.
+const MAX_DIGIT_WIDTH: i16 = 6;
+
+
+/// Calculate the digits in a number (when represented as decimal).
+#[inline]
+fn digits(x: u64) -> i16 {
+  if x == 0 {
+    1
+  } else {
+    i16::try_from(x.ilog10()).unwrap() + 1
+  }
+}
 
 
 /// A type helping with keeping track of score in a Tetris game.
@@ -156,6 +168,28 @@ impl Score {
     self.lines_since_up = 0;
   }
 
+  fn dyn_str_len(&self) -> i16 {
+    // If the fixed strings are changed the calculation below will
+    // likely also need to be adjusted.
+    debug_assert_eq!(FIXED_STRS.len(), 3);
+
+    [u64::from(self.level), self.points, u64::from(self.lines)]
+      .into_iter()
+      .map(digits)
+      .max()
+      .unwrap_or_default()
+  }
+
+  /// Calculate the width of the score board.
+  pub fn width(&self) -> i16 {
+    let factor = f32::from(FONT_SIZE) / f32::from(self.font.size());
+
+    let statc = (f32::from(MAX_FIXED_STR_WIDTH) * factor).ceil() as i16;
+    let dynmc = (f32::from(self.dyn_str_len() * MAX_DIGIT_WIDTH) * factor).ceil() as i16;
+
+    statc + dynmc
+  }
+
   /// Retrieve the current level.
   #[inline]
   pub fn level(&self) -> u16 {
@@ -188,6 +222,26 @@ mod tests {
   use crate::winit::with_opengl_context;
 
 
+  /// Verify that our [`digit`] functions work correctly on a bunch of
+  /// inputs.
+  #[test]
+  fn digit_calculation() {
+    assert_eq!(digits(0), 1);
+    assert_eq!(digits(1), 1);
+    assert_eq!(digits(5), 1);
+    assert_eq!(digits(9), 1);
+    assert_eq!(digits(10), 2);
+    assert_eq!(digits(42), 2);
+    assert_eq!(digits(99), 2);
+    assert_eq!(digits(100), 3);
+    assert_eq!(digits(999), 3);
+    assert_eq!(digits(1_000), 4);
+    assert_eq!(digits(10_000), 5);
+    assert_eq!(digits(1_000_000), 7);
+    assert_eq!(digits(12_345_678_901), 11);
+    assert_eq!(digits(u64::MAX), 20);
+  }
+
   /// Check that our pre-calculated `FIXED_STR_MAX_WIDTH` constant is
   /// correct.
   #[test]
@@ -196,6 +250,15 @@ mod tests {
     let max_w = FIXED_STRS.iter().map(|s| font.str_width(s)).max().unwrap();
 
     assert_eq!(max_w, MAX_FIXED_STR_WIDTH);
+  }
+
+  /// Test that our `MAX_DIGIT_WIDTH` constant matches reality.
+  #[test]
+  fn max_digit_width_checking() {
+    let font = Font::builtin();
+    let max_w = (b'0'..=b'9').map(|b| font.str_width(&[b])).max().unwrap();
+
+    assert_eq!(max_w, MAX_DIGIT_WIDTH);
   }
 
   /// Check that we can keep track of scores correctly.

@@ -1,6 +1,7 @@
 // Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
+use std::cmp::max;
 use std::io::Cursor;
 use std::num::NonZeroU16;
 use std::rc::Rc;
@@ -50,7 +51,8 @@ const SCREEN_CLEAR_COLOR: ColorSet<(f32, f32, f32)> = ColorSet::new(
 const LEFT_SPACE: i16 = 1;
 /// Space between the bottom of the screen and the field.
 const BOTTOM_SPACE: i16 = 1;
-/// Space between the right side of the screen and the preview stones.
+/// Space between the right side of the screen and the preview
+/// stones/score board (whatever is wider).
 const RIGHT_SPACE: i16 = 1;
 /// Space between the upper screen side and the field.
 const TOP_SPACE: i16 = 1;
@@ -491,8 +493,11 @@ impl Game {
 
   /// Retrieve the game surface's width.
   pub fn width(&self) -> NonZeroU16 {
-    let width =
-      LEFT_SPACE + self.field.width() + PREVIEW_FIELD_SPACE + self.preview.width() + RIGHT_SPACE;
+    let width = LEFT_SPACE
+      + self.field.width()
+      + PREVIEW_FIELD_SPACE
+      + max(self.preview.width(), self.score.width())
+      + RIGHT_SPACE;
     // SAFETY: The provided height is guaranteed to be greater than zero.
     unsafe { NonZeroU16::new_unchecked(width as u16) }
   }
