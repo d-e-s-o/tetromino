@@ -271,7 +271,7 @@ impl Game {
             let () = Self::ai_remove_down_move(&mut self.ai);
           },
           MoveResult::Merged(lines) => {
-            let () = Self::handle_merged_lines(&mut self.score, lines);
+            change |= Self::handle_merged_lines(&mut self.score, lines);
             let () = Self::ai_remove_down_move(&mut self.ai);
             let () = Self::ai_remove_stone_merge(&mut self.ai, &self.field, &self.preview);
           },
@@ -365,9 +365,9 @@ impl Game {
     self.ai.is_some()
   }
 
-  fn handle_merged_lines(score: &mut Score, lines: u16) {
+  fn handle_merged_lines(score: &mut Score, lines: u16) -> Change {
     let level = score.level();
-    let () = score.add(lines);
+    let change = score.add(lines);
     let new_level = score.level();
 
     // While we actually render the score in real-time, we also print to
@@ -377,6 +377,7 @@ impl Game {
     if new_level != level {
       println!("{} points @ level {}", score.points(), new_level);
     }
+    change
   }
 
   /// Check whether the game in its current state accepts and reacts to
@@ -392,11 +393,11 @@ impl Game {
   #[inline]
   pub(crate) fn on_move_down(&mut self) -> Change {
     if self.accepts_input() {
-      let (change, result) = self.field.move_stone_down();
+      let (mut change, result) = self.field.move_stone_down();
       match result {
         MoveResult::None | MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
-          let () = Self::handle_merged_lines(&mut self.score, lines);
+          change |= Self::handle_merged_lines(&mut self.score, lines);
         },
         MoveResult::Conflict => {
           let () = self.end();
@@ -412,11 +413,11 @@ impl Game {
   #[inline]
   pub(crate) fn on_drop(&mut self) -> Change {
     if self.accepts_input() {
-      let (change, result) = self.field.drop_stone();
+      let (mut change, result) = self.field.drop_stone();
       match result {
         MoveResult::None | MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
-          let () = Self::handle_merged_lines(&mut self.score, lines);
+          change |= Self::handle_merged_lines(&mut self.score, lines);
         },
         MoveResult::Conflict => {
           let () = self.end();

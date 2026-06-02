@@ -8,6 +8,7 @@ use std::rc::Rc;
 use bufio::Writer as StackWriter;
 
 use crate::ActiveRenderer as Renderer;
+use crate::Change;
 use crate::Color;
 use crate::Font;
 use crate::Point;
@@ -137,7 +138,8 @@ impl Score {
   }
 
   /// Add the given number of lines to the score.
-  pub fn add(&mut self, lines: u16) {
+  pub fn add(&mut self, lines: u16) -> Change {
+    let before_len = self.dyn_str_len();
     // Strictly speaking the point calculation is wrong: if
     // `lines_for_level_` is a low value (e.g. 1) then the points will
     // be calculated based only on the current level -- though the level
@@ -151,6 +153,14 @@ impl Score {
     self.lines_since_up += lines;
     self.level += self.lines_since_up / self.lines_for_level;
     self.lines_since_up %= self.lines_for_level;
+
+    let after_len = self.dyn_str_len();
+
+    if before_len != after_len {
+      Change::Resize
+    } else {
+      Change::Changed
+    }
   }
 
   /// This method is used to calculate the number of points for the
@@ -273,21 +283,24 @@ mod tests {
       assert_eq!(score.lines, 0);
       assert_eq!(score.lines_for_level, 10);
 
-      let () = score.add(5);
+      let change = score.add(5);
+      assert_eq!(change, Change::Resize);
       assert_eq!(score.level, 1);
-      assert_ne!(score.points, 0);
+      assert_eq!(score.points, 125);
       assert_eq!(score.lines, 5);
       assert_eq!(score.lines_for_level, 10);
 
-      let () = score.add(1);
+      let change = score.add(1);
+      assert_eq!(change, Change::Changed);
       assert_eq!(score.level, 1);
-      assert_ne!(score.points, 0);
+      assert_eq!(score.points, 130);
       assert_eq!(score.lines, 6);
       assert_eq!(score.lines_for_level, 10);
 
-      let () = score.add(4);
+      let _change = score.add(4);
+      assert_eq!(change, Change::Changed);
       assert_eq!(score.level, 2);
-      assert_ne!(score.points, 0);
+      assert_eq!(score.points, 210);
       assert_eq!(score.lines, 10);
       assert_eq!(score.lines_for_level, 10);
     })
