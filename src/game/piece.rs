@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::ActiveRenderer as Renderer;
@@ -58,7 +58,7 @@ impl Piece {
     location: Point<i16>,
     overlay: Color,
   ) {
-    let color = Self::COLORS[usize::from(self.color_idx)].select(&self.color_mode);
+    let color = Self::COLORS[usize::from(self.color_idx)].select(self.color_mode);
     let _guard = renderer.set_color(color + overlay);
 
     let () = renderer.render_rect(Rect::new(location.x, location.y, 1, 1));

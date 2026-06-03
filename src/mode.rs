@@ -1,4 +1,4 @@
-// Copyright (C) 2024-2025 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2024-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use crate::Color;
@@ -81,7 +81,7 @@ impl<T> ColorSet<T> {
 
   /// Retrieve the appropriate color based on the provided mode.
   #[inline]
-  pub fn select(&self, mode: &ColorMode<()>) -> T
+  pub fn select(&self, mode: ColorMode<()>) -> T
   where
     T: Copy,
   {
