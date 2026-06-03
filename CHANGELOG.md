@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Properly account for score board size when sizing window contents
+
+
 0.2.4
 -----
 - Added Wasm + WebGL support
