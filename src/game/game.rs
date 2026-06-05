@@ -470,17 +470,14 @@ impl Game {
   pub fn render(&self, renderer: &Renderer) {
     let clear_color = SCREEN_CLEAR_COLOR.select(self.color_mode);
     let () = renderer.clear_screen(clear_color);
-
-    let () = self.field.render(renderer);
-    let () = self.preview.render(renderer);
+    let () = self.field.render(renderer, self.color_mode);
+    let () = self.preview.render(renderer, self.color_mode);
     let () = self.score.render(renderer);
   }
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
     let () = self.color_mode.toggle();
-    let () = self.field.toggle_color_mode();
-    let () = self.preview.toggle_color_mode();
   }
 
   #[cfg(feature = "debug")]

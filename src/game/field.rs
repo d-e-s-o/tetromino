@@ -99,8 +99,6 @@ pub(crate) struct Field {
   producer: Rc<dyn StoneProducer>,
   /// The texture to use for one unit of wall.
   wall: Rc<Texture>,
-  /// The color mode to use.
-  color_mode: ColorMode,
 }
 
 impl Field {
@@ -129,7 +127,6 @@ impl Field {
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
-      color_mode: ColorMode::default(),
     }
   }
 
@@ -296,9 +293,9 @@ impl Field {
   }
 
   /// Render the walls of the field.
-  fn render_walls(&self, renderer: &Renderer) {
+  fn render_walls(&self, renderer: &Renderer, color_mode: ColorMode) {
     let _guard = renderer.set_texture(&self.wall);
-    let _guard = renderer.set_color(WALL_COLOR.select(self.color_mode));
+    let _guard = renderer.set_color(WALL_COLOR.select(color_mode));
 
     let left = Rect::new(0, 0, WALL_WIDTH, self.height());
     let () = renderer.render_rect_with_tex_coords(left.into_other(), left);
@@ -316,33 +313,27 @@ impl Field {
   }
 
   /// Render the currently active stone (if any).
-  fn render_stone(&self, renderer: &Renderer) {
+  fn render_stone(&self, renderer: &Renderer, color_mode: ColorMode) {
     match &self.state {
       State::Moving { stone }
       | State::Clearing {
         next_stone: stone, ..
-      } => stone.render(renderer),
-      State::Colliding { stone } => stone.render_with_overlay(renderer, Color::white()),
+      } => stone.render(renderer, color_mode),
+      State::Colliding { stone } => stone.render_with_overlay(renderer, color_mode, Color::white()),
     }
   }
 
   /// Render the Tetris field.
-  pub(super) fn render(&self, renderer: &Renderer) {
+  pub(super) fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
     let _guard = renderer.set_origin(self.location);
 
     {
       let _guard = renderer.set_origin(Point::new(WALL_WIDTH, WALL_WIDTH));
-      let () = self.pieces.render(renderer);
-      let () = self.render_stone(renderer);
+      let () = self.pieces.render(renderer, color_mode);
+      let () = self.render_stone(renderer, color_mode);
     }
 
-    let () = self.render_walls(renderer);
-  }
-
-  /// Toggle the color mode (light/dark) in use.
-  pub(crate) fn toggle_color_mode(&mut self) {
-    let () = self.color_mode.toggle();
-    let () = self.pieces.toggle_color_mode();
+    let () = self.render_walls(renderer, color_mode);
   }
 
   /// Convert this `Field` into an `ai::Field` together with an
@@ -407,8 +398,6 @@ struct PieceField {
   matrix: Matrix<Option<Piece>>,
   /// The texture to use for the entire inner back area.
   back: Rc<Texture>,
-  /// The color mode to use.
-  color_mode: ColorMode,
   /// The texture to use for pieces.
   piece: Rc<Texture>,
 }
@@ -418,7 +407,6 @@ impl PieceField {
     Self {
       matrix: Matrix::new(width, height),
       back,
-      color_mode: ColorMode::default(),
       piece,
     }
   }
@@ -430,11 +418,11 @@ impl PieceField {
   }
 
   /// Render the background of the field and draw vertical lines.
-  fn render_back(&self, renderer: &Renderer) {
+  fn render_back(&self, renderer: &Renderer, color_mode: ColorMode) {
     // Render background image.
     {
       let _guard = renderer.set_texture(&self.back);
-      let _guard = renderer.set_color(BACKGROUND_COLOR.select(self.color_mode));
+      let _guard = renderer.set_color(BACKGROUND_COLOR.select(color_mode));
 
       let () = renderer.render_rect(Rect::new(0, 0, self.width(), self.height()));
     }
@@ -451,7 +439,7 @@ impl PieceField {
   }
 
   /// Render the already dropped pieces.
-  fn render_pieces(&self, renderer: &Renderer) {
+  fn render_pieces(&self, renderer: &Renderer, color_mode: ColorMode) {
     let _guard = renderer.set_texture(&self.piece);
 
     let mut complete = (-1, false);
@@ -470,27 +458,16 @@ impl PieceField {
         }
 
         if complete.1 {
-          let () = piece.render_with_overlay(renderer, location, overlay);
+          let () = piece.render_with_overlay(renderer, location, color_mode, overlay);
         } else {
-          let () = piece.render(renderer, location);
+          let () = piece.render(renderer, location, color_mode);
         }
       })
   }
 
-  fn render(&self, renderer: &Renderer) {
-    let () = self.render_back(renderer);
-    let () = self.render_pieces(renderer);
-  }
-
-  /// Toggle the color mode (light/dark) in use.
-  pub(crate) fn toggle_color_mode(&mut self) {
-    let () = self.color_mode.toggle();
-
-    for (piece, _position) in self.matrix.iter_mut() {
-      if let Some(piece) = piece {
-        let () = piece.set_color_mode(self.color_mode);
-      }
-    }
+  fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
+    let () = self.render_back(renderer, color_mode);
+    let () = self.render_pieces(renderer, color_mode);
   }
 }
 

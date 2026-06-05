@@ -41,26 +41,21 @@ impl Stone {
     }
   }
 
-  pub(crate) fn render(&self, renderer: &Renderer) {
-    self.render_with_overlay(renderer, Color::black())
+  pub(crate) fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
+    self.render_with_overlay(renderer, color_mode, Color::black())
   }
 
-  pub(crate) fn render_with_overlay(&self, renderer: &Renderer, overlay: Color) {
+  pub(crate) fn render_with_overlay(
+    &self,
+    renderer: &Renderer,
+    color_mode: ColorMode,
+    overlay: Color,
+  ) {
     let _guard = renderer.set_texture(&self.piece_texture);
 
-    let () = self
-      .pieces
-      .iter()
-      .for_each(|(piece, location)| piece.render_with_overlay(renderer, *location, overlay));
-  }
-
-  /// Set the stone's color mode.
-  #[inline]
-  pub(crate) fn set_color_mode(&mut self, mode: ColorMode) {
-    let () = self
-      .pieces
-      .iter_mut()
-      .for_each(|(piece, _location)| piece.set_color_mode(mode));
+    let () = self.pieces.iter().for_each(|(piece, location)| {
+      piece.render_with_overlay(renderer, *location, color_mode, overlay)
+    });
   }
 
   /// Rip out the object's guts, creating a new stone and leaving this

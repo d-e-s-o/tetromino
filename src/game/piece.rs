@@ -15,8 +15,6 @@ use crate::Rect;
 pub(crate) struct Piece {
   /// The index of the color that the piece has.
   color_idx: u8,
-  /// The color mode in use.
-  color_mode: ColorMode,
 }
 
 impl Piece {
@@ -33,19 +31,16 @@ impl Piece {
 
   pub(crate) fn new(color_idx: u8) -> Self {
     debug_assert!(usize::from(color_idx) < Self::COLORS.len());
-    Self {
-      color_idx,
-      color_mode: ColorMode::default(),
-    }
+    Self { color_idx }
   }
 
   /// # Notes
   /// This method assumes that the piece texture to use is already
   /// bound.
-  pub(crate) fn render(&self, renderer: &Renderer, location: Point<i16>) {
+  pub(crate) fn render(&self, renderer: &Renderer, location: Point<i16>, color_mode: ColorMode) {
     // Perhaps counter-intuitively, the color black acts as a neutral
     // component here.
-    self.render_with_overlay(renderer, location, Color::black())
+    self.render_with_overlay(renderer, location, color_mode, Color::black())
   }
 
   /// Render the piece with the provided color as "overlay".
@@ -53,18 +48,13 @@ impl Piece {
     &self,
     renderer: &Renderer,
     location: Point<i16>,
+    color_mode: ColorMode,
     overlay: Color,
   ) {
-    let color = Self::COLORS[usize::from(self.color_idx)].select(self.color_mode);
+    let color = Self::COLORS[usize::from(self.color_idx)].select(color_mode);
     let _guard = renderer.set_color(color + overlay);
 
     let () = renderer.render_rect(Rect::new(location.x, location.y, 1, 1));
-  }
-
-  /// Set the piece's color mode.
-  #[inline]
-  pub(crate) fn set_color_mode(&mut self, mode: ColorMode) {
-    self.color_mode = mode;
   }
 }
 
@@ -79,6 +69,6 @@ mod tests {
   /// Check that objects of our [`Piece`] type have the expected size.
   #[test]
   fn piece_size() {
-    assert_eq!(size_of::<Piece>(), 2);
+    assert_eq!(size_of::<Piece>(), 1);
   }
 }
