@@ -69,8 +69,8 @@ const CLEAR_TIME: Duration = Duration::from_millis(200);
 /// A type representing a game of Tetris.
 #[derive(Debug)]
 pub struct Game {
-  /// The color to use for clearing the screen.
-  screen_clear_color: ColorMode<(f32, f32, f32)>,
+  /// The color mode in use.
+  color_mode: ColorMode,
   /// The Tetris field.
   field: Field,
   /// The preview stones.
@@ -138,7 +138,7 @@ impl Game {
     };
 
     let mut slf = Self {
-      screen_clear_color: ColorMode::Light(SCREEN_CLEAR_COLOR.light),
+      color_mode: ColorMode::default(),
       field,
       preview,
       ai,
@@ -468,7 +468,9 @@ impl Game {
 
   /// Render the game and its components.
   pub fn render(&self, renderer: &Renderer) {
-    let () = renderer.clear_screen(self.screen_clear_color.color());
+    let clear_color = SCREEN_CLEAR_COLOR.select(self.color_mode);
+    let () = renderer.clear_screen(clear_color);
+
     let () = self.field.render(renderer);
     let () = self.preview.render(renderer);
     let () = self.score.render(renderer);
@@ -476,7 +478,7 @@ impl Game {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    let () = self.screen_clear_color.toggle_with(&SCREEN_CLEAR_COLOR);
+    let () = self.color_mode.toggle();
     let () = self.field.toggle_color_mode();
     let () = self.preview.toggle_color_mode();
   }

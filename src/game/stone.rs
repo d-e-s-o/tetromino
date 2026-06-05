@@ -56,7 +56,7 @@ impl Stone {
 
   /// Set the stone's color mode.
   #[inline]
-  pub(crate) fn set_color_mode(&mut self, mode: ColorMode<()>) {
+  pub(crate) fn set_color_mode(&mut self, mode: ColorMode) {
     let () = self
       .pieces
       .iter_mut()

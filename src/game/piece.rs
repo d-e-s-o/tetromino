@@ -16,10 +16,7 @@ pub(crate) struct Piece {
   /// The index of the color that the piece has.
   color_idx: u8,
   /// The color mode in use.
-  // TODO: For whatever reason not even a `ColorMode<NonZeroU8>` fits
-  //       into a single byte, when conceptually it should. Should get
-  //       to the bottom of it.
-  color_mode: ColorMode<()>,
+  color_mode: ColorMode,
 }
 
 impl Piece {
@@ -66,7 +63,7 @@ impl Piece {
 
   /// Set the piece's color mode.
   #[inline]
-  pub(crate) fn set_color_mode(&mut self, mode: ColorMode<()>) {
+  pub(crate) fn set_color_mode(&mut self, mode: ColorMode) {
     self.color_mode = mode;
   }
 }

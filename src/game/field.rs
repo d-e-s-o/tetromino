@@ -99,8 +99,8 @@ pub(crate) struct Field {
   producer: Rc<dyn StoneProducer>,
   /// The texture to use for one unit of wall.
   wall: Rc<Texture>,
-  /// The color to use for the walls.
-  wall_color: ColorMode,
+  /// The color mode to use.
+  color_mode: ColorMode,
 }
 
 impl Field {
@@ -129,7 +129,7 @@ impl Field {
       pieces,
       // The walls just use the "piece" texture.
       wall: piece,
-      wall_color: ColorMode::Light(WALL_COLOR.light),
+      color_mode: ColorMode::default(),
     }
   }
 
@@ -298,7 +298,7 @@ impl Field {
   /// Render the walls of the field.
   fn render_walls(&self, renderer: &Renderer) {
     let _guard = renderer.set_texture(&self.wall);
-    let _guard = renderer.set_color(self.wall_color.color());
+    let _guard = renderer.set_color(WALL_COLOR.select(self.color_mode));
 
     let left = Rect::new(0, 0, WALL_WIDTH, self.height());
     let () = renderer.render_rect_with_tex_coords(left.into_other(), left);
@@ -341,7 +341,7 @@ impl Field {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    let () = self.wall_color.toggle_with(&WALL_COLOR);
+    let () = self.color_mode.toggle();
     let () = self.pieces.toggle_color_mode();
   }
 
@@ -407,8 +407,8 @@ struct PieceField {
   matrix: Matrix<Option<Piece>>,
   /// The texture to use for the entire inner back area.
   back: Rc<Texture>,
-  /// The color to use for the background image.
-  back_color: ColorMode,
+  /// The color mode to use.
+  color_mode: ColorMode,
   /// The texture to use for pieces.
   piece: Rc<Texture>,
 }
@@ -418,7 +418,7 @@ impl PieceField {
     Self {
       matrix: Matrix::new(width, height),
       back,
-      back_color: ColorMode::Light(BACKGROUND_COLOR.light),
+      color_mode: ColorMode::default(),
       piece,
     }
   }
@@ -434,7 +434,7 @@ impl PieceField {
     // Render background image.
     {
       let _guard = renderer.set_texture(&self.back);
-      let _guard = renderer.set_color(self.back_color.color());
+      let _guard = renderer.set_color(BACKGROUND_COLOR.select(self.color_mode));
 
       let () = renderer.render_rect(Rect::new(0, 0, self.width(), self.height()));
     }
@@ -484,12 +484,11 @@ impl PieceField {
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    let () = self.back_color.toggle_with(&BACKGROUND_COLOR);
-    let mode = self.back_color.stripped();
+    let () = self.color_mode.toggle();
 
     for (piece, _position) in self.matrix.iter_mut() {
       if let Some(piece) = piece {
-        let () = piece.set_color_mode(mode);
+        let () = piece.set_color_mode(self.color_mode);
       }
     }
   }

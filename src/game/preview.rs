@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::Cell;
@@ -32,7 +32,7 @@ pub(super) struct PreviewStones {
   /// The index of the next stone to yield.
   index: Cell<u8>,
   /// The color mode in use.
-  mode: RefCell<ColorMode<()>>,
+  mode: RefCell<ColorMode>,
 }
 
 impl PreviewStones {
