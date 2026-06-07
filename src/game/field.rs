@@ -87,8 +87,6 @@ pub(super) enum State {
 
 #[derive(Debug)]
 pub(crate) struct Field {
-  /// The location of the lower left corner of the field, in game units.
-  location: Point<i16>,
   /// The time we take for clearing completed lines.
   clear_time: Duration,
   /// The inner field area, containing dropped pieces.
@@ -103,7 +101,6 @@ pub(crate) struct Field {
 
 impl Field {
   pub(super) fn new(
-    location: Point<i16>,
     width: i16,
     height: i16,
     clear_time: Duration,
@@ -120,7 +117,6 @@ impl Field {
     };
 
     Self {
-      location,
       clear_time,
       state,
       producer,
@@ -325,8 +321,6 @@ impl Field {
 
   /// Render the Tetris field.
   pub(super) fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
-    let _guard = renderer.set_origin(self.location);
-
     {
       let _guard = renderer.set_origin(Point::new(WALL_WIDTH, WALL_WIDTH));
       let () = self.pieces.render(renderer, color_mode);

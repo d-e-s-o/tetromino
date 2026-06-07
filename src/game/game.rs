@@ -114,7 +114,6 @@ impl Game {
       .from_dynamic_image(&field_back)?;
     let field_back = Rc::new(field_back);
     let field = Field::new(
-      field_location,
       config.field_width,
       config.field_height,
       CLEAR_TIME,
@@ -472,7 +471,13 @@ impl Game {
   pub fn render(&self, renderer: &Renderer) {
     let clear_color = SCREEN_CLEAR_COLOR.select(self.color_mode);
     let () = renderer.clear_screen(clear_color);
-    let () = self.field.render(renderer, self.color_mode);
+
+    let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
+    {
+      let _guard = renderer.set_origin(field_location);
+      let () = self.field.render(renderer, self.color_mode);
+    }
+
     let () = self.preview.render(renderer, self.color_mode);
     let () = self.score.render(renderer);
   }
