@@ -296,8 +296,8 @@ impl Game {
   }
 
   /// Restart the game.
-  pub fn restart(&mut self) {
-    let () = self.score.reset();
+  pub fn restart(&mut self) -> Change {
+    let change = self.score.reset();
     let () = if self.field.reset() {
       if self.ai.is_some() {
         self.ai = Self::create_ai(&self.field, &self.preview);
@@ -306,6 +306,8 @@ impl Game {
     } else {
       self.end()
     };
+
+    change
   }
 
   /// End the current game.

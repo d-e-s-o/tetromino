@@ -103,8 +103,7 @@ where
       k if *k == keys::KEY_QUIT => Change::Quit,
       k if *k == keys::KEY_RESTART => {
         *repeat = KeyRepeat::Disabled;
-        let () = game.restart();
-        Change::Changed
+        game.restart()
       },
       k if *k == keys::KEY_DROP => {
         *repeat = KeyRepeat::Disabled;

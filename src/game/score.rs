@@ -137,30 +137,38 @@ impl Score {
     let () = self.font.render_str(string, render_pixel);
   }
 
-  /// Add the given number of lines to the score.
-  pub fn add(&mut self, lines: u16) -> Change {
-    let before_len = self.dyn_str_len();
-    // Strictly speaking the point calculation is wrong: if
-    // `lines_for_level_` is a low value (e.g. 1) then the points will
-    // be calculated based only on the current level -- though the level
-    // would increase after some lines are cleared (e.g. lines is 4 then
-    // the increase could be 4 levels). However it should be quite
-    // impossible to change this because the points depend on the number
-    // of lines cleared and is not limited so we cannot split the
-    // calculation, increase the level and continue.
-    self.points += self.calculate_points(lines);
-    self.lines += u32::from(lines);
-    self.lines_since_up += lines;
-    self.level += self.lines_since_up / self.lines_for_level;
-    self.lines_since_up %= self.lines_for_level;
-
-    let after_len = self.dyn_str_len();
+  fn with_dyn_str_change<F>(score: &mut Score, mut f: F) -> Change
+  where
+    F: FnMut(&mut Score),
+  {
+    let before_len = score.dyn_str_len();
+    let () = f(score);
+    let after_len = score.dyn_str_len();
 
     if before_len != after_len {
       Change::Resize
     } else {
       Change::Changed
     }
+  }
+
+  /// Add the given number of lines to the score.
+  pub fn add(&mut self, lines: u16) -> Change {
+    Self::with_dyn_str_change(self, |slf| {
+      // Strictly speaking the point calculation is wrong: if
+      // `lines_for_level_` is a low value (e.g. 1) then the points will
+      // be calculated based only on the current level -- though the level
+      // would increase after some lines are cleared (e.g. lines is 4 then
+      // the increase could be 4 levels). However it should be quite
+      // impossible to change this because the points depend on the number
+      // of lines cleared and is not limited so we cannot split the
+      // calculation, increase the level and continue.
+      slf.points += slf.calculate_points(lines);
+      slf.lines += u32::from(lines);
+      slf.lines_since_up += lines;
+      slf.level += slf.lines_since_up / slf.lines_for_level;
+      slf.lines_since_up %= slf.lines_for_level;
+    })
   }
 
   /// This method is used to calculate the number of points for the
@@ -171,11 +179,13 @@ impl Score {
   }
 
   /// Reset the `Score`'s state to its initial value.
-  pub fn reset(&mut self) {
-    self.level = self.start_level;
-    self.lines = 0;
-    self.points = 0;
-    self.lines_since_up = 0;
+  pub fn reset(&mut self) -> Change {
+    Self::with_dyn_str_change(self, |slf| {
+      slf.level = slf.start_level;
+      slf.lines = 0;
+      slf.points = 0;
+      slf.lines_since_up = 0;
+    })
   }
 
   fn dyn_str_len(&self) -> i16 {
