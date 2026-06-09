@@ -23,8 +23,6 @@ const SPACE: i16 = 1;
 /// A type used for displaying a preview of upcoming stones.
 #[derive(Debug)]
 pub(super) struct PreviewStones {
-  /// The location of the upper left corner of the preview area.
-  location: Point<i16>,
   /// The producer we use for creating new stones.
   producer: Box<dyn StoneProducer>,
   /// The upcoming stones.
@@ -35,14 +33,13 @@ pub(super) struct PreviewStones {
 
 impl PreviewStones {
   /// Create a new `PreviewStones` object displaying `count` stones.
-  pub(super) fn new(location: Point<i16>, count: u8, producer: Box<dyn StoneProducer>) -> Self {
+  pub(super) fn new(count: u8, producer: Box<dyn StoneProducer>) -> Self {
     let stones = (0..count)
       .map(|_| producer.create_stone())
       .collect::<Vec<_>>()
       .into_boxed_slice();
 
     let slf = Self {
-      location,
       producer,
       stones: RefCell::new(stones),
       index: Cell::new(0),
@@ -67,16 +64,16 @@ impl PreviewStones {
 
   /// Reposition all stones.
   fn reposition_stones(&self) {
-    let mut location = self.location;
+    let mut y = 0;
     let mut stones = self.stones.borrow_mut();
     let mut index = usize::from(self.index.get());
 
     for _ in 0..stones.len() {
       let stone = &mut stones[index];
       let bounds = stone.bounds();
-      let () = stone.move_to(location - (0, bounds.h).into());
+      let () = stone.move_to(Point::new(0, y - bounds.h));
 
-      location.y -= bounds.h + SPACE;
+      y -= bounds.h + SPACE;
       index = (index + 1) % stones.len();
     }
   }

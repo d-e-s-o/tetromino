@@ -104,7 +104,7 @@ impl Game {
         Field::total_height(config.field_height),
       )
       + Point::new(RIGHT_SPACE, 0);
-    let preview = PreviewStones::new(preview_location, config.preview_stone_count, factory);
+    let preview = PreviewStones::new(config.preview_stone_count, factory);
     let preview = Rc::new(preview);
 
     let reader = Cursor::new(data::TETRIS_FIELD_BACK_TEXTURE);
@@ -478,7 +478,14 @@ impl Game {
       let () = self.field.render(renderer, self.color_mode);
     }
 
-    let () = self.preview.render(renderer, self.color_mode);
+    let preview_location = field_location
+      + Point::new(self.field.width(), self.field.height())
+      + Point::new(RIGHT_SPACE, 0);
+    {
+      let _guard = renderer.set_origin(preview_location);
+      let () = self.preview.render(renderer, self.color_mode);
+    }
+
     let () = self.score.render(renderer);
   }
 
