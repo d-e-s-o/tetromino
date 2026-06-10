@@ -97,13 +97,6 @@ impl Game {
 
     let factory = Box::new(StoneFactory::with_default_stones(Rc::clone(&piece)));
 
-    let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
-    let preview_location = field_location
-      + Point::new(
-        Field::total_width(config.field_width),
-        Field::total_height(config.field_height),
-      )
-      + Point::new(RIGHT_SPACE, 0);
     let preview = PreviewStones::new(config.preview_stone_count, factory);
     let preview = Rc::new(preview);
 
@@ -122,13 +115,7 @@ impl Game {
       field_back,
     );
 
-    let score_location = preview_location - Point::new(0, preview.height() + PREVIEW_SCORE_SPACE);
-    let score = Score::new(
-      score_location,
-      config.start_level,
-      config.lines_for_level,
-      piece,
-    );
+    let score = Score::new(config.start_level, config.lines_for_level, piece);
 
     let ai = if config.enable_ai {
       Self::create_ai(&field, &preview)
@@ -486,7 +473,12 @@ impl Game {
       let () = self.preview.render(renderer, self.color_mode);
     }
 
-    let () = self.score.render(renderer);
+    let score_location =
+      preview_location - Point::new(0, self.preview.height() + PREVIEW_SCORE_SPACE);
+    {
+      let _guard = renderer.set_origin(score_location);
+      let () = self.score.render(renderer);
+    }
   }
 
   /// Toggle the color mode (light/dark) in use.

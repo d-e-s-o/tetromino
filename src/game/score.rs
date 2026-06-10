@@ -45,8 +45,6 @@ fn digits(x: u64) -> i16 {
 /// A type helping with keeping track of score in a Tetris game.
 #[derive(Debug)]
 pub(super) struct Score {
-  /// The location of the upper left corner of the score board.
-  location: Point<i16>,
   /// The starting level.
   start_level: u16,
   /// The current level.
@@ -67,14 +65,8 @@ pub(super) struct Score {
 }
 
 impl Score {
-  pub(super) fn new(
-    location: Point<i16>,
-    start_level: u16,
-    lines_for_level: u16,
-    texture: Rc<Texture>,
-  ) -> Self {
+  pub(super) fn new(start_level: u16, lines_for_level: u16, texture: Rc<Texture>) -> Self {
     Self {
-      location,
       start_level,
       level: start_level,
       points: 0,
@@ -102,7 +94,6 @@ impl Score {
     let _guard = renderer.set_texture(&self.texture);
 
     {
-      let _guard = renderer.set_origin(self.location);
       let () = self.font.render_str(LEVEL_STR, render_pixel);
 
       let _guard = renderer.set_origin(Point::new(0, -FONT_SIZE));
@@ -117,9 +108,10 @@ impl Score {
     let mut buffer = [MaybeUninit::<u8>::uninit(); 256];
     let mut writer = StackWriter::new(&mut buffer);
 
-    let _guard = renderer.set_origin(
-      self.location + Point::new((f32::from(MAX_FIXED_STR_WIDTH) * factor).ceil() as i16, 0),
-    );
+    let _guard = renderer.set_origin(Point::new(
+      (f32::from(MAX_FIXED_STR_WIDTH) * factor).ceil() as i16,
+      0,
+    ));
     let () = write!(writer, "{}", self.level).unwrap();
     let string = writer.written();
     let () = self.font.render_str(string, render_pixel);
@@ -287,7 +279,7 @@ mod tests {
   fn score_counting() {
     with_opengl_context(|context| {
       let texture = Rc::new(empty_texture(context).unwrap());
-      let mut score = Score::new(Point::new(0, 0), 1, 10, texture);
+      let mut score = Score::new(1, 10, texture);
       assert_eq!(score.level, 1);
       assert_eq!(score.points, 0);
       assert_eq!(score.lines, 0);
