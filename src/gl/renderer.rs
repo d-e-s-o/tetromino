@@ -523,7 +523,6 @@ impl<'ctx> ActiveRenderer<'ctx> {
 impl Drop for ActiveRenderer<'_> {
   fn drop(&mut self) {
     let () = self.flush_vertex_buffer(self.texture.borrow_mut().deref_mut());
-    let () = self.renderer.on_post_render();
   }
 }
 
@@ -735,7 +734,7 @@ impl Renderer {
     self.logic_h = logic_h;
   }
 
-  fn push_states(&self, context: &sys::Context) {
+  fn set_states(&self, context: &sys::Context) {
     let () = context.set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
 
     // Our renderer will render everything with z-coordinate of 0.0f,
@@ -749,17 +748,11 @@ impl Renderer {
     let () = context.set_uniform_matrix(&self.modelview_loc, modelview.as_array());
   }
 
-  fn pop_states(&self) {}
-
   /// Activate the renderer with the given [`sys::Context`] in
   /// preparation for rendering to take place.
   pub fn on_pre_render<'ctx>(&'ctx self, context: &'ctx sys::Context) -> ActiveRenderer<'ctx> {
-    let () = self.push_states(context);
+    let () = self.set_states(context);
 
     ActiveRenderer::new(context, self)
-  }
-
-  fn on_post_render(&self) {
-    let () = self.pop_states();
   }
 }
