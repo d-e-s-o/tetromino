@@ -16,7 +16,6 @@ use std::rc::Rc;
 use anyhow::Context as _;
 use anyhow::Result;
 
-use xgl::MatrixStack;
 use xgl::Program;
 use xgl::Shader;
 use xgl::VertexArray;
@@ -542,10 +541,10 @@ pub struct Renderer {
   logic_h: f32,
   /// The program.
   _program: Program,
-  /// The model-view matrix stack.
-  modelview: RefCell<MatrixStack<Mat4f, 2, Box<dyn Fn(&Mat4f)>>>,
-  /// The projection matrix stack.
-  projection: RefCell<MatrixStack<Mat4f, 2, Box<dyn Fn(&Mat4f)>>>,
+  /// The location of the model-view matrix uniform.
+  modelview_loc: sys::UniformLocation,
+  /// The location of the projection matrix uniform.
+  projection_loc: sys::UniformLocation,
   /// An "empty" texture.
   empty_texture: Rc<Texture>,
   /// Vertices for rendering the scene.
@@ -656,9 +655,6 @@ impl Renderer {
     let () = context.set_active_texture_unit(unit);
     let () = context.set_uniform_1i(&texture_unit_loc, unit as _);
 
-    let context_clone1 = context.clone();
-    let context_clone2 = context.clone();
-
     let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     let attrib_indices = [
@@ -680,12 +676,8 @@ impl Renderer {
       logic_w,
       logic_h,
       _program: program,
-      modelview: RefCell::new(MatrixStack::new(Box::new(move |matrix| {
-        context_clone1.set_uniform_matrix(&modelview_loc, matrix.as_array())
-      }))),
-      projection: RefCell::new(MatrixStack::new(Box::new(move |matrix| {
-        context_clone2.set_uniform_matrix(&projection_loc, matrix.as_array())
-      }))),
+      modelview_loc,
+      projection_loc,
       empty_texture,
       vertices_vbo,
       vertices_vao,
@@ -745,40 +737,29 @@ impl Renderer {
 
   fn push_states(&self, context: &sys::Context) {
     let () = context.set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
+
+    // Our renderer will render everything with z-coordinate of 0.0f,
+    // this must lie inside the range [znear, zfar].
+    let znear = -0.5;
+    let zfar = 0.5;
+    let projection = Mat4f::orthographic(0.0, self.logic_w, 0.0, self.logic_h, znear, zfar);
+    let () = context.set_uniform_matrix(&self.projection_loc, projection.as_array());
+
+    let modelview = Mat4f::identity();
+    let () = context.set_uniform_matrix(&self.modelview_loc, modelview.as_array());
   }
 
   fn pop_states(&self) {}
-
-  fn push_matrizes(&self) {
-    // We create an orthogonal projection matrix with bounds
-    // sufficient to contain the logical view.
-    let () = self.projection.borrow_mut().push(|p| {
-      // Our renderer will render everything with z-coordinate of 0.0f,
-      // this must lie inside the range [zNear, zFar] (last two
-      // parameters).
-      *p = Mat4f::orthographic(0.0, self.logic_w, 0.0, self.logic_h, -0.5, 0.5);
-    });
-    let () = self.modelview.borrow_mut().push(|m| {
-      *m = Mat4f::identity();
-    });
-  }
-
-  fn pop_matrizes(&self) {
-    let () = self.modelview.borrow_mut().pop();
-    let () = self.projection.borrow_mut().pop();
-  }
 
   /// Activate the renderer with the given [`sys::Context`] in
   /// preparation for rendering to take place.
   pub fn on_pre_render<'ctx>(&'ctx self, context: &'ctx sys::Context) -> ActiveRenderer<'ctx> {
     let () = self.push_states(context);
-    let () = self.push_matrizes();
 
     ActiveRenderer::new(context, self)
   }
 
   fn on_post_render(&self) {
-    let () = self.pop_matrizes();
     let () = self.pop_states();
   }
 }
