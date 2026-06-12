@@ -534,10 +534,10 @@ pub struct Renderer {
   phys_w: u32,
   /// The physical height of the window to which this renderer belongs.
   phys_h: u32,
-  /// The logical width of the view maintained by this renderer.
-  logic_w: f32,
-  /// The logical height of the view maintained by this renderer.
-  logic_h: f32,
+  /// The modelview matrix we use.
+  modelview: Mat4f,
+  /// The projection matrix we use.
+  projection: Mat4f,
   /// The program.
   _program: Program,
   /// The location of the model-view matrix uniform.
@@ -654,8 +654,6 @@ impl Renderer {
     let () = context.set_active_texture_unit(unit);
     let () = context.set_uniform_1i(&texture_unit_loc, unit as _);
 
-    let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
-
     let attrib_indices = [
       (texture_coord_idx, AttribType::Texture),
       (color_idx, AttribType::Color),
@@ -672,8 +670,8 @@ impl Renderer {
     let slf = Self {
       phys_w: phys_w.get(),
       phys_h: phys_h.get(),
-      logic_w,
-      logic_h,
+      modelview: Mat4f::identity(),
+      projection: Self::calculate_view(phys_w, phys_h, logic_w, logic_h),
       _program: program,
       modelview_loc,
       projection_loc,
@@ -689,7 +687,7 @@ impl Renderer {
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
-  ) -> (f32, f32) {
+  ) -> Mat4f {
     let phys_w = phys_w.get() as f32;
     let phys_h = phys_h.get() as f32;
     let logic_w = logic_w.get() as f32;
@@ -714,7 +712,13 @@ impl Renderer {
     } else {
       width += logic_h * phys_w / phys_h - logic_w;
     }
-    (width, height)
+
+    // Our renderer will render everything with z-coordinate of 0.0f,
+    // this must lie inside the range [znear, zfar].
+    let znear = -0.5;
+    let zfar = 0.5;
+
+    Mat4f::orthographic(0.0, width, 0.0, height, znear, zfar)
   }
 
   /// Update the view after the containing window or contained logical
@@ -726,26 +730,17 @@ impl Renderer {
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) {
-    let (logic_w, logic_h) = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
+    self.projection = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     self.phys_w = phys_w.get();
     self.phys_h = phys_h.get();
-    self.logic_w = logic_w;
-    self.logic_h = logic_h;
   }
 
   fn set_states(&self, context: &sys::Context) {
     let () = context.set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
 
-    // Our renderer will render everything with z-coordinate of 0.0f,
-    // this must lie inside the range [znear, zfar].
-    let znear = -0.5;
-    let zfar = 0.5;
-    let projection = Mat4f::orthographic(0.0, self.logic_w, 0.0, self.logic_h, znear, zfar);
-    let () = context.set_uniform_matrix(&self.projection_loc, projection.as_array());
-
-    let modelview = Mat4f::identity();
-    let () = context.set_uniform_matrix(&self.modelview_loc, modelview.as_array());
+    let () = context.set_uniform_matrix(&self.projection_loc, self.projection.as_array());
+    let () = context.set_uniform_matrix(&self.modelview_loc, self.modelview.as_array());
   }
 
   /// Activate the renderer with the given [`sys::Context`] in
