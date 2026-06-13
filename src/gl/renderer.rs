@@ -696,10 +696,11 @@ impl Renderer {
     let phys_ratio = phys_w / phys_h;
     let logic_ratio = logic_w / logic_h;
 
-    let mut width = logic_w;
-    let mut height = logic_h;
+    let mut x = 0.0;
+    let mut y = 0.0;
 
-    // Our goal is to make the two ratios equal, that means:
+    // Our goal is to make the two ratios equal in order to preserve the
+    // physical aspect ratio. That means:
     //
     // phys_w   logic_w + x
     // ------ = -----------
@@ -708,17 +709,28 @@ impl Renderer {
     // where `x` is zero if `logic_ratio` > `phys_ratio`, otherwise `y`
     // is zero. Resolve it to `x` or `y` to get the equation from above.
     if logic_ratio > phys_ratio {
-      height += logic_w * phys_h / phys_w - logic_h;
+      y = logic_w * phys_h / phys_w - logic_h;
     } else {
-      width += logic_h * phys_w / phys_h - logic_w;
-    }
+      x = logic_h * phys_w / phys_h - logic_w;
+    };
+
+    // Calculate the offsets to use to center the view properly.
+    let off_x = -0.5 * x;
+    let off_y = -0.5 * y;
 
     // Our renderer will render everything with z-coordinate of 0.0f,
     // this must lie inside the range [znear, zfar].
     let znear = -0.5;
     let zfar = 0.5;
 
-    Mat4f::orthographic(0.0, width, 0.0, height, znear, zfar)
+    Mat4f::orthographic(
+      off_x,
+      off_x + x + logic_w,
+      off_y,
+      off_y + y + logic_h,
+      znear,
+      zfar,
+    )
   }
 
   /// Update the view after the containing window or contained logical

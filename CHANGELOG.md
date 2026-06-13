@@ -1,6 +1,7 @@
 Unreleased
 ----------
 - Properly account for score board size when sizing window contents
+- Lay out game objects centrally on rendering surface
 
 
 0.2.4
