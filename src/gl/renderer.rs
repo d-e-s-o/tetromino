@@ -531,9 +531,9 @@ impl Drop for ActiveRenderer<'_> {
 #[derive(Debug)]
 pub struct Renderer {
   /// The physical width of the window to which this renderer belongs.
-  phys_w: u32,
+  phys_w: NonZeroU32,
   /// The physical height of the window to which this renderer belongs.
-  phys_h: u32,
+  phys_h: NonZeroU32,
   /// The modelview matrix we use.
   modelview: Mat4f,
   /// The projection matrix we use.
@@ -668,8 +668,8 @@ impl Renderer {
     let empty_texture = Rc::new(empty_texture(context)?);
 
     let slf = Self {
-      phys_w: phys_w.get(),
-      phys_h: phys_h.get(),
+      phys_w,
+      phys_h,
       modelview: Mat4f::identity(),
       projection: Self::calculate_view(phys_w, phys_h, logic_w, logic_h),
       _program: program,
@@ -744,12 +744,12 @@ impl Renderer {
   ) {
     self.projection = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
-    self.phys_w = phys_w.get();
-    self.phys_h = phys_h.get();
+    self.phys_w = phys_w;
+    self.phys_h = phys_h;
   }
 
   fn set_states(&self, context: &sys::Context) {
-    let () = context.set_viewport(0, 0, self.phys_w as _, self.phys_h as _);
+    let () = context.set_viewport(0, 0, self.phys_w.get() as _, self.phys_h.get() as _);
 
     let () = context.set_uniform_matrix(&self.projection_loc, self.projection.as_array());
     let () = context.set_uniform_matrix(&self.modelview_loc, self.modelview.as_array());
