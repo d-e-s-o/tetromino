@@ -737,11 +737,14 @@ impl Renderer {
   /// dimensions have changed.
   pub fn update_view(
     &mut self,
-    phys_w: NonZeroU32,
-    phys_h: NonZeroU32,
+    phys_w: Option<NonZeroU32>,
+    phys_h: Option<NonZeroU32>,
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
   ) {
+    let phys_w = phys_w.unwrap_or(self.phys_w);
+    let phys_h = phys_h.unwrap_or(self.phys_h);
+
     self.projection = Self::calculate_view(phys_w, phys_h, logic_w, logic_h);
 
     self.phys_w = phys_w;

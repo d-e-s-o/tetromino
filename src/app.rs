@@ -82,9 +82,12 @@ where
   }
 
   pub fn on_window_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
-    let () = self
-      .renderer
-      .update_view(phys_w, phys_h, self.game.width(), self.game.height());
+    let () = self.renderer.update_view(
+      Some(phys_w),
+      Some(phys_h),
+      self.game.width(),
+      self.game.height(),
+    );
   }
 
   fn handle_key(key: &Key, repeat: &mut KeyRepeat, game: &mut Game) -> Change {
