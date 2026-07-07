@@ -127,7 +127,12 @@ fn tick(state: &mut State, force_render: bool) {
     let now = Instant::now();
     let (change, _wait) = game.tick(now);
 
-    if change == Change::Changed || force_render {
+    if change == Change::Resize {
+      let (phys_w, phys_h) = (None, None);
+      let () = renderer.update_view(phys_w, phys_h, game.width(), game.height());
+    }
+
+    if change == Change::Changed || change == Change::Resize || force_render {
       let renderer = renderer.on_pre_render(context.gl_context());
       let () = game.render(&renderer);
       let () = drop(renderer);
