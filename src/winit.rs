@@ -2,16 +2,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cell::OnceCell;
-use std::fs::read_to_string;
-use std::io::ErrorKind;
 use std::num::NonZeroU32;
-use std::path::PathBuf;
 use std::time::Duration;
 
 use anyhow::Context as _;
 use anyhow::Result;
-
-use dirs::config_dir;
 
 use glutin::config::Config as GlConfig;
 use glutin::config::ConfigTemplateBuilder;
@@ -70,32 +65,6 @@ use crate::keys::Keys;
 
 
 type App = AppT<Window>;
-
-
-/// Retrieve the default path to the program's configuration file.
-fn default_config_path() -> Result<PathBuf> {
-  let config = config_dir()
-    .context("unable to determine config directory")?
-    .join("tetromino")
-    .join("config.toml");
-
-  Ok(config)
-}
-
-
-fn load_config() -> Result<Config> {
-  let path = default_config_path().context("failed to retrieve program config directory path")?;
-  let contents = match read_to_string(&path) {
-    Ok(contents) => contents,
-    Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Config::default()),
-    e @ Err(..) => {
-      e.with_context(|| format!("failed to load program configuration at {}", path.display()))?
-    },
-  };
-  let config = toml::from_str(&contents)
-    .with_context(|| format!("failed to parse TOML configuration at {}", path.display()))?;
-  Ok(config)
-}
 
 
 fn window_size(window: &WinitWindow) -> (NonZeroU32, NonZeroU32) {
@@ -354,7 +323,7 @@ impl Handler {
 impl ApplicationHandler for Handler {
   fn resumed(&mut self, event_loop: &ActiveEventLoop) {
     fn create_app(event_loop: &ActiveEventLoop) -> Result<App> {
-      let config = load_config().context("failed to load program configuration")?;
+      let config = Config::load().context("failed to load program configuration")?;
       let display_handle = event_loop
         .display_handle()
         .context("failed to retrieve display handle")?;

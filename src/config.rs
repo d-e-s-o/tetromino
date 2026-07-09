@@ -1,11 +1,34 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
+
+#![cfg_attr(target_arch = "wasm32", expect(unused_imports))]
+
+use std::fs::read_to_string;
+use std::io::ErrorKind;
+use std::path::PathBuf;
+
+use anyhow::Context as _;
+use anyhow::Result;
 
 use serde::Deserialize;
 use serde::Serialize;
 
 use crate::game;
 use crate::keys;
+
+
+/// Retrieve the default path to the program's configuration file.
+#[cfg(not(target_arch = "wasm32"))]
+fn default_config_path() -> Result<PathBuf> {
+  use dirs::config_dir;
+
+  let config = config_dir()
+    .context("unable to determine config directory")?
+    .join("tetromino")
+    .join("config.toml");
+
+  Ok(config)
+}
 
 
 /// A type representing the configuration of the program.
@@ -18,6 +41,27 @@ pub struct Config {
   /// Configuration of the game itself.
   #[serde(default)]
   pub game: game::Config,
+}
+
+impl Config {
+  /// Load the configuration from its default path on the file system.
+  #[cfg(not(target_arch = "wasm32"))]
+  pub fn load() -> Result<Self> {
+    let path = default_config_path().context("failed to retrieve program config directory path")?;
+    let contents = match read_to_string(&path) {
+      Ok(contents) => contents,
+      Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Config::default()),
+      e @ Err(..) => e.with_context(|| {
+        format!(
+          "failed to load program configuration at `{}`",
+          path.display()
+        )
+      })?,
+    };
+    let config = toml::from_str(&contents)
+      .with_context(|| format!("failed to parse TOML configuration at `{}`", path.display()))?;
+    Ok(config)
+  }
 }
 
 
