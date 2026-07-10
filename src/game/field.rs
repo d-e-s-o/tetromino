@@ -293,17 +293,17 @@ impl Field {
     let _guard = renderer.set_texture(&self.wall);
     let _guard = renderer.set_color(WALL_COLOR.select(color_mode));
 
-    let left = Rect::new(0, 0, WALL_WIDTH, self.height());
+    let left = Rect::new(0, 0, WALL_WIDTH, self.display_height());
     let () = renderer.render_rect_with_tex_coords(left.into_other(), left);
 
-    let bottom = Rect::new(0, 0, self.width(), WALL_WIDTH);
+    let bottom = Rect::new(0, 0, self.display_width(), WALL_WIDTH);
     let () = renderer.render_rect_with_tex_coords(bottom.into_other(), bottom);
 
     let right = Rect::new(
       WALL_WIDTH + self.pieces.width(),
       0,
       WALL_WIDTH,
-      self.height(),
+      self.display_height(),
     );
     let () = renderer.render_rect_with_tex_coords(right.into_other(), right);
   }
@@ -365,22 +365,22 @@ impl Field {
   }
 
   #[inline]
-  pub(super) fn total_width(width: i16) -> i16 {
+  fn total_width(width: i16) -> i16 {
     2 * WALL_WIDTH + width
   }
 
   #[inline]
-  pub(super) fn total_height(height: i16) -> i16 {
+  fn total_height(height: i16) -> i16 {
     WALL_WIDTH + height
   }
 
   #[inline]
-  pub(super) fn width(&self) -> i16 {
+  pub(super) fn display_width(&self) -> i16 {
     Self::total_width(self.pieces.width())
   }
 
   #[inline]
-  pub(super) fn height(&self) -> i16 {
+  pub(super) fn display_height(&self) -> i16 {
     Self::total_height(self.pieces.height())
   }
 }

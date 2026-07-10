@@ -466,7 +466,7 @@ impl Game {
     }
 
     let preview_location = field_location
-      + Point::new(self.field.width(), self.field.height())
+      + Point::new(self.field.display_width(), self.field.display_height())
       + Point::new(RIGHT_SPACE, 0);
     {
       let _guard = renderer.set_origin(preview_location);
@@ -500,7 +500,7 @@ impl Game {
   /// Retrieve the game surface's width.
   pub fn width(&self) -> NonZeroU16 {
     let width = LEFT_SPACE
-      + self.field.width()
+      + self.field.display_width()
       + PREVIEW_FIELD_SPACE
       + max(self.preview.width(), self.score.width())
       + RIGHT_SPACE;
@@ -510,7 +510,7 @@ impl Game {
 
   /// Retrieve the game surface's height.
   pub fn height(&self) -> NonZeroU16 {
-    let height = BOTTOM_SPACE + self.field.height() + TOP_SPACE;
+    let height = BOTTOM_SPACE + self.field.display_height() + TOP_SPACE;
     // SAFETY: The provided height is guaranteed to be greater than zero.
     unsafe { NonZeroU16::new_unchecked(height as u16) }
   }
