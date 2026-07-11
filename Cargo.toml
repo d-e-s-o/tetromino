@@ -112,7 +112,7 @@ bufio = {version = "0.2"}
 image = {version = "0.25", default-features = false, features = ["png"]}
 keypeat = {version = "0.1"}
 serde = {version = "1.0.182", default-features = false, features = ["derive", "std"]}
-toml = {version = "1.0", default-features = false, features = ["display", "parse", "serde"]}
+toml_edit = {version = "0.25", default-features = false, features = ["display", "parse", "serde"]}
 vema = {version = "0.1"}
 xgl = {version = "0.2"}
 

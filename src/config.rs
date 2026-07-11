@@ -13,6 +13,8 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
+use toml_edit::de::from_str as from_toml_str;
+
 use crate::game;
 use crate::keys;
 
@@ -58,7 +60,7 @@ impl Config {
         )
       })?,
     };
-    let config = toml::from_str(&contents)
+    let config = from_toml_str(&contents)
       .with_context(|| format!("failed to parse TOML configuration at `{}`", path.display()))?;
     Ok(config)
   }
@@ -69,6 +71,9 @@ impl Config {
 mod tests {
   use super::*;
 
+  use toml_edit::de::from_str as from_toml_str;
+  use toml_edit::ser::to_string_pretty as to_toml_string;
+
 
   /// Make sure that we can successfully deserialize various
   /// configurations.
@@ -76,8 +81,8 @@ mod tests {
   fn deserialization() {
     // Complete config with everything set.
     let config = Config::default();
-    let config = toml::to_string_pretty(&config).unwrap();
-    assert!(toml::from_str::<Config>(&config).is_ok());
+    let config = to_toml_string(&config).unwrap();
+    assert!(from_toml_str::<Config>(&config).is_ok());
 
     // Config without keyboard data.
     let config = r#"
@@ -90,7 +95,7 @@ preview_stone_count = 1
 enable_ai = false
 enable_dark_mode = false
     "#;
-    assert!(toml::from_str::<Config>(config).is_ok());
+    assert!(from_toml_str::<Config>(config).is_ok());
 
     // Partial game config.
     let config = r#"
@@ -98,6 +103,6 @@ enable_dark_mode = false
 start_level = 1
 lines_for_level = 10
     "#;
-    assert!(toml::from_str::<Config>(config).is_ok());
+    assert!(from_toml_str::<Config>(config).is_ok());
   }
 }

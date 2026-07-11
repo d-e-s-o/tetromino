@@ -11,6 +11,8 @@ use std::env::args_os;
 use anyhow::Result;
 use anyhow::bail;
 
+use toml_edit::ser::to_string_pretty as to_toml_string;
+
 use tetromino::Config;
 use tetromino::run;
 
@@ -18,8 +20,7 @@ use tetromino::run;
 fn default_config() -> String {
   // SANITY: Converting the config object to a string is expected to
   //         always succeed and any failure would be a bug.
-  let config =
-    toml::to_string_pretty(&Config::default()).expect("failed to serialize Tetromino config");
+  let config = to_toml_string(&Config::default()).expect("failed to serialize Tetromino config");
   let mut lines = config.lines();
   let indent = lines
     .next()
