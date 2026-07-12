@@ -5,6 +5,7 @@
 
 use std::fs::read_to_string;
 use std::io::ErrorKind;
+use std::path::Path;
 use std::path::PathBuf;
 
 use anyhow::Context as _;
@@ -32,6 +33,22 @@ fn default_config_path() -> Result<PathBuf> {
   Ok(config)
 }
 
+fn load_config(path: &Path) -> Result<Config> {
+  let contents = match read_to_string(path) {
+    Ok(contents) => contents,
+    Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Config::default()),
+    e @ Err(..) => e.with_context(|| {
+      format!(
+        "failed to load program configuration at `{}`",
+        path.display()
+      )
+    })?,
+  };
+  let config = from_toml_str(&contents)
+    .with_context(|| format!("failed to parse TOML configuration at `{}`", path.display()))?;
+  Ok(config)
+}
+
 
 /// A type representing the configuration of the program.
 #[derive(Default, Debug, Deserialize, Serialize)]
@@ -50,18 +67,7 @@ impl Config {
   #[cfg(not(target_arch = "wasm32"))]
   pub fn load() -> Result<Self> {
     let path = default_config_path().context("failed to retrieve program config directory path")?;
-    let contents = match read_to_string(&path) {
-      Ok(contents) => contents,
-      Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Config::default()),
-      e @ Err(..) => e.with_context(|| {
-        format!(
-          "failed to load program configuration at `{}`",
-          path.display()
-        )
-      })?,
-    };
-    let config = from_toml_str(&contents)
-      .with_context(|| format!("failed to parse TOML configuration at `{}`", path.display()))?;
+    let config = load_config(&path)?;
     Ok(config)
   }
 }
