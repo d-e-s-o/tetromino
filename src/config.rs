@@ -7,6 +7,7 @@ use std::fs::read_to_string;
 use std::io::ErrorKind;
 use std::path::Path;
 use std::path::PathBuf;
+use std::str::FromStr as _;
 
 use anyhow::Context as _;
 use anyhow::Result;
@@ -14,7 +15,8 @@ use anyhow::Result;
 use serde::Deserialize;
 use serde::Serialize;
 
-use toml_edit::de::from_str as from_toml_str;
+use toml_edit::DocumentMut;
+use toml_edit::de::from_document as from_toml_doc;
 
 use crate::game;
 use crate::keys;
@@ -33,10 +35,10 @@ fn default_config_path() -> Result<PathBuf> {
   Ok(config)
 }
 
-fn load_config(path: &Path) -> Result<Config> {
+fn load_config_doc(path: &Path) -> Result<Option<DocumentMut>> {
   let contents = match read_to_string(path) {
     Ok(contents) => contents,
-    Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Config::default()),
+    Err(err) if err.kind() == ErrorKind::NotFound => return Ok(None),
     e @ Err(..) => e.with_context(|| {
       format!(
         "failed to load program configuration at `{}`",
@@ -44,9 +46,25 @@ fn load_config(path: &Path) -> Result<Config> {
       )
     })?,
   };
-  let config = from_toml_str(&contents)
+
+  let doc = DocumentMut::from_str(&contents)
     .with_context(|| format!("failed to parse TOML configuration at `{}`", path.display()))?;
-  Ok(config)
+  Ok(Some(doc))
+}
+
+fn load_config(path: &Path) -> Result<Config> {
+  let doc = load_config_doc(path)?;
+
+  if let Some(doc) = doc {
+    from_toml_doc(doc).with_context(|| {
+      format!(
+        "failed to deserialize configuration from `{}`",
+        path.display()
+      )
+    })
+  } else {
+    Ok(Config::default())
+  }
 }
 
 
