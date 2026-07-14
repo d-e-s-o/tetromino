@@ -52,7 +52,7 @@ mod imp {
 pub(crate) use imp::*;
 
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct Config {
   /// The auto-repeat timeout, in milliseconds.

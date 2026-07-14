@@ -69,7 +69,7 @@ fn load_config(path: &Path) -> Result<Config> {
 
 
 /// A type representing the configuration of the program.
-#[derive(Default, Debug, Deserialize, Serialize)]
+#[derive(Clone, Default, Debug, PartialEq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct Config {
   /// Settings pertaining keyboard handling.

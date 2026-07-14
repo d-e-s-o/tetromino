@@ -1,4 +1,4 @@
-// Copyright (C) 2023-2024 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use serde::Deserialize;
@@ -27,7 +27,7 @@ fn default_preview_stone_count() -> u8 {
 
 
 /// The configuration for a [`Game`][super::Game].
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, PartialEq, Deserialize, Serialize)]
 #[non_exhaustive]
 pub struct Config {
   /// The level the game starts at.
