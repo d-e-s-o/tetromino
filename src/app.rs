@@ -160,6 +160,11 @@ where
   }
 
   #[cfg(not(target_arch = "wasm32"))]
+  pub fn into_parts(self) -> (Game, Keys<Key>) {
+    (self.game, self.keys)
+  }
+
+  #[cfg(not(target_arch = "wasm32"))]
   #[inline]
   pub fn ops(&self) -> &O {
     &self.ops

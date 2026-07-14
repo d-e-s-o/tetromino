@@ -365,6 +365,16 @@ impl Field {
   }
 
   #[inline]
+  pub(super) fn width(&self) -> i16 {
+    self.pieces.width()
+  }
+
+  #[inline]
+  pub(super) fn height(&self) -> i16 {
+    self.pieces.height()
+  }
+
+  #[inline]
   fn total_width(width: i16) -> i16 {
     2 * WALL_WIDTH + width
   }

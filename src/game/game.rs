@@ -481,6 +481,19 @@ impl Game {
     }
   }
 
+  /// Convert the game (back) into a [`Config`].
+  pub fn into_config(self) -> Config {
+    Config {
+      start_level: self.score.start_level(),
+      lines_for_level: self.score.lines_for_level(),
+      field_width: self.field.width(),
+      field_height: self.field.height(),
+      preview_stone_count: self.preview.with_stones(|stones| stones.count()) as _,
+      enable_ai: self.ai.is_some(),
+      enable_dark_mode: matches!(self.color_mode, ColorMode::Dark),
+    }
+  }
+
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
     let () = self.color_mode.toggle();

@@ -202,6 +202,18 @@ impl Score {
     statc + dynmc
   }
 
+  /// Retrieve the start level.
+  #[inline]
+  pub fn start_level(&self) -> u16 {
+    self.start_level
+  }
+
+  /// Retrieve the lines required to be cleared to level up.
+  #[inline]
+  pub fn lines_for_level(&self) -> u16 {
+    self.lines_for_level
+  }
+
   /// Retrieve the current level.
   #[inline]
   pub fn level(&self) -> u16 {

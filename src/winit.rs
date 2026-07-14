@@ -61,6 +61,7 @@ use crate::app::App as AppT;
 use crate::app::Ops;
 use crate::game::Game;
 use crate::gl::Renderer;
+use crate::keys::Config as KeysConfig;
 use crate::keys::Keys;
 
 
@@ -431,7 +432,19 @@ pub(crate) fn run_app() -> Result<()> {
   let mut handler = Handler::default();
   let () = event_loop.run_app(&mut handler)?;
   if let Some(result) = handler.app.into_inner() {
-    result.map(|_app| ())
+    let app = result?;
+    let (game, keys) = app.into_parts();
+
+    let config = Config {
+      keyboard: KeysConfig {
+        // SANITY: We originally set the timeout duration from a `u32`.
+        auto_repeat_timeout_ms: u32::try_from(keys.timeout().as_millis()).unwrap(),
+        // SANITY: We originally set the interval duration from a `u32`.
+        auto_repeat_interval_ms: u32::try_from(keys.interval().as_millis()).unwrap(),
+      },
+      game: game.into_config(),
+    };
+    Ok(())
   } else {
     Ok(())
   }
