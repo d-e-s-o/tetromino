@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Write out configuration changes on game exit
+
+
 0.2.5
 -----
 - Properly account for score board size when sizing window contents

@@ -137,6 +137,7 @@ web-sys = {version = "0.3", default-features = false, features = [
 ]}
 
 [dev-dependencies]
+tempfile = {version = "3", default-features = false}
 test-fork = {version = "0.1.2"}
 
 [lints]

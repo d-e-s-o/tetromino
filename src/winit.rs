@@ -444,6 +444,9 @@ pub(crate) fn run_app() -> Result<()> {
       },
       game: game.into_config(),
     };
+    let () = config
+      .save()
+      .context("failed to save program configuration")?;
     Ok(())
   } else {
     Ok(())
