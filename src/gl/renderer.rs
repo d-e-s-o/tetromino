@@ -667,6 +667,8 @@ impl Renderer {
     let vertices_vao = VertexArray::new(&vertices_vbo, &attrib_indices, context)?;
     let empty_texture = Rc::new(empty_texture(context)?);
 
+    let () = Self::set_global_gl_state(context);
+
     let slf = Self {
       phys_w,
       phys_h,
@@ -680,6 +682,15 @@ impl Renderer {
       vertices_vao,
     };
     Ok(slf)
+  }
+
+  /// Set global GL state that we treat as invariant between frames.
+  ///
+  /// If an object changes this state temporarily, said change has to be
+  /// reverted when no longer needed.
+  fn set_global_gl_state(context: &sys::Context) {
+    let () = context.disable(sys::Capability::ScissorTest);
+    let () = context.disable(sys::Capability::DepthTest);
   }
 
   fn calculate_view(
