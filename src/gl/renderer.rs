@@ -691,6 +691,10 @@ impl Renderer {
   fn set_global_gl_state(context: &sys::Context) {
     let () = context.disable(sys::Capability::ScissorTest);
     let () = context.disable(sys::Capability::DepthTest);
+
+    let () = context.enable(sys::Capability::CullFace);
+    let () = context.set_front_face(sys::FrontFace::CounterClockWise);
+    let () = context.set_cull_face(sys::CullFace::Back);
   }
 
   fn calculate_view(
