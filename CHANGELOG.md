@@ -1,5 +1,5 @@
-Unreleased
-----------
+0.3.0
+-----
 - Write out configuration changes on game exit
 
 
