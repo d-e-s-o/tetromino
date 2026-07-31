@@ -32,7 +32,6 @@ use xgl::sys;
 
 use crate::Change;
 use crate::Instant;
-use crate::Renderer;
 use crate::Tick;
 use crate::app::App;
 use crate::app::Ops;
@@ -410,11 +409,10 @@ pub fn run(canvas: JsValue) -> Result<(), JsValue> {
     let params = UrlSearchParams::new_with_str(&search)
       .map_err(|_| anyhow!("failed parse URL search parameters"))?;
 
-    let config = game_config(&params, &window).context("failed to create game configuration")?;
-    let game = Game::with_config(&config, &context).context("failed to instantiate game object")?;
     let (width, height) = window_size(&window);
-    let renderer = Renderer::new(width, height, game.width(), game.height(), &context)
-      .context("failed to create WebGL renderer")?;
+    let config = game_config(&params, &window).context("failed to create game configuration")?;
+    let game = Game::with_config(width, height, &config, &context)
+      .context("failed to instantiate game object")?;
 
     let config = keys_config(&params).context("failed to create key configuration")?;
     let keys::Config {
@@ -426,7 +424,7 @@ pub fn run(canvas: JsValue) -> Result<(), JsValue> {
     let keys = Keys::new(timeout, interval);
 
     let ops_state = (document.clone(), canvas, context);
-    let app = App::new(ops_state, game, renderer, keys);
+    let app = App::new(ops_state, game, keys);
     let state = State::new(app, window).context("failed to instantiate application state")?;
     let () = forget(state);
 

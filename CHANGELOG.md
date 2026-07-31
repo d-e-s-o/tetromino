@@ -1,3 +1,8 @@
+Unreleased
+----------
+- Integrated `Renderer` into `Game` type
+
+
 0.3.0
 -----
 - Write out configuration changes on game exit

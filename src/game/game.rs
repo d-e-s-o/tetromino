@@ -4,19 +4,22 @@
 use std::cmp::max;
 use std::io::Cursor;
 use std::num::NonZeroU16;
+use std::num::NonZeroU32;
 use std::rc::Rc;
 use std::time::Duration;
 
+use anyhow::Context as _;
 use anyhow::Result;
 
 use xgl::sys;
 
-use crate::ActiveRenderer as Renderer;
+use crate::ActiveRenderer;
 use crate::Change;
 use crate::ColorMode;
 use crate::ColorSet;
 use crate::Instant;
 use crate::Point;
+use crate::Renderer;
 use crate::Texture;
 use crate::TextureBuilderExt as _;
 use crate::Tick;
@@ -66,9 +69,8 @@ const PREVIEW_SCORE_SPACE: i16 = 1;
 const CLEAR_TIME: Duration = Duration::from_millis(200);
 
 
-/// A type representing a game of Tetris.
 #[derive(Debug)]
-pub struct Game {
+struct Inner {
   /// The color mode in use.
   color_mode: ColorMode,
   /// The Tetris field.
@@ -85,9 +87,70 @@ pub struct Game {
   next_tick: Option<Instant>,
 }
 
+impl Inner {
+  fn render(&self, renderer: &ActiveRenderer) {
+    let clear_color = SCREEN_CLEAR_COLOR.select(self.color_mode);
+    let () = renderer.clear_screen(clear_color);
+
+    let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
+    {
+      let _guard = renderer.set_origin(field_location);
+      let () = self.field.render(renderer, self.color_mode);
+    }
+
+    let preview_location = field_location
+      + Point::new(self.field.display_width(), self.field.display_height())
+      + Point::new(RIGHT_SPACE, 0);
+    {
+      let _guard = renderer.set_origin(preview_location);
+      let () = self.preview.render(renderer, self.color_mode);
+    }
+
+    let score_location =
+      preview_location - Point::new(0, self.preview.height() + PREVIEW_SCORE_SPACE);
+    {
+      let _guard = renderer.set_origin(score_location);
+      let () = self.score.render(renderer);
+    }
+  }
+
+  /// Retrieve the game surface's width.
+  fn width(&self) -> NonZeroU16 {
+    let width = LEFT_SPACE
+      + self.field.display_width()
+      + PREVIEW_FIELD_SPACE
+      + max(self.preview.width(), self.score.width())
+      + RIGHT_SPACE;
+    // SAFETY: The provided width is guaranteed to be greater than zero.
+    unsafe { NonZeroU16::new_unchecked(width as u16) }
+  }
+
+  /// Retrieve the game surface's height.
+  fn height(&self) -> NonZeroU16 {
+    let height = BOTTOM_SPACE + self.field.display_height() + TOP_SPACE;
+    // SAFETY: The provided height is guaranteed to be greater than zero.
+    unsafe { NonZeroU16::new_unchecked(height as u16) }
+  }
+}
+
+
+/// A type representing a game of Tetris.
+#[derive(Debug)]
+pub struct Game {
+  /// The renderer we use.
+  renderer: Renderer,
+  /// Our inner game state.
+  inner: Inner,
+}
+
 impl Game {
   /// Instantiate a new game of Tetris with the given configuration.
-  pub fn with_config(config: &Config, context: &sys::Context) -> Result<Self> {
+  pub fn with_config(
+    phys_w: NonZeroU32,
+    phys_h: NonZeroU32,
+    config: &Config,
+    context: &sys::Context,
+  ) -> Result<Self> {
     let reader = Cursor::new(data::TETRIS_FIELD_PIECE_TEXTURE);
     let piece = image::ImageReader::with_format(reader, image::ImageFormat::Png).decode()?;
     let piece = Texture::builder()
@@ -123,7 +186,7 @@ impl Game {
       None
     };
 
-    let mut slf = Self {
+    let inner = Inner {
       color_mode: ColorMode::default(),
       field,
       preview,
@@ -131,6 +194,11 @@ impl Game {
       next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
     };
+
+    let renderer = Renderer::new(phys_w, phys_h, inner.width(), inner.height(), context)
+      .context("failed to create OpenGL renderer")?;
+
+    let mut slf = Self { renderer, inner };
 
     if config.enable_dark_mode {
       let () = slf.toggle_color_mode();
@@ -222,16 +290,16 @@ impl Game {
   pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
     let mut change = Change::Unchanged;
 
-    match self.field.state() {
+    match self.inner.field.state() {
       State::Moving { .. } => (),
       State::Clearing { until, .. } => {
         // The game must not be paused while we are clearing. Pausing
         // should always transition the field to "moving" state.
-        debug_assert!(self.next_tick.is_some());
+        debug_assert!(self.inner.next_tick.is_some());
 
         if now > *until {
-          self.next_tick = Some(Self::next_tick(*until, self.score.level()));
-          let () = self.field.clear_complete_lines();
+          self.inner.next_tick = Some(Self::next_tick(*until, self.inner.score.level()));
+          let () = self.inner.field.clear_complete_lines();
 
           change = Change::Changed;
         } else {
@@ -239,27 +307,31 @@ impl Game {
         }
       },
       State::Colliding { .. } => {
-        debug_assert_eq!(self.next_tick, None);
-        self.next_tick = None
+        debug_assert_eq!(self.inner.next_tick, None);
+        self.inner.next_tick = None
       },
     }
 
-    while let Some(next_tick) = &mut self.next_tick {
-      change |= Self::ai_handle_regular_move(&mut self.ai, &mut self.field);
+    while let Some(next_tick) = &mut self.inner.next_tick {
+      change |= Self::ai_handle_regular_move(&mut self.inner.ai, &mut self.inner.field);
 
       if now >= *next_tick {
-        let result = self.field.move_stone_down();
+        let result = self.inner.field.move_stone_down();
         change |= result.0;
 
         match result.1 {
           MoveResult::None => (),
           MoveResult::Moved => {
-            let () = Self::ai_remove_down_move(&mut self.ai);
+            let () = Self::ai_remove_down_move(&mut self.inner.ai);
           },
           MoveResult::Merged(lines) => {
-            change |= Self::handle_merged_lines(&mut self.score, lines);
-            let () = Self::ai_remove_down_move(&mut self.ai);
-            let () = Self::ai_remove_stone_merge(&mut self.ai, &self.field, &self.preview);
+            change |= Self::handle_merged_lines(&mut self.inner.score, lines);
+            let () = Self::ai_remove_down_move(&mut self.inner.ai);
+            let () = Self::ai_remove_stone_merge(
+              &mut self.inner.ai,
+              &self.inner.field,
+              &self.inner.preview,
+            );
           },
           MoveResult::Conflict => {
             let () = self.end();
@@ -267,13 +339,13 @@ impl Game {
           },
         }
 
-        *next_tick = Self::next_tick(*next_tick, self.score.level());
+        *next_tick = Self::next_tick(*next_tick, self.inner.score.level());
       } else {
         break
       }
     }
 
-    let tick = match self.next_tick {
+    let tick = match self.inner.next_tick {
       None => Tick::None,
       Some(next_tick) => Tick::At(next_tick),
     };
@@ -281,14 +353,22 @@ impl Game {
     (change, tick)
   }
 
+  /// Update the view after the containing window or contained logical
+  /// dimensions have changed.
+  pub fn update_view(&mut self, phys_w: Option<NonZeroU32>, phys_h: Option<NonZeroU32>) {
+    self
+      .renderer
+      .update_view(phys_w, phys_h, self.inner.width(), self.inner.height())
+  }
+
   /// Restart the game.
   pub fn restart(&mut self) -> Change {
-    let change = self.score.reset();
-    let () = if self.field.reset() {
-      if self.ai.is_some() {
-        self.ai = Self::create_ai(&self.field, &self.preview);
+    let change = self.inner.score.reset();
+    let () = if self.inner.field.reset() {
+      if self.inner.ai.is_some() {
+        self.inner.ai = Self::create_ai(&self.inner.field, &self.inner.preview);
       }
-      self.next_tick = Some(Self::next_tick(Instant::now(), self.score.level()));
+      self.inner.next_tick = Some(Self::next_tick(Instant::now(), self.inner.score.level()));
     } else {
       self.end()
     };
@@ -298,20 +378,20 @@ impl Game {
 
   /// End the current game.
   fn end(&mut self) {
-    self.next_tick = None;
+    self.inner.next_tick = None;
 
     println!(
       "{} points @ level {}; total {} lines cleared (game over)",
-      self.score.points(),
-      self.score.level(),
-      self.score.lines()
+      self.inner.score.points(),
+      self.inner.score.level(),
+      self.inner.score.lines()
     );
   }
 
   /// Pause or unpause the game.
   #[inline]
   pub(crate) fn pause(&mut self, pause: bool) {
-    if !matches!(self.field.state(), State::Colliding { .. }) {
+    if !matches!(self.inner.field.state(), State::Colliding { .. }) {
       if pause {
         // Note that strictly speaking the field could change state here
         // (if it was "clearing") and, conceptually, we should cause a
@@ -319,12 +399,13 @@ impl Game {
         // though, we do *not* want to do that, because doing so could
         // eagerly remove cleared lines and it just makes more sense to
         // leave them there for the duration of the pause.
-        let () = self.field.on_pause();
-        let _next_tick = self.next_tick.take();
+        let () = self.inner.field.on_pause();
+        let _next_tick = self.inner.next_tick.take();
       } else {
         let _next_tick = self
+          .inner
           .next_tick
-          .replace(Self::next_tick(Instant::now(), self.score.level()));
+          .replace(Self::next_tick(Instant::now(), self.inner.score.level()));
       }
     }
   }
@@ -332,17 +413,17 @@ impl Game {
   /// Inquire whether the game is currently paused.
   #[inline]
   pub(crate) fn is_paused(&self) -> bool {
-    self.next_tick.is_none()
+    self.inner.next_tick.is_none()
   }
 
   /// Enable or disable auto-playing of the game.
   pub(crate) fn auto_play(&mut self, auto_play: bool) {
     if auto_play {
-      if self.ai.is_none() {
-        self.ai = Self::create_ai(&self.field, &self.preview);
+      if self.inner.ai.is_none() {
+        self.inner.ai = Self::create_ai(&self.inner.field, &self.inner.preview);
       }
     } else {
-      self.ai = None;
+      self.inner.ai = None;
     }
   }
 
@@ -350,7 +431,7 @@ impl Game {
   /// AI.
   #[inline]
   pub(crate) fn is_auto_playing(&self) -> bool {
-    self.ai.is_some()
+    self.inner.ai.is_some()
   }
 
   fn handle_merged_lines(score: &mut Score, lines: u16) -> Change {
@@ -375,17 +456,17 @@ impl Game {
   /// playing.
   #[inline]
   fn accepts_input(&self) -> bool {
-    self.next_tick.is_some() && !self.is_auto_playing()
+    self.inner.next_tick.is_some() && !self.is_auto_playing()
   }
 
   #[inline]
   pub(crate) fn on_move_down(&mut self) -> Change {
     if self.accepts_input() {
-      let (mut change, result) = self.field.move_stone_down();
+      let (mut change, result) = self.inner.field.move_stone_down();
       match result {
         MoveResult::None | MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
-          change |= Self::handle_merged_lines(&mut self.score, lines);
+          change |= Self::handle_merged_lines(&mut self.inner.score, lines);
         },
         MoveResult::Conflict => {
           let () = self.end();
@@ -401,11 +482,11 @@ impl Game {
   #[inline]
   pub(crate) fn on_drop(&mut self) -> Change {
     if self.accepts_input() {
-      let (mut change, result) = self.field.drop_stone();
+      let (mut change, result) = self.inner.field.drop_stone();
       match result {
         MoveResult::None | MoveResult::Moved => (),
         MoveResult::Merged(lines) => {
-          change |= Self::handle_merged_lines(&mut self.score, lines);
+          change |= Self::handle_merged_lines(&mut self.inner.score, lines);
         },
         MoveResult::Conflict => {
           let () = self.end();
@@ -421,7 +502,7 @@ impl Game {
   #[inline]
   pub(crate) fn on_move_left(&mut self) -> Change {
     if self.accepts_input() {
-      self.field.move_stone_left()
+      self.inner.field.move_stone_left()
     } else {
       Change::Unchanged
     }
@@ -430,7 +511,7 @@ impl Game {
   #[inline]
   pub(crate) fn on_move_right(&mut self) -> Change {
     if self.accepts_input() {
-      self.field.move_stone_right()
+      self.inner.field.move_stone_right()
     } else {
       Change::Unchanged
     }
@@ -439,7 +520,7 @@ impl Game {
   #[inline]
   pub(crate) fn on_rotate_left(&mut self) -> Change {
     if self.accepts_input() {
-      self.field.rotate_stone_left()
+      self.inner.field.rotate_stone_left()
     } else {
       Change::Unchanged
     }
@@ -448,84 +529,46 @@ impl Game {
   #[inline]
   pub(crate) fn on_rotate_right(&mut self) -> Change {
     if self.accepts_input() {
-      self.field.rotate_stone_right()
+      self.inner.field.rotate_stone_right()
     } else {
       Change::Unchanged
     }
   }
 
   /// Render the game and its components.
-  pub fn render(&self, renderer: &Renderer) {
-    let clear_color = SCREEN_CLEAR_COLOR.select(self.color_mode);
-    let () = renderer.clear_screen(clear_color);
-
-    let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
-    {
-      let _guard = renderer.set_origin(field_location);
-      let () = self.field.render(renderer, self.color_mode);
-    }
-
-    let preview_location = field_location
-      + Point::new(self.field.display_width(), self.field.display_height())
-      + Point::new(RIGHT_SPACE, 0);
-    {
-      let _guard = renderer.set_origin(preview_location);
-      let () = self.preview.render(renderer, self.color_mode);
-    }
-
-    let score_location =
-      preview_location - Point::new(0, self.preview.height() + PREVIEW_SCORE_SPACE);
-    {
-      let _guard = renderer.set_origin(score_location);
-      let () = self.score.render(renderer);
-    }
+  pub fn render(&self, context: &sys::Context) {
+    let renderer = self.renderer.on_pre_render(context);
+    let () = self.inner.render(&renderer);
+    let () = drop(renderer);
   }
 
   /// Convert the game (back) into a [`Config`].
   pub fn into_config(self) -> Config {
     Config {
-      start_level: self.score.start_level(),
-      lines_for_level: self.score.lines_for_level(),
-      field_width: self.field.width(),
-      field_height: self.field.height(),
-      preview_stone_count: self.preview.with_stones(|stones| stones.count()) as _,
-      enable_ai: self.ai.is_some(),
-      enable_dark_mode: matches!(self.color_mode, ColorMode::Dark),
+      start_level: self.inner.score.start_level(),
+      lines_for_level: self.inner.score.lines_for_level(),
+      field_width: self.inner.field.width(),
+      field_height: self.inner.field.height(),
+      preview_stone_count: self.inner.preview.with_stones(|stones| stones.count()) as _,
+      enable_ai: self.inner.ai.is_some(),
+      enable_dark_mode: matches!(self.inner.color_mode, ColorMode::Dark),
     }
   }
 
   /// Toggle the color mode (light/dark) in use.
   pub(crate) fn toggle_color_mode(&mut self) {
-    let () = self.color_mode.toggle();
+    let () = self.inner.color_mode.toggle();
   }
 
   #[cfg(feature = "debug")]
   pub(crate) fn dump_state(&self) {
-    if let Some((stone, field)) = self.field.to_ai_data() {
-      if let Some(ai) = self.ai.as_ref() {
+    if let Some((stone, field)) = self.inner.field.to_ai_data() {
+      if let Some(ai) = self.inner.ai.as_ref() {
         println!("{ai:#?}");
       }
       println!("{stone:?}");
       println!("{field:?}");
     }
-  }
-
-  /// Retrieve the game surface's width.
-  pub fn width(&self) -> NonZeroU16 {
-    let width = LEFT_SPACE
-      + self.field.display_width()
-      + PREVIEW_FIELD_SPACE
-      + max(self.preview.width(), self.score.width())
-      + RIGHT_SPACE;
-    // SAFETY: The provided width is guaranteed to be greater than zero.
-    unsafe { NonZeroU16::new_unchecked(width as u16) }
-  }
-
-  /// Retrieve the game surface's height.
-  pub fn height(&self) -> NonZeroU16 {
-    let height = BOTTOM_SPACE + self.field.display_height() + TOP_SPACE;
-    // SAFETY: The provided height is guaranteed to be greater than zero.
-    unsafe { NonZeroU16::new_unchecked(height as u16) }
   }
 }
 

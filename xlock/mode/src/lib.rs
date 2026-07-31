@@ -18,7 +18,6 @@ use tetromino::Context;
 use tetromino::Game;
 use tetromino::GameConfig;
 use tetromino::Instant;
-use tetromino::Renderer;
 
 
 // SAFETY: `ModeSpecOpt` is just a C-style POD with all bit patterns
@@ -57,7 +56,7 @@ static tetromino_description: xlock::ModStruct = xlock::ModStruct {
 /// Our "mode's" main state object.
 struct State {
   /// Relevant Tetromino related data.
-  data: Option<(Context, Game, Renderer)>,
+  data: Option<(Context, Game)>,
 }
 
 
@@ -111,10 +110,9 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
     config.enable_dark_mode = true;
 
     let gl_context = context.gl_context();
-    let game = Game::with_config(&config, gl_context).unwrap();
-    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height(), gl_context).unwrap();
+    let game = Game::with_config(phys_w, phys_h, &config, gl_context).unwrap();
 
-    state.data = Some((context, game, renderer));
+    state.data = Some((context, game));
   } else {
     // TODO: We probably still want to be sure to clear the window on
     //       all other screens.
@@ -123,19 +121,17 @@ extern "C" fn init_tetromino(mode_info: *const xlock::ModeInfo) {
 
 /// "Tick" the game.
 fn tick(state: &mut State, force_render: bool) {
-  if let Some((context, game, renderer)) = &mut state.data {
+  if let Some((context, game)) = &mut state.data {
     let now = Instant::now();
     let (change, _wait) = game.tick(now);
 
     if change == Change::Resize {
       let (phys_w, phys_h) = (None, None);
-      let () = renderer.update_view(phys_w, phys_h, game.width(), game.height());
+      let () = game.update_view(phys_w, phys_h);
     }
 
     if change == Change::Changed || change == Change::Resize || force_render {
-      let renderer = renderer.on_pre_render(context.gl_context());
-      let () = game.render(&renderer);
-      let () = drop(renderer);
+      let () = game.render(context.gl_context());
       let () = context.swap_buffers();
     }
   }
@@ -184,7 +180,7 @@ extern "C" fn change_tetromino(mode_info: *const xlock::ModeInfo) {
   //         we are sure we have a `State` object set.
   let state = unsafe { lock_struct.userdata.cast::<State>().as_mut().unwrap() };
 
-  if let Some((_window, game, _renderer)) = &mut state.data {
+  if let Some((_context, game)) = &mut state.data {
     let _change = game.restart();
   }
 }

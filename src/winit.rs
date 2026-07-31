@@ -60,7 +60,6 @@ use crate::Tick;
 use crate::app::App as AppT;
 use crate::app::Ops;
 use crate::game::Game;
-use crate::gl::Renderer;
 use crate::keys::Config as KeysConfig;
 use crate::keys::Keys;
 
@@ -333,15 +332,13 @@ impl ApplicationHandler for Handler {
         Window::new(display_handle, create_window_fn).context("failed to create OpenGL window")?;
       let (phys_w, phys_h) = window.size();
       let gl_context = window.render_context().gl_context();
-      let game =
-        Game::with_config(&config.game, gl_context).context("failed to instantiate game object")?;
-      let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height(), gl_context)
-        .context("failed to create OpenGL renderer")?;
+      let game = Game::with_config(phys_w, phys_h, &config.game, gl_context)
+        .context("failed to instantiate game object")?;
       let timeout = Duration::from_millis(config.keyboard.auto_repeat_timeout_ms.into());
       let interval = Duration::from_millis(config.keyboard.auto_repeat_interval_ms.into());
       let keys = Keys::new(timeout, interval);
 
-      let app = App::new(window, game, renderer, keys);
+      let app = App::new(window, game, keys);
       Ok(app)
     }
 

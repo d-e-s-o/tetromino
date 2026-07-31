@@ -10,7 +10,6 @@ use crate::Change;
 use crate::Instant;
 use crate::Tick;
 use crate::game::Game;
-use crate::gl::Renderer;
 use crate::keys;
 use crate::keys::Key;
 use crate::keys::KeyRepeat;
@@ -29,7 +28,6 @@ pub(crate) trait Ops {
 pub(crate) struct App<O> {
   ops: O,
   game: Game,
-  renderer: Renderer,
   keys: Keys<Key>,
   was_paused: bool,
 }
@@ -38,12 +36,11 @@ impl<O> App<O>
 where
   O: Ops,
 {
-  pub fn new(ops: O, game: Game, renderer: Renderer, keys: Keys<Key>) -> Self {
+  pub fn new(ops: O, game: Game, keys: Keys<Key>) -> Self {
     let was_paused = game.is_paused();
     Self {
       ops,
       game,
-      renderer,
       keys,
       was_paused,
     }
@@ -82,12 +79,7 @@ where
   }
 
   pub fn on_window_resize(&mut self, phys_w: NonZeroU32, phys_h: NonZeroU32) {
-    let () = self.renderer.update_view(
-      Some(phys_w),
-      Some(phys_h),
-      self.game.width(),
-      self.game.height(),
-    );
+    let () = self.game.update_view(Some(phys_w), Some(phys_h));
   }
 
   fn handle_key(key: &Key, repeat: &mut KeyRepeat, game: &mut Game) -> Change {
@@ -154,9 +146,7 @@ where
 
   pub fn render(&mut self) {
     let gl_context = self.ops.context();
-    let renderer = self.renderer.on_pre_render(gl_context);
-    let () = self.game.render(&renderer);
-    let () = drop(renderer);
+    let () = self.game.render(gl_context);
   }
 
   #[cfg(not(target_arch = "wasm32"))]
