@@ -19,10 +19,10 @@ use crate::ColorMode;
 use crate::ColorSet;
 use crate::Instant;
 use crate::Point;
-use crate::Renderer;
 use crate::Texture;
 use crate::TextureBuilderExt as _;
 use crate::Tick;
+use crate::gl::Renderer;
 
 use super::Config;
 use super::Field;

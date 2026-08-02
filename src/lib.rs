@@ -48,7 +48,6 @@ pub use crate::change::Change;
 pub use crate::config::Config;
 pub use crate::game::Config as GameConfig;
 pub use crate::game::Game;
-pub use crate::gl::Renderer;
 pub use crate::instant::Instant;
 pub use crate::tick::Tick;
 #[cfg(not(target_arch = "wasm32"))]

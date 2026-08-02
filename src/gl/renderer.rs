@@ -311,7 +311,7 @@ impl TextureState {
 
 /// A type directly usable to render graphics primitives.
 #[derive(Debug)]
-pub struct ActiveRenderer<'ctx> {
+pub(crate) struct ActiveRenderer<'ctx> {
   /// The OpenGL context.
   context: &'ctx sys::Context,
   /// The `Renderer` this object belongs to.
@@ -529,7 +529,7 @@ impl Drop for ActiveRenderer<'_> {
 
 /// A type enabling the rendering of graphics.
 #[derive(Debug)]
-pub struct Renderer {
+pub(crate) struct Renderer {
   /// The physical width of the window to which this renderer belongs.
   phys_w: NonZeroU32,
   /// The physical height of the window to which this renderer belongs.
