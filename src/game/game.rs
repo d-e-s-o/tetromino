@@ -187,7 +187,11 @@ impl Game {
     };
 
     let inner = Inner {
-      color_mode: ColorMode::default(),
+      color_mode: if config.enable_dark_mode {
+        ColorMode::Dark
+      } else {
+        ColorMode::Light
+      },
       field,
       preview,
       ai,
@@ -198,11 +202,7 @@ impl Game {
     let renderer = Renderer::new(phys_w, phys_h, inner.width(), inner.height(), context)
       .context("failed to create OpenGL renderer")?;
 
-    let mut slf = Self { renderer, inner };
-
-    if config.enable_dark_mode {
-      let () = slf.toggle_color_mode();
-    }
+    let slf = Self { renderer, inner };
     Ok(slf)
   }
 
