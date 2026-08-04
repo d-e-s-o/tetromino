@@ -21,7 +21,7 @@ pub(crate) struct Matrix<T> {
 impl<T> Matrix<T> {
   /// # Panics
   /// This constructor panics if either dimension is 0.
-  pub(crate) fn new(width: i16, height: i16) -> Self
+  pub fn new(width: i16, height: i16) -> Self
   where
     T: Default,
   {
@@ -65,7 +65,7 @@ impl<T> Matrix<T> {
   }
 
   /// Create an iterator over all elements, along with their positions.
-  pub(crate) fn iter(&self) -> impl Iterator<Item = (&T, Point<i16>)> {
+  pub fn iter(&self) -> impl Iterator<Item = (&T, Point<i16>)> {
     let width = self.width as usize;
 
     self.matrix.iter().enumerate().map(move |(i, t)| {
@@ -76,14 +76,14 @@ impl<T> Matrix<T> {
   }
 
   /// Create an iterator over all elements in the given line.
-  pub(crate) fn iter_line(&self, line: i16) -> impl Iterator<Item = &T> {
+  pub fn iter_line(&self, line: i16) -> impl Iterator<Item = &T> {
     let index = self.calculate_index((0, line));
     self.matrix[index..index + self.width as usize].iter()
   }
 
   /// Convert the `Matrix` into one with a different `T`, using the
   /// provided function, `f`, to to convert individual items.
-  pub(crate) fn to_other<U, F>(&self, f: F) -> Matrix<U>
+  pub fn to_other<U, F>(&self, f: F) -> Matrix<U>
   where
     F: Fn(&T) -> U,
   {
@@ -95,12 +95,12 @@ impl<T> Matrix<T> {
   }
 
   #[inline]
-  pub(crate) fn width(&self) -> i16 {
+  pub fn width(&self) -> i16 {
     self.width
   }
 
   #[inline]
-  pub(crate) fn height(&self) -> i16 {
+  pub fn height(&self) -> i16 {
     self.height
   }
 

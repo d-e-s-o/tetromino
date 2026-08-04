@@ -65,7 +65,7 @@ pub(super) struct Score {
 }
 
 impl Score {
-  pub(super) fn new(start_level: u16, lines_for_level: u16, texture: Rc<Texture>) -> Self {
+  pub fn new(start_level: u16, lines_for_level: u16, texture: Rc<Texture>) -> Self {
     Self {
       start_level,
       level: start_level,

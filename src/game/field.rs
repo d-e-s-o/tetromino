@@ -86,7 +86,7 @@ pub(super) enum State {
 
 
 #[derive(Debug)]
-pub(crate) struct Field {
+pub(super) struct Field {
   /// The time we take for clearing completed lines.
   clear_time: Duration,
   /// The inner field area, containing dropped pieces.
@@ -100,7 +100,7 @@ pub(crate) struct Field {
 }
 
 impl Field {
-  pub(super) fn new(
+  pub fn new(
     width: i16,
     height: i16,
     clear_time: Duration,
@@ -127,7 +127,7 @@ impl Field {
   }
 
   /// Remove all completed lines from the field.
-  pub(super) fn clear_complete_lines(&mut self) {
+  pub fn clear_complete_lines(&mut self) {
     match &mut self.state {
       State::Clearing {
         next_stone,
@@ -146,7 +146,7 @@ impl Field {
 
   /// Reset the field back to its initial state, with no merged pieces
   /// and a stone at its initial position.
-  pub(super) fn reset(&mut self) -> bool {
+  pub fn reset(&mut self) -> bool {
     let () = self.pieces.clear();
     let mut stone = self.producer.create_stone();
     if self.pieces.reset_stone(&mut stone) {
@@ -198,7 +198,7 @@ impl Field {
     }
   }
 
-  pub(super) fn drop_stone(&mut self) -> (Change, MoveResult) {
+  pub fn drop_stone(&mut self) -> (Change, MoveResult) {
     let mut change = Change::Unchanged;
     loop {
       let result = self.move_stone_down_impl();
@@ -210,7 +210,7 @@ impl Field {
     }
   }
 
-  pub(super) fn move_stone_down(&mut self) -> (Change, MoveResult) {
+  pub fn move_stone_down(&mut self) -> (Change, MoveResult) {
     self.move_stone_down_impl()
   }
 
@@ -234,11 +234,11 @@ impl Field {
     }
   }
 
-  pub(super) fn move_stone_left(&mut self) -> Change {
+  pub fn move_stone_left(&mut self) -> Change {
     self.move_stone_by(-1)
   }
 
-  pub(super) fn move_stone_right(&mut self) -> Change {
+  pub fn move_stone_right(&mut self) -> Change {
     self.move_stone_by(1)
   }
 
@@ -261,17 +261,17 @@ impl Field {
     }
   }
 
-  pub(super) fn rotate_stone_left(&mut self) -> Change {
+  pub fn rotate_stone_left(&mut self) -> Change {
     self.rotate_stone(true)
   }
 
-  pub(super) fn rotate_stone_right(&mut self) -> Change {
+  pub fn rotate_stone_right(&mut self) -> Change {
     self.rotate_stone(false)
   }
 
   /// "Event handler" for informing the field that the overall game has
   /// been paused.
-  pub(super) fn on_pause(&mut self) {
+  pub fn on_pause(&mut self) {
     match &mut self.state {
       State::Clearing {
         next_stone,
@@ -320,7 +320,7 @@ impl Field {
   }
 
   /// Render the Tetris field.
-  pub(super) fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
+  pub fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
     {
       let _guard = renderer.set_origin(Point::new(WALL_WIDTH, WALL_WIDTH));
       let () = self.pieces.render(renderer, color_mode);
@@ -335,7 +335,7 @@ impl Field {
   ///
   /// This method returns `None` if there is a collision.
   #[inline]
-  pub(super) fn to_ai_data(&self) -> Option<(ai::Field, ai::Stone)> {
+  pub fn to_ai_data(&self) -> Option<(ai::Field, ai::Stone)> {
     match &self.state {
       State::Moving { stone } => {
         let field = ai::Field::from_matrix(&self.pieces.matrix);
@@ -360,17 +360,17 @@ impl Field {
   }
 
   #[inline]
-  pub(super) fn state(&self) -> &State {
+  pub fn state(&self) -> &State {
     &self.state
   }
 
   #[inline]
-  pub(super) fn width(&self) -> i16 {
+  pub fn width(&self) -> i16 {
     self.pieces.width()
   }
 
   #[inline]
-  pub(super) fn height(&self) -> i16 {
+  pub fn height(&self) -> i16 {
     self.pieces.height()
   }
 
@@ -385,12 +385,12 @@ impl Field {
   }
 
   #[inline]
-  pub(super) fn display_width(&self) -> i16 {
+  pub fn display_width(&self) -> i16 {
     Self::total_width(self.pieces.width())
   }
 
   #[inline]
-  pub(super) fn display_height(&self) -> i16 {
+  pub fn display_height(&self) -> i16 {
     Self::total_height(self.pieces.height())
   }
 }

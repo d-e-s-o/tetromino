@@ -28,7 +28,7 @@ pub(crate) struct AI {
 impl AI {
   /// Create a new `AI` using the provided `Field`, `Stone`, and
   /// an optional list of preview stones.
-  pub(crate) fn new(field: &Field, stone: &Stone, next_stones: &[Stone]) -> Self {
+  pub fn new(field: &Field, stone: &Stone, next_stones: &[Stone]) -> Self {
     let best = search(field, stone, next_stones);
     let (actions, _field) = actions(best);
 

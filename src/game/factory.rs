@@ -29,7 +29,7 @@ pub(super) struct StoneFactory {
 }
 
 impl StoneFactory {
-  pub(super) fn with_default_stones(piece_texture: Rc<Texture>) -> Self {
+  pub fn with_default_stones(piece_texture: Rc<Texture>) -> Self {
     #[rustfmt::skip]
     let templates = Box::new([
       vec![Point::new(0, 0), Point::new(1, 0), Point::new(1, 1), Point::new(0, 1)].into_boxed_slice(), // O

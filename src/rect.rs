@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Add;
@@ -17,13 +17,13 @@ pub(crate) struct Rect<T> {
 
 impl<T> Rect<T> {
   #[inline]
-  pub(crate) fn new(x: T, y: T, w: T, h: T) -> Self {
+  pub fn new(x: T, y: T, w: T, h: T) -> Self {
     Self { x, y, w, h }
   }
 
   /// Convert the `Rect` into one with a different `T`, assuming there
   /// exists a lossless conversion between the two inner types.
-  pub(crate) fn into_other<U>(self) -> Rect<U>
+  pub fn into_other<U>(self) -> Rect<U>
   where
     U: From<T>,
   {

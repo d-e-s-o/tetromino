@@ -33,7 +33,7 @@ pub(super) struct PreviewStones {
 
 impl PreviewStones {
   /// Create a new `PreviewStones` object displaying `count` stones.
-  pub(super) fn new(count: u8, producer: Box<dyn StoneProducer>) -> Self {
+  pub fn new(count: u8, producer: Box<dyn StoneProducer>) -> Self {
     let stones = (0..count)
       .map(|_| producer.create_stone())
       .collect::<Vec<_>>()
@@ -79,7 +79,7 @@ impl PreviewStones {
   }
 
   /// Render the object.
-  pub(super) fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
+  pub fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
     for stone in self.stones.borrow().iter() {
       let () = stone.render(renderer, color_mode);
     }
@@ -87,7 +87,7 @@ impl PreviewStones {
 
   /// Perform an operation on the preview stones.
   #[inline]
-  pub(super) fn with_stones<F, R>(&self, f: F) -> R
+  pub fn with_stones<F, R>(&self, f: F) -> R
   where
     F: FnOnce(iter::Chain<slice::Iter<Stone>, slice::Iter<Stone>>) -> R,
   {
@@ -98,13 +98,13 @@ impl PreviewStones {
 
   /// Retrieve the maximum width of the preview stones.
   #[inline]
-  pub(super) fn width(&self) -> i16 {
+  pub fn width(&self) -> i16 {
     self.max_dimensions().0
   }
 
   /// Retrieve the maximum height of the preview stones.
   #[inline]
-  pub(super) fn height(&self) -> i16 {
+  pub fn height(&self) -> i16 {
     (self.stones.borrow().len() as i16 + SPACE) * self.max_dimensions().1
   }
 }

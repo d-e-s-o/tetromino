@@ -29,7 +29,7 @@ impl Piece {
     ColorSet::new(Color::gray(), Color::orange()),
   ];
 
-  pub(crate) fn new(color_idx: u8) -> Self {
+  pub fn new(color_idx: u8) -> Self {
     debug_assert!(usize::from(color_idx) < Self::COLORS.len());
     Self { color_idx }
   }
@@ -37,14 +37,14 @@ impl Piece {
   /// # Notes
   /// This method assumes that the piece texture to use is already
   /// bound.
-  pub(crate) fn render(&self, renderer: &Renderer, location: Point<i16>, color_mode: ColorMode) {
+  pub fn render(&self, renderer: &Renderer, location: Point<i16>, color_mode: ColorMode) {
     // Perhaps counter-intuitively, the color black acts as a neutral
     // component here.
     self.render_with_overlay(renderer, location, color_mode, Color::black())
   }
 
   /// Render the piece with the provided color as "overlay".
-  pub(crate) fn render_with_overlay(
+  pub fn render_with_overlay(
     &self,
     renderer: &Renderer,
     location: Point<i16>,

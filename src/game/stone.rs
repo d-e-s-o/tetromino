@@ -20,7 +20,7 @@ use super::ai;
 
 /// The representation of a Tetris stone.
 #[derive(Debug)]
-pub(crate) struct Stone {
+pub(super) struct Stone {
   /// The texture to use for an individual piece.
   piece_texture: Rc<Texture>,
   /// The individual pieces making up the stone and their locations.
@@ -29,7 +29,7 @@ pub(crate) struct Stone {
 }
 
 impl Stone {
-  pub(crate) fn new(piece_texture: Rc<Texture>, template: &[Point<i8>], color_idx: u8) -> Self {
+  pub fn new(piece_texture: Rc<Texture>, template: &[Point<i8>], color_idx: u8) -> Self {
     assert!(!template.is_empty(), "provided stone template is empty");
 
     Self {
@@ -41,16 +41,11 @@ impl Stone {
     }
   }
 
-  pub(crate) fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
+  pub fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
     self.render_with_overlay(renderer, color_mode, Color::black())
   }
 
-  pub(crate) fn render_with_overlay(
-    &self,
-    renderer: &Renderer,
-    color_mode: ColorMode,
-    overlay: Color,
-  ) {
+  pub fn render_with_overlay(&self, renderer: &Renderer, color_mode: ColorMode, overlay: Color) {
     let _guard = renderer.set_texture(&self.piece_texture);
 
     let () = self.pieces.iter().for_each(|(piece, location)| {
@@ -62,7 +57,7 @@ impl Stone {
   /// one effectively empty.
   // This method is a convenience helper for `Stone` usage in enums
   // allowing us to omit unnecessary clones due to limitations of Rust.
-  pub(crate) fn take(&mut self) -> Self {
+  pub fn take(&mut self) -> Self {
     Self {
       piece_texture: Rc::clone(&self.piece_texture),
       pieces: take(&mut self.pieces),

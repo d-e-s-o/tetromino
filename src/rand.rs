@@ -17,7 +17,7 @@ pub(crate) struct Rng {
 
 impl Rng {
   #[cfg(not(target_arch = "wasm32"))]
-  pub(crate) fn new() -> Self {
+  pub fn new() -> Self {
     use std::time::SystemTime;
     use std::time::UNIX_EPOCH;
 
@@ -31,14 +31,14 @@ impl Rng {
   }
 
   #[cfg(target_arch = "wasm32")]
-  pub(crate) fn new() -> Self {
+  pub fn new() -> Self {
     use crate::Instant;
 
     let seed = Instant::now().as_millis() as u64;
     Self::with_seed(seed)
   }
 
-  pub(crate) fn with_seed(seed: u64) -> Self {
+  pub fn with_seed(seed: u64) -> Self {
     let state = seed.wrapping_add(INCREMENT);
 
     Self {
@@ -47,7 +47,7 @@ impl Rng {
   }
 
   /// Generate a new pseudo random `u32` value.
-  pub(crate) fn rand_u32(&self) -> u32 {
+  pub fn rand_u32(&self) -> u32 {
     fn rotr32(x: u32, r: usize) -> u32 {
       (x >> r) | (x << (!r & 31))
     }

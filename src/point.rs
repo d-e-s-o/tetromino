@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::ops::Add;
@@ -21,7 +21,7 @@ impl<T> Point<T> {
 
   /// Convert the `Point` into one with a different `T`, assuming there
   /// exists a lossless conversion between the two inner types.
-  pub(crate) fn into_other<U>(self) -> Point<U>
+  pub fn into_other<U>(self) -> Point<U>
   where
     U: From<T>,
   {

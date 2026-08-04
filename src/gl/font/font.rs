@@ -68,7 +68,7 @@ impl Font {
   }
 
   /// Instantiate the built-in font.
-  pub(crate) fn builtin() -> Self {
+  pub fn builtin() -> Self {
     let invalid_idx = raster::GLYPHS.len() - 1;
     Self::load(&raster::GLYPHS, &raster::SPACES, b' ', invalid_idx)
   }
@@ -78,7 +78,7 @@ impl Font {
   /// # Notes
   /// If the string contains non-ASCII characters the result may not be
   /// as expected.
-  pub(crate) fn render_str<R>(&self, s: &[u8], mut render: R)
+  pub fn render_str<R>(&self, s: &[u8], mut render: R)
   where
     R: FnMut(Point<i16>),
   {
@@ -101,7 +101,7 @@ impl Font {
 
   // Determine the width of the given string when rendered.
   #[cfg(test)]
-  pub(crate) fn str_width(&self, s: &[u8]) -> i16 {
+  pub fn str_width(&self, s: &[u8]) -> i16 {
     s.iter()
       .map(|c| {
         c.checked_sub(self.offset)
@@ -115,7 +115,7 @@ impl Font {
 
   /// Retrieve the font's size, in "points".
   #[inline]
-  pub(crate) fn size(&self) -> u8 {
+  pub fn size(&self) -> u8 {
     self.point_size
   }
 }
