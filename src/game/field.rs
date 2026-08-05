@@ -15,6 +15,7 @@ use crate::Instant;
 use crate::Point;
 use crate::Rect;
 use crate::Texture;
+use crate::Tick;
 use crate::mode::ColorMode;
 use crate::mode::ColorSet;
 
@@ -285,6 +286,22 @@ impl Field {
       },
       State::Colliding { .. } => panic!("attempted to pause from collision state"),
       State::Moving { .. } => (),
+    }
+  }
+
+  pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
+    match &self.state {
+      State::Clearing { until, .. } => {
+        if now > *until {
+          let () = self.clear_complete_lines();
+          // NB: The field itself doesn't know when the next tick is,
+          //     because it depends on the level etc.
+          (Change::Changed, Tick::None)
+        } else {
+          (Change::Unchanged, Tick::At(*until))
+        }
+      },
+      State::Moving { .. } | State::Colliding { .. } => (Change::Unchanged, Tick::None),
     }
   }
 

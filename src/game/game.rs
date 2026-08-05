@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::max;
+use std::cmp::min;
 use std::io::Cursor;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
@@ -288,24 +289,25 @@ impl Game {
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
   pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
-    let mut change = Change::Unchanged;
+    let clearing_until = if let State::Clearing { until, .. } = self.inner.field.state() {
+      Some(*until)
+    } else {
+      None
+    };
+    let (mut change, field_tick) = self.inner.field.tick(now);
 
     match self.inner.field.state() {
-      State::Moving { .. } => (),
-      State::Clearing { until, .. } => {
-        // The game must not be paused while we are clearing. Pausing
-        // should always transition the field to "moving" state.
-        debug_assert!(self.inner.next_tick.is_some());
+      State::Moving { .. } => {
+        if let Some(until) = clearing_until {
+          // The game must not have been paused while we were clearing.
+          // Pausing should always transition the field to "moving"
+          // state.
+          debug_assert!(self.inner.next_tick.is_some());
 
-        if now > *until {
-          self.inner.next_tick = Some(Self::next_tick(*until, self.inner.score.level()));
-          let () = self.inner.field.clear_complete_lines();
-
-          change = Change::Changed;
-        } else {
-          return (change, Tick::At(*until))
+          self.inner.next_tick = Some(Self::next_tick(until, self.inner.score.level()));
         }
       },
+      State::Clearing { .. } => return (change, field_tick),
       State::Colliding { .. } => {
         debug_assert_eq!(self.inner.next_tick, None);
         self.inner.next_tick = None
@@ -345,12 +347,12 @@ impl Game {
       }
     }
 
-    let tick = match self.inner.next_tick {
+    let game_tick = match self.inner.next_tick {
       None => Tick::None,
       Some(next_tick) => Tick::At(next_tick),
     };
 
-    (change, tick)
+    (change, min(field_tick, game_tick))
   }
 
   /// Update the view after the containing window or contained logical
