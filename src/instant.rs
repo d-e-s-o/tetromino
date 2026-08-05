@@ -71,7 +71,7 @@ mod imp {
 
     #[inline]
     fn sub(self, other: Instant) -> Self::Output {
-      Duration::from_secs_f64((self.millis - other.millis) / 1000.0)
+      Duration::try_from_secs_f64((self.millis - other.millis) / 1000.0).unwrap_or(Duration::ZERO)
     }
   }
 
