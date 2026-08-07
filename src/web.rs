@@ -162,6 +162,12 @@ impl StateInner {
           )
           .unwrap();
       },
+      Tick::Now => {
+        let _id = self
+          .window
+          .set_timeout_with_callback(self.tick.as_ref().unchecked_ref())
+          .unwrap();
+      },
     }
   }
 

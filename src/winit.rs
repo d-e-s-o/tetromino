@@ -409,6 +409,7 @@ impl ApplicationHandler for Handler {
       let control_flow = match tick {
         Tick::None => ControlFlow::Wait,
         Tick::At(wait_until) => ControlFlow::WaitUntil(wait_until),
+        Tick::Now => ControlFlow::Poll,
       };
       let () = event_loop.set_control_flow(control_flow);
 
