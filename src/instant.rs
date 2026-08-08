@@ -8,6 +8,7 @@ mod imp {
   use std::ops::Add;
   use std::ops::AddAssign;
   use std::ops::Sub;
+  use std::ops::SubAssign;
   use std::time::Duration;
 
   use wasm_bindgen::prelude::wasm_bindgen;
@@ -41,6 +42,12 @@ mod imp {
       *self - earlier
     }
 
+    /// Subtract a [`Duration`] from this `Instant`.
+    #[inline]
+    pub fn checked_sub(&self, other: Duration) -> Option<Instant> {
+      Some(*self - other)
+    }
+
     /// Retrieve the time stamp represented by this [`Instant`] as
     /// milliseconds.
     #[inline]
@@ -63,6 +70,23 @@ mod imp {
     #[inline]
     fn add_assign(&mut self, other: Duration) {
       self.millis += other.as_secs_f64() * 1000.0;
+    }
+  }
+
+  impl Sub<Duration> for Instant {
+    type Output = Instant;
+
+    #[inline]
+    fn sub(mut self, other: Duration) -> Self::Output {
+      self -= other;
+      self
+    }
+  }
+
+  impl SubAssign<Duration> for Instant {
+    #[inline]
+    fn sub_assign(&mut self, other: Duration) {
+      self.millis -= other.as_secs_f64() * 1000.0;
     }
   }
 

@@ -1,5 +1,6 @@
 Unreleased
 ----------
+- Improved line clearing "animation"
 - Integrated `Renderer` into `Game` type
 
 

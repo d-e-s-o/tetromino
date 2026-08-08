@@ -18,6 +18,7 @@ use crate::Texture;
 use crate::Tick;
 use crate::mode::ColorMode;
 use crate::mode::ColorSet;
+use crate::util::smoothstep;
 
 use super::Fieldlike;
 use super::Matrix;
@@ -74,6 +75,8 @@ pub(super) enum State {
     next_stone: Stone,
     /// The instant at which we are done clearing completed lines.
     until: Instant,
+    /// The overlay color to use.
+    overlay: Color,
     /// The y-range containing completed lines.
     y_range: Range<i16>,
   },
@@ -134,6 +137,7 @@ impl Field {
         next_stone,
         until,
         y_range,
+        ..
       } => {
         debug_assert!(Instant::now() > *until);
         let _removed = self.pieces.remove_complete_lines(y_range.clone());
@@ -185,6 +189,8 @@ impl Field {
               self.state = State::Clearing {
                 next_stone: stone.take(),
                 until: Instant::now() + self.clear_time,
+                // The initial overlay is basically invisible.
+                overlay: Color::black(),
                 y_range,
               };
             }
@@ -290,15 +296,24 @@ impl Field {
   }
 
   pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
-    match &self.state {
-      State::Clearing { until, .. } => {
+    match &mut self.state {
+      State::Clearing { until, overlay, .. } => {
         if now > *until {
           let () = self.clear_complete_lines();
           // NB: The field itself doesn't know when the next tick is,
           //     because it depends on the level etc.
           (Change::Changed, Tick::None)
         } else {
-          (Change::Unchanged, Tick::At(*until))
+          // SANITY: The resulting time will always be representable,
+          //         because we added `clear_time` to construct it.
+          let start = (*until).checked_sub(self.clear_time).unwrap();
+          let max = until.duration_since(start).as_secs_f32();
+          let cur = now.duration_since(start).as_secs_f32();
+          let val = smoothstep(0.0, 255.0, cur / max) as u8;
+          overlay.r = val;
+          overlay.g = val;
+          overlay.b = val;
+          (Change::Changed, Tick::Now)
         }
       },
       State::Moving { .. } | State::Colliding { .. } => (Change::Unchanged, Tick::None),
@@ -339,8 +354,14 @@ impl Field {
   /// Render the Tetris field.
   pub fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
     {
+      let complete_overlay = if let State::Clearing { overlay, .. } = &self.state {
+        Some(*overlay)
+      } else {
+        None
+      };
+
       let _guard = renderer.set_origin(Point::new(WALL_WIDTH, WALL_WIDTH));
-      let () = self.pieces.render(renderer, color_mode);
+      let () = self.pieces.render(renderer, color_mode, complete_overlay);
       let () = self.render_stone(renderer, color_mode);
     }
 
@@ -460,35 +481,40 @@ impl PieceField {
   }
 
   /// Render the already dropped pieces.
-  fn render_pieces(&self, renderer: &Renderer, color_mode: ColorMode) {
+  fn render_pieces(
+    &self,
+    renderer: &Renderer,
+    color_mode: ColorMode,
+    complete_overlay: Option<Color>,
+  ) {
     let _guard = renderer.set_texture(&self.piece);
 
     let mut complete = (-1, false);
-    // By overlaying the piece's color with white we effectively force
-    // it to be white altogether, because adding white to anything
-    // always results in white.
-    let overlay = Color::white();
 
     self
       .matrix
       .iter()
       .filter_map(|(piece, location)| piece.map(|piece| (piece, location)))
       .for_each(|(piece, location)| {
-        if complete.0 != location.y {
-          complete = (location.y, self.line_complete(location.y));
-        }
+        if let Some(overlay) = complete_overlay {
+          if complete.0 != location.y {
+            complete = (location.y, self.line_complete(location.y));
+          }
 
-        if complete.1 {
-          let () = piece.render_with_overlay(renderer, location, color_mode, overlay);
+          if complete.1 {
+            let () = piece.render_with_overlay(renderer, location, color_mode, overlay);
+          } else {
+            let () = piece.render(renderer, location, color_mode);
+          }
         } else {
           let () = piece.render(renderer, location, color_mode);
         }
       })
   }
 
-  fn render(&self, renderer: &Renderer, color_mode: ColorMode) {
+  fn render(&self, renderer: &Renderer, color_mode: ColorMode, complete_overlay: Option<Color>) {
     let () = self.render_back(renderer, color_mode);
-    let () = self.render_pieces(renderer, color_mode);
+    let () = self.render_pieces(renderer, color_mode, complete_overlay);
   }
 }
 
