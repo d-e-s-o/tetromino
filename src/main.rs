@@ -69,7 +69,7 @@ CONFIG:
     },
     _ => {
       let arg = args().next().unwrap();
-      bail!("unexpected argument '{}' found", &arg.to_string_lossy())
+      bail!("unexpected argument '{}' found", arg.to_string_lossy())
     },
   }
 }
