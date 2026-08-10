@@ -588,7 +588,6 @@ mod tests {
 
   use crate::app::Ops as _;
   use crate::game::Config;
-  use crate::gl::Renderer;
   use crate::winit::Window;
 
 
@@ -603,16 +602,12 @@ mod tests {
     let raw_display_handle = display_handle.into();
     let create_window_fn = |attrs| event_loop.create_window(attrs);
     let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
-    let context = window.context();
     let (phys_w, phys_h) = window.size();
     let config = Config::default();
-    let game = Game::with_config(&config, context).unwrap();
-    let renderer = Renderer::new(phys_w, phys_h, game.width(), game.height(), context).unwrap();
+    let game = Game::with_config(phys_w, phys_h, &config, window.context()).unwrap();
 
     let () = b.iter(|| {
-      let renderer = renderer.on_pre_render(window.context());
-      let () = game.render(&renderer);
-      let () = drop(renderer);
+      let () = game.render(window.context());
       let () = window.render_context_mut().swap_buffers();
     });
   }

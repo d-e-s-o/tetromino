@@ -3,7 +3,7 @@
 
 //! A graphical Tetris clone.
 
-#![cfg_attr(feature = "nightly", feature(test))]
+#![cfg_attr(all(feature = "nightly", test), feature(test))]
 
 #[cfg(all(feature = "nightly", test))]
 extern crate test;
