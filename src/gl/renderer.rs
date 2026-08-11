@@ -250,13 +250,6 @@ impl<'ctx> ActiveRenderer<'ctx> {
     self.set_texture(&self.renderer.empty_texture)
   }
 
-  /// Clear the screen using the given color.
-  pub(crate) fn clear_screen(&self, color: (f32, f32, f32)) {
-    let (r, g, b) = color;
-    let () = self.context.set_clear_color(r, g, b, 1.0);
-    let () = self.context.clear(sys::ClearMask::ColorBuffer);
-  }
-
   /// Render a line.
   pub(crate) fn render_line(&self, mut p1: Point<i16>, mut p2: Point<i16>) {
     const VERTEX_COUNT_LINE: usize = 2;

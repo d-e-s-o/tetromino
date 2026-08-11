@@ -13,6 +13,7 @@ use anyhow::Context as _;
 use anyhow::Result;
 
 use xgl::sys;
+use xgl::sys::Gl as _;
 
 use crate::ActiveRenderer;
 use crate::Change;
@@ -90,9 +91,6 @@ struct Inner {
 
 impl Inner {
   fn render(&self, renderer: &ActiveRenderer) {
-    let clear_color = SCREEN_CLEAR_COLOR.select(self.color_mode);
-    let () = renderer.clear_screen(clear_color);
-
     let field_location = Point::new(LEFT_SPACE, BOTTOM_SPACE);
     {
       let _guard = renderer.set_origin(field_location);
@@ -539,6 +537,10 @@ impl Game {
 
   /// Render the game and its components.
   pub fn render(&self, context: &sys::Context) {
+    let (r, g, b) = SCREEN_CLEAR_COLOR.select(self.inner.color_mode);
+    let () = context.set_clear_color(r, g, b, 1.0);
+    let () = context.clear(sys::ClearMask::ColorBuffer);
+
     let renderer = self.renderer.on_pre_render(context);
     let () = self.inner.render(&renderer);
     let () = drop(renderer);
