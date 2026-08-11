@@ -8,9 +8,7 @@ use std::mem::offset_of;
 use std::mem::replace;
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
-use std::ops::Add;
 use std::ops::DerefMut as _;
-use std::ops::Sub;
 use std::rc::Rc;
 
 use anyhow::Context as _;
@@ -30,6 +28,7 @@ use crate::Point;
 use crate::Rect;
 use crate::guard::Guard;
 
+use super::Color;
 use super::Mat4f;
 use super::Texture;
 use super::empty_texture;
@@ -96,140 +95,6 @@ impl Attribs for Vertex {
       },
     ),
   ];
-}
-
-
-#[derive(Clone, Copy, Debug, PartialEq)]
-#[repr(C, packed)]
-pub(crate) struct Color {
-  pub(crate) r: u8,
-  pub(crate) g: u8,
-  pub(crate) b: u8,
-  pub(crate) a: u8,
-}
-
-impl Color {
-  /// A `const` version of `Add::add`.
-  const fn cadd(self, other: Color) -> Self {
-    Self {
-      r: self.r.saturating_add(other.r),
-      g: self.g.saturating_add(other.g),
-      b: self.b.saturating_add(other.b),
-      a: self.a.saturating_add(other.a),
-    }
-  }
-
-  /// A `const` version of `Sub::sub`.
-  pub const fn csub(self, other: Color) -> Self {
-    Self {
-      r: self.r.saturating_sub(other.r),
-      g: self.g.saturating_sub(other.g),
-      b: self.b.saturating_sub(other.b),
-      a: self.a.saturating_sub(other.a),
-    }
-  }
-
-
-  #[inline]
-  pub(crate) const fn black() -> Self {
-    Self {
-      r: u8::MIN,
-      g: u8::MIN,
-      b: u8::MIN,
-      a: u8::MAX,
-    }
-  }
-
-  #[inline]
-  pub(crate) const fn white() -> Self {
-    Self {
-      r: u8::MAX,
-      g: u8::MAX,
-      b: u8::MAX,
-      a: u8::MAX,
-    }
-  }
-
-  #[inline]
-  pub(crate) const fn red() -> Self {
-    Self {
-      r: u8::MAX,
-      g: u8::MIN,
-      b: u8::MIN,
-      a: u8::MAX,
-    }
-  }
-
-  #[inline]
-  pub(crate) const fn green() -> Self {
-    Self {
-      r: u8::MIN,
-      g: u8::MAX,
-      b: u8::MIN,
-      a: u8::MAX,
-    }
-  }
-
-  #[inline]
-  pub(crate) const fn blue() -> Self {
-    Self {
-      r: u8::MIN,
-      g: u8::MIN,
-      b: u8::MAX,
-      a: u8::MAX,
-    }
-  }
-
-  #[inline]
-  pub(crate) const fn yellow() -> Self {
-    Self::red().cadd(Self::green())
-  }
-
-  #[inline]
-  pub(crate) const fn violet() -> Self {
-    Self::red().cadd(Self::blue())
-  }
-
-  #[inline]
-  pub(crate) const fn cyan() -> Self {
-    Self::green().cadd(Self::blue())
-  }
-
-  #[inline]
-  pub(crate) const fn orange() -> Self {
-    Self {
-      r: u8::MAX,
-      g: u8::MAX / 4,
-      b: u8::MIN,
-      a: u8::MAX,
-    }
-  }
-
-  #[inline]
-  pub(crate) const fn gray() -> Self {
-    Self {
-      r: u8::MAX / 4,
-      g: u8::MAX / 4,
-      b: u8::MAX / 4,
-      a: u8::MAX,
-    }
-  }
-}
-
-impl Add<Color> for Color {
-  type Output = Color;
-
-  fn add(self, other: Color) -> Self::Output {
-    self.cadd(other)
-  }
-}
-
-impl Sub<Color> for Color {
-  type Output = Color;
-
-  fn sub(self, other: Color) -> Self::Output {
-    self.csub(other)
-  }
 }
 
 
