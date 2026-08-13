@@ -131,7 +131,7 @@ fn tick(state: &mut State, force_render: bool) {
     }
 
     if change == Change::Changed || change == Change::Resize || force_render {
-      let () = game.render(context.gl_context());
+      let () = game.render();
       let () = context.swap_buffers();
     }
   }

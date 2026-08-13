@@ -24,6 +24,7 @@ use crate::Point;
 use crate::Texture;
 use crate::TextureBuilderExt as _;
 use crate::Tick;
+use crate::gl::ObjectRenderState;
 use crate::gl::Renderer;
 
 use super::Config;
@@ -136,6 +137,8 @@ impl Inner {
 /// A type representing a game of Tetris.
 #[derive(Debug)]
 pub struct Game {
+  /// Our GL render state.
+  state: ObjectRenderState,
   /// The renderer we use.
   renderer: Renderer,
   /// Our inner game state.
@@ -198,10 +201,15 @@ impl Game {
       score,
     };
 
-    let renderer = Renderer::new(phys_w, phys_h, inner.width(), inner.height(), context)
+    let mut state = ObjectRenderState::new(context).context("failed to initialize OpenGL state")?;
+    let renderer = Renderer::new(phys_w, phys_h, inner.width(), inner.height(), &mut state)
       .context("failed to create OpenGL renderer")?;
 
-    let slf = Self { renderer, inner };
+    let slf = Self {
+      state,
+      renderer,
+      inner,
+    };
     Ok(slf)
   }
 
@@ -536,12 +544,12 @@ impl Game {
   }
 
   /// Render the game and its components.
-  pub fn render(&self, context: &sys::Context) {
+  pub fn render(&mut self) {
     let (r, g, b) = SCREEN_CLEAR_COLOR.select(self.inner.color_mode);
-    let () = context.set_clear_color(r, g, b, 1.0);
-    let () = context.clear(sys::ClearMask::ColorBuffer);
+    let () = self.state.set_clear_color(r, g, b, 1.0);
+    let () = self.state.clear(sys::ClearMask::ColorBuffer);
 
-    let renderer = self.renderer.on_pre_render(context);
+    let renderer = self.renderer.on_pre_render(&mut self.state);
     let () = self.inner.render(&renderer);
     let () = drop(renderer);
   }
@@ -604,12 +612,13 @@ mod tests {
     let raw_display_handle = display_handle.into();
     let create_window_fn = |attrs| event_loop.create_window(attrs);
     let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
+    let context = window.context();
     let (phys_w, phys_h) = window.size();
     let config = Config::default();
-    let game = Game::with_config(phys_w, phys_h, &config, window.context()).unwrap();
+    let mut game = Game::with_config(phys_w, phys_h, &config, context).unwrap();
 
     let () = b.iter(|| {
-      let () = game.render(window.context());
+      let () = game.render();
       let () = window.render_context_mut().swap_buffers();
     });
   }

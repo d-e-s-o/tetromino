@@ -7,12 +7,14 @@ mod color;
 //       minor changes) should we ever add more backends.
 mod font;
 mod renderer;
+mod state;
 mod texture;
 
 pub(crate) use color::Color;
 pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Renderer;
+pub(crate) use state::ObjectRenderState;
 pub(crate) use texture::Texture;
 pub(crate) use texture::TextureBuilderExt;
 pub(crate) use texture::empty_texture;

@@ -145,8 +145,7 @@ where
   }
 
   pub fn render(&mut self) {
-    let gl_context = self.ops.context();
-    let () = self.game.render(gl_context);
+    let () = self.game.render();
   }
 
   #[cfg(not(target_arch = "wasm32"))]

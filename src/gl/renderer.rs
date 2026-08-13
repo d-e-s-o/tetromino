@@ -11,11 +11,8 @@ use std::num::NonZeroU32;
 use std::ops::DerefMut as _;
 use std::rc::Rc;
 
-use anyhow::Context as _;
 use anyhow::Result;
 
-use xgl::Program;
-use xgl::Shader;
 use xgl::VertexArray;
 use xgl::VertexBuffer;
 use xgl::sys;
@@ -30,6 +27,7 @@ use crate::guard::Guard;
 
 use super::Color;
 use super::Mat4f;
+use super::ObjectRenderState;
 use super::Texture;
 use super::empty_texture;
 
@@ -396,12 +394,6 @@ pub(crate) struct Renderer {
   modelview: Mat4f,
   /// The projection matrix we use.
   projection: Mat4f,
-  /// The program.
-  _program: Program,
-  /// The location of the model-view matrix uniform.
-  modelview_loc: sys::UniformLocation,
-  /// The location of the projection matrix uniform.
-  projection_loc: sys::UniformLocation,
   /// An "empty" texture.
   empty_texture: Rc<Texture>,
   /// Vertices for rendering the scene.
@@ -418,123 +410,23 @@ impl Renderer {
     phys_h: NonZeroU32,
     logic_w: NonZeroU16,
     logic_h: NonZeroU16,
-    context: &sys::Context,
+    state: &mut ObjectRenderState,
   ) -> Result<Self> {
-    // The name of the model-view matrix uniform in the vertex shader.
-    let modelview_uniform = "modelview";
-    // The name of the projection matrix uniform in the vertex shader.
-    let projection_uniform = "projection";
-    // The name of the texture uniform in the fragment shader.
-    let texture_unit_uniform = "texture_unit";
-    // The name of the color input attribute in the vertex shader.
-    let color_attrib = "color";
-    // The name of the position input attribute in the vertex shader.
-    let position_attrib = "position";
-    // The name of the texture coordinate input attribute in the vertex shader.
-    let texture_coord_attrib = "texture_coord";
-    // The name of the color attribute transferred between vertex and
-    // fragment shader.
-    let color_in_out = "color_in_out";
-    // The name of the texture coordinate attribute transferred between
-    // vertex and fragment shader.
-    let texture_coord_in_out = "texture_coord_in_out";
-
-    let shader_line = line!() + 2;
-    let vertex_shader_file = format!(
-      r#"#version {glsl_version}
-      #line {shader_line}
-
-      uniform mat4 {modelview_uniform};
-      uniform mat4 {projection_uniform};
-
-      in vec3 {position_attrib};
-      in vec4 {color_attrib};
-      in vec2 {texture_coord_attrib};
-
-      out vec4 {color_in_out};
-      out vec2 {texture_coord_in_out};
-
-      void main() {{
-        gl_Position = {projection_uniform} * {modelview_uniform} * vec4({position_attrib}, 1.0);
-
-        {color_in_out} = {color_attrib};
-        {texture_coord_in_out} = {texture_coord_attrib};
-      }}
-      "#,
-      glsl_version = Shader::glsl_version(),
-    );
-
-    let shader_line = line!() + 2;
-    let fragment_shader_file = format!(
-      r#"#version {glsl_version}
-      #line {shader_line}
-
-      precision highp float;
-      precision highp sampler2D;
-
-      uniform sampler2D {texture_unit_uniform};
-
-      in vec4 {color_in_out};
-      in vec2 {texture_coord_in_out};
-
-      out vec4 fragment_color;
-
-      vec3 linear_to_srgb(vec3 color) {{
-        float gamma = 2.2;
-        return pow(color, vec3(1.0 / gamma));
-      }}
-
-      void main() {{
-        fragment_color = texture({texture_unit_uniform}, {texture_coord_in_out}) * {color_in_out};
-        fragment_color.rgb = linear_to_srgb(fragment_color.rgb);
-      }}
-      "#,
-      glsl_version = Shader::glsl_version(),
-    );
-
-    let vertex_shader = Shader::new(sys::ShaderType::Vertex, &vertex_shader_file, context)
-      .context("failed to create vertex shader")?;
-    let fragment_shader = Shader::new(sys::ShaderType::Fragment, &fragment_shader_file, context)
-      .context("failed to create fragment shader")?;
-    let program = Program::new(&[vertex_shader, fragment_shader], context)?;
-    let texture_unit_loc = program.query_uniform_location(texture_unit_uniform)?;
-    let modelview_loc = program.query_uniform_location(modelview_uniform)?;
-    let projection_loc = program.query_uniform_location(projection_uniform)?;
-    let color_idx = program.query_attrib_location(color_attrib)?;
-    let position_idx = program.query_attrib_location(position_attrib)?;
-    let texture_coord_idx = program.query_attrib_location(texture_coord_attrib)?;
-
-    // Bind the program so that we can set uniforms below.
-    let () = program.bind();
-
-    // All our texturing uses a single unit. Activate it.
-    let unit = 0;
-    let () = context.set_active_texture_unit(unit);
-    let () = context.set_uniform_1i(&texture_unit_loc, unit as _);
-
-    let attrib_indices = [
-      (texture_coord_idx, AttribType::Texture),
-      (color_idx, AttribType::Color),
-      (position_idx, AttribType::Position),
-    ];
     let vertices_vbo = VertexBuffer::from_vertices(
       &[Vertex::default(); VERTEX_BUFFER_CAPACITY],
       sys::VertexBufferUsage::DynamicDraw,
-      context,
+      state,
     )?;
-    let vertices_vao = VertexArray::new(&vertices_vbo, &attrib_indices, context)?;
-    let empty_texture = Rc::new(empty_texture(context)?);
+    let vertices_vao = VertexArray::new(&vertices_vbo, state.attrib_indices(), state)?;
+    let empty_texture = Rc::new(empty_texture(state)?);
 
-    let () = Self::set_global_gl_state(context);
+    let () = Self::set_global_gl_state(state);
 
     let slf = Self {
       phys_w,
       phys_h,
       modelview: Mat4f::identity(),
       projection: Self::calculate_view(phys_w, phys_h, logic_w, logic_h),
-      _program: program,
-      modelview_loc,
-      projection_loc,
       empty_texture,
       vertices_vbo,
       vertices_vao,
@@ -624,18 +516,21 @@ impl Renderer {
     self.phys_h = phys_h;
   }
 
-  fn set_states(&self, context: &sys::Context) {
-    let () = context.set_viewport(0, 0, self.phys_w.get() as _, self.phys_h.get() as _);
+  fn set_states(&self, state: &mut ObjectRenderState) {
+    let () = state.set_viewport(0, 0, self.phys_w.get() as _, self.phys_h.get() as _);
 
-    let () = context.set_uniform_matrix(&self.projection_loc, self.projection.as_array());
-    let () = context.set_uniform_matrix(&self.modelview_loc, self.modelview.as_array());
+    let () = state.set_projection(&self.projection);
+    let () = state.set_modelview(&self.modelview);
   }
 
   /// Activate the renderer with the given [`sys::Context`] in
   /// preparation for rendering to take place.
-  pub fn on_pre_render<'ctx>(&'ctx self, context: &'ctx sys::Context) -> ActiveRenderer<'ctx> {
-    let () = self.set_states(context);
+  pub fn on_pre_render<'ctx>(
+    &'ctx self,
+    state: &'ctx mut ObjectRenderState,
+  ) -> ActiveRenderer<'ctx> {
+    let () = self.set_states(state);
 
-    ActiveRenderer::new(context, self)
+    ActiveRenderer::new(state, self)
   }
 }
