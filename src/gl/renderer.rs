@@ -126,7 +126,7 @@ impl TextureState {
   }
 
   /// Make sure that the "active" texture is bound.
-  fn ensure_bound(&mut self) {
+  fn ensure_bound(&mut self, object: &mut ObjectRenderState) {
     match self {
       Self::Bound { .. } => (),
       Self::Unbound {
@@ -138,7 +138,7 @@ impl TextureState {
           .map(|still_bound| !Rc::ptr_eq(unbound, still_bound))
           .unwrap_or(true)
         {
-          let () = unbound.bind();
+          let () = object.set_texture(unbound);
         }
 
         // The clone is reasonably cheap, but also entirely unnecessary at
@@ -174,11 +174,11 @@ impl TextureState {
 
 /// A type directly usable to render graphics primitives.
 #[derive(Debug)]
-pub(crate) struct ActiveRenderer<'ctx> {
-  /// The OpenGL context.
-  context: &'ctx sys::Context,
+pub(crate) struct ActiveRenderer<'state> {
+  /// The GL render state.
+  object: RefCell<&'state mut ObjectRenderState>,
   /// The `Renderer` this object belongs to.
-  renderer: &'ctx Renderer,
+  renderer: &'state Renderer,
   /// The origin relative to which rendering happens.
   origin: Cell<Point<i16>>,
   /// The currently set color.
@@ -191,10 +191,10 @@ pub(crate) struct ActiveRenderer<'ctx> {
   primitive: Cell<sys::Primitive>,
 }
 
-impl<'ctx> ActiveRenderer<'ctx> {
-  fn new(context: &'ctx sys::Context, renderer: &'ctx Renderer) -> Self {
+impl<'state> ActiveRenderer<'state> {
+  fn new(object: &'state mut ObjectRenderState, renderer: &'state Renderer) -> Self {
     Self {
-      context,
+      object: RefCell::new(object),
       renderer,
       origin: Cell::new(Point::default()),
       color: Cell::new(Color::black()),
@@ -363,10 +363,10 @@ impl<'ctx> ActiveRenderer<'ctx> {
     let mut buffer = self.vertices.borrow_mut();
     let size = buffer.len() as _;
     if size > 0 {
-      let () = texture.ensure_bound();
+      let () = texture.ensure_bound(*self.object.borrow_mut());
       let () = self.renderer.vertices_vbo.update(&buffer, 0);
       let () = self.renderer.vertices_vao.bind();
-      let () = self.context.draw_arrays(self.primitive.get(), size);
+      let () = self.object.borrow().draw_arrays(self.primitive.get(), size);
 
       debug_assert!(const { !needs_drop::<Vertex>() });
       // SAFETY: We are strictly decreasing size and our vertices are
@@ -525,10 +525,10 @@ impl Renderer {
 
   /// Activate the renderer with the given [`sys::Context`] in
   /// preparation for rendering to take place.
-  pub fn on_pre_render<'ctx>(
-    &'ctx self,
-    state: &'ctx mut ObjectRenderState,
-  ) -> ActiveRenderer<'ctx> {
+  pub fn on_pre_render<'state>(
+    &'state self,
+    state: &'state mut ObjectRenderState,
+  ) -> ActiveRenderer<'state> {
     let () = self.set_states(state);
 
     ActiveRenderer::new(state, self)

@@ -8,6 +8,7 @@ use anyhow::Result;
 
 use xgl::Program;
 use xgl::Shader;
+use xgl::Texture;
 use xgl::sys;
 use xgl::sys::Gl as _;
 use xgl::vertex::AttribType;
@@ -25,6 +26,8 @@ pub(crate) struct ObjectRenderState {
   modelview_loc: sys::UniformLocation,
   /// The location of the projection matrix uniform.
   projection_loc: sys::UniformLocation,
+  /// The location of the texture unit uniform.
+  texture_unit_loc: sys::UniformLocation,
   /// The attribute indices.
   attrib_indices: [(u32, AttribType); 3],
 }
@@ -118,16 +121,12 @@ impl ObjectRenderState {
     // Bind the program to make sure its in effect subsequently.
     let () = program.bind();
 
-    // All our texturing uses a single unit. Activate it.
-    let unit = 0;
-    let () = context.set_active_texture_unit(unit);
-    let () = context.set_uniform_1i(&texture_unit_loc, unit as _);
-
     let slf = Self {
       context: context.clone(),
       _program: program,
       modelview_loc,
       projection_loc,
+      texture_unit_loc,
       attrib_indices: [
         (color_idx, AttribType::Color),
         (position_idx, AttribType::Position),
@@ -149,6 +148,16 @@ impl ObjectRenderState {
     self
       .context
       .set_uniform_matrix(&self.projection_loc, projection.as_array())
+  }
+
+  pub fn set_texture(&mut self, texture: &Texture) {
+    // All our texturing uses a single unit.
+    let unit = 0;
+    let () = self.context.set_active_texture_unit(unit);
+    let () = texture.bind();
+    let () = self
+      .context
+      .set_uniform_1i(&self.texture_unit_loc, unit as _);
   }
 
   pub fn attrib_indices(&self) -> &[(u32, AttribType)] {
