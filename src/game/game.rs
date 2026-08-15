@@ -27,6 +27,7 @@ use crate::Tick;
 use crate::gl::ObjectRenderState;
 use crate::gl::Renderer;
 
+use super::Camera;
 use super::Config;
 use super::Field;
 use super::MoveResult;
@@ -139,6 +140,8 @@ impl Inner {
 pub struct Game {
   /// Our GL render state.
   state: ObjectRenderState,
+  /// The game's virtual "camera".
+  camera: Camera,
   /// The renderer we use.
   renderer: Renderer,
   /// Our inner game state.
@@ -202,11 +205,12 @@ impl Game {
     };
 
     let mut state = ObjectRenderState::new(context).context("failed to initialize OpenGL state")?;
-    let renderer = Renderer::new(phys_w, phys_h, inner.width(), inner.height(), &mut state)
-      .context("failed to create OpenGL renderer")?;
+    let camera = Camera::new(phys_w, phys_h, inner.width(), inner.height());
+    let renderer = Renderer::new(&mut state).context("failed to create GL renderer")?;
 
     let slf = Self {
       state,
+      camera,
       renderer,
       inner,
     };
@@ -365,7 +369,7 @@ impl Game {
   /// dimensions have changed.
   pub fn update_view(&mut self, phys_w: Option<NonZeroU32>, phys_h: Option<NonZeroU32>) {
     self
-      .renderer
+      .camera
       .update_view(phys_w, phys_h, self.inner.width(), self.inner.height())
   }
 
@@ -549,9 +553,11 @@ impl Game {
     let () = self.state.set_clear_color(r, g, b, 1.0);
     let () = self.state.clear(sys::ClearMask::ColorBuffer);
 
-    let renderer = self.renderer.on_pre_render(&mut self.state);
-    let () = self.inner.render(&renderer);
-    let () = drop(renderer);
+    let () = self.camera.render_scene(&mut self.state, |object| {
+      let renderer = self.renderer.on_pre_render(object);
+      let () = self.inner.render(&renderer);
+      let () = drop(renderer);
+    });
   }
 
   /// Convert the game (back) into a [`Config`].

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod ai;
+mod camera;
 mod config;
 mod data;
 mod factory;
@@ -16,6 +17,7 @@ mod score;
 mod stone;
 mod stonelike;
 
+use camera::Camera;
 use factory::StoneFactory;
 use field::Field;
 use field::MoveResult;
