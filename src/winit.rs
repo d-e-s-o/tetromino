@@ -58,7 +58,6 @@ use crate::Config;
 use crate::Instant;
 use crate::Tick;
 use crate::app::App as AppT;
-use crate::app::Ops;
 use crate::game::Game;
 use crate::keys::Config as KeysConfig;
 use crate::keys::Keys;
@@ -252,7 +251,7 @@ impl Window {
 
   /// Retrieve a reference to the window's render context.
   #[inline]
-  fn render_context(&self) -> &Context {
+  pub(crate) fn render_context(&self) -> &Context {
     &self.context
   }
 
@@ -281,13 +280,6 @@ impl Window {
   #[inline]
   fn request_redraw(&self) {
     self.window.request_redraw()
-  }
-}
-
-impl Ops for Window {
-  #[inline]
-  fn context(&self) -> &sys::Context {
-    self.context.gl_context()
   }
 }
 

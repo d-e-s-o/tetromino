@@ -34,7 +34,6 @@ use crate::Change;
 use crate::Instant;
 use crate::Tick;
 use crate::app::App;
-use crate::app::Ops;
 use crate::game;
 use crate::game::Game;
 use crate::keys;
@@ -79,13 +78,6 @@ fn window_size(window: &Window) -> (NonZeroU32, NonZeroU32) {
   let width = NonZeroU32::new(if width != 0 { width } else { 1 }).unwrap();
   let height = NonZeroU32::new(if height != 0 { height } else { 1 }).unwrap();
   (width, height)
-}
-
-
-impl Ops for OpsState {
-  fn context(&self) -> &sys::Context {
-    &self.2
-  }
 }
 
 

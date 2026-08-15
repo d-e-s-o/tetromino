@@ -4,8 +4,6 @@
 use std::cmp::min;
 use std::num::NonZeroU32;
 
-use xgl::sys;
-
 use crate::Change;
 use crate::Instant;
 use crate::Tick;
@@ -18,12 +16,6 @@ use crate::keys::Keys as KeysT;
 type Keys<K> = KeysT<K, Instant>;
 
 
-/// An abstraction over operations provided by the windowing system (or
-/// similar), as required by the application.
-pub(crate) trait Ops {
-  fn context(&self) -> &sys::Context;
-}
-
 /// Our application's state.
 pub(crate) struct App<O> {
   ops: O,
@@ -32,10 +24,7 @@ pub(crate) struct App<O> {
   was_paused: bool,
 }
 
-impl<O> App<O>
-where
-  O: Ops,
-{
+impl<O> App<O> {
   pub fn new(ops: O, game: Game, keys: Keys<Key>) -> Self {
     let was_paused = game.is_paused();
     Self {

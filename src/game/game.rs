@@ -596,7 +596,6 @@ mod tests {
   use winit::platform::x11::EventLoopBuilderExtX11 as _;
   use winit::raw_window_handle::HasDisplayHandle as _;
 
-  use crate::app::Ops as _;
   use crate::game::Config;
   use crate::winit::Window;
 
@@ -612,7 +611,7 @@ mod tests {
     let raw_display_handle = display_handle.into();
     let create_window_fn = |attrs| event_loop.create_window(attrs);
     let mut window = Window::new(raw_display_handle, create_window_fn).unwrap();
-    let context = window.context();
+    let context = window.render_context().gl_context();
     let (phys_w, phys_h) = window.size();
     let config = Config::default();
     let mut game = Game::with_config(phys_w, phys_h, &config, context).unwrap();
