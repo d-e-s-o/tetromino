@@ -37,7 +37,7 @@ use super::Stone;
 use super::StoneFactory;
 use super::ai;
 use super::data;
-use super::field::State;
+use super::field::State as FieldState;
 
 
 /// The color set used when clearing the screen.
@@ -299,7 +299,7 @@ impl Game {
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
   pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
-    let clearing_until = if let State::Clearing { until, .. } = self.inner.field.state() {
+    let clearing_until = if let FieldState::Clearing { until, .. } = self.inner.field.state() {
       Some(*until)
     } else {
       None
@@ -307,7 +307,7 @@ impl Game {
     let (mut change, field_tick) = self.inner.field.tick(now);
 
     match self.inner.field.state() {
-      State::Moving { .. } => {
+      FieldState::Moving { .. } => {
         if let Some(until) = clearing_until {
           // The game must not have been paused while we were clearing.
           // Pausing should always transition the field to "moving"
@@ -317,8 +317,8 @@ impl Game {
           self.inner.next_tick = Some(Self::next_tick(until, self.inner.score.level()));
         }
       },
-      State::Clearing { .. } => return (change, field_tick),
-      State::Colliding { .. } => {
+      FieldState::Clearing { .. } => return (change, field_tick),
+      FieldState::Colliding { .. } => {
         debug_assert_eq!(self.inner.next_tick, None);
         self.inner.next_tick = None
       },
@@ -403,7 +403,7 @@ impl Game {
   /// Pause or unpause the game.
   #[inline]
   pub(crate) fn pause(&mut self, pause: bool) {
-    if !matches!(self.inner.field.state(), State::Colliding { .. }) {
+    if !matches!(self.inner.field.state(), FieldState::Colliding { .. }) {
       if pause {
         // Note that strictly speaking the field could change state here
         // (if it was "clearing") and, conceptually, we should cause a
