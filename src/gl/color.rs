@@ -5,6 +5,13 @@ use std::ops::Add;
 use std::ops::Sub;
 
 
+pub(crate) const GLSL_LINEAR_TO_SRGB: &str = r#"
+vec3 linear_to_srgb(vec3 color) {
+  return pow(color, vec3(1.0 / 2.2));
+}
+"#;
+
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(C, packed)]
 pub(crate) struct Color {

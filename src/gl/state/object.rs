@@ -13,6 +13,7 @@ use xgl::sys;
 use xgl::sys::Gl as _;
 use xgl::vertex::AttribType;
 
+use crate::gl::GLSL_LINEAR_TO_SRGB;
 use crate::gl::Mat4f;
 
 
@@ -93,10 +94,7 @@ impl ObjectRenderState {
 
       out vec4 fragment_color;
 
-      vec3 linear_to_srgb(vec3 color) {{
-        float gamma = 2.2;
-        return pow(color, vec3(1.0 / gamma));
-      }}
+      {GLSL_LINEAR_TO_SRGB}
 
       void main() {{
         fragment_color = texture({texture_unit_uniform}, {texture_coord_in_out}) * {color_in_out};
