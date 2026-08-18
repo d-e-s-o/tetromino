@@ -22,7 +22,7 @@ pub(crate) struct ObjectRenderState {
   /// The OpenGL context.
   context: sys::Context,
   /// The program.
-  _program: Program,
+  program: Program,
   /// The location of the model-view matrix uniform.
   modelview_loc: sys::UniformLocation,
   /// The location of the projection matrix uniform.
@@ -121,7 +121,7 @@ impl ObjectRenderState {
 
     let slf = Self {
       context: context.clone(),
-      _program: program,
+      program,
       modelview_loc,
       projection_loc,
       texture_unit_loc,
@@ -132,6 +132,12 @@ impl ObjectRenderState {
       ],
     };
     Ok(slf)
+  }
+
+  /// Activate the state and the associated GL program.
+  #[inline]
+  pub fn activate(&mut self) {
+    self.program.bind()
   }
 
   #[inline]

@@ -16,6 +16,7 @@ pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;
 pub(crate) use renderer::Renderer;
 pub(crate) use state::ObjectRenderState;
+pub(crate) use state::State;
 pub(crate) use texture::Texture;
 pub(crate) use texture::TextureBuilderExt;
 pub(crate) use texture::empty_texture;
