@@ -24,8 +24,8 @@ use crate::Point;
 use crate::Texture;
 use crate::TextureBuilderExt as _;
 use crate::Tick;
-use crate::gl::ObjectRenderState;
 use crate::gl::Renderer;
+use crate::gl::State;
 
 use super::Camera;
 use super::Config;
@@ -139,7 +139,7 @@ impl Inner {
 #[derive(Debug)]
 pub struct Game {
   /// Our GL render state.
-  state: ObjectRenderState,
+  state: State,
   /// The game's virtual "camera".
   camera: Camera,
   /// The renderer we use.
@@ -204,9 +204,10 @@ impl Game {
       score,
     };
 
-    let mut state = ObjectRenderState::new(context).context("failed to initialize OpenGL state")?;
+    let mut state = State::new(context).context("failed to initialize GL state")?;
+    let object = state.object();
     let camera = Camera::new(phys_w, phys_h, inner.width(), inner.height());
-    let renderer = Renderer::new(&mut state).context("failed to create GL renderer")?;
+    let renderer = Renderer::new(object).context("failed to create GL renderer")?;
 
     let slf = Self {
       state,
@@ -553,7 +554,8 @@ impl Game {
     let () = self.state.set_clear_color(r, g, b, 1.0);
     let () = self.state.clear(sys::ClearMask::ColorBuffer);
 
-    let () = self.camera.render_scene(&mut self.state, |object| {
+    let object = self.state.object();
+    let () = self.camera.render_scene(object, |object| {
       let renderer = self.renderer.on_pre_render(object);
       let () = self.inner.render(&renderer);
       let () = drop(renderer);

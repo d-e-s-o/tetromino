@@ -34,7 +34,7 @@ pub(crate) struct ObjectRenderState {
 }
 
 impl ObjectRenderState {
-  pub fn new(context: &sys::Context) -> Result<Self> {
+  pub(super) fn new(context: &sys::Context) -> Result<Self> {
     // The name of the model-view matrix uniform in the vertex shader.
     let modelview_uniform = "modelview";
     // The name of the projection matrix uniform in the vertex shader.
@@ -115,9 +115,6 @@ impl ObjectRenderState {
     let color_idx = program.query_attrib_location(color_attrib)?;
     let position_idx = program.query_attrib_location(position_attrib)?;
     let texture_coord_idx = program.query_attrib_location(texture_coord_attrib)?;
-
-    // Bind the program to make sure its in effect subsequently.
-    let () = program.bind();
 
     let slf = Self {
       context: context.clone(),
