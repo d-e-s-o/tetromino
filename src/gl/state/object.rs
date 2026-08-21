@@ -29,6 +29,8 @@ pub(crate) struct ObjectRenderState {
   projection_loc: sys::UniformLocation,
   /// The location of the texture unit uniform.
   texture_unit_loc: sys::UniformLocation,
+  /// The location of the linear colors uniform.
+  linear_colors_loc: sys::UniformLocation,
   /// The attribute indices.
   attrib_indices: [(u32, AttribType); 3],
 }
@@ -41,6 +43,8 @@ impl ObjectRenderState {
     let projection_uniform = "projection";
     // The name of the texture uniform in the fragment shader.
     let texture_unit_uniform = "texture_unit";
+    // The name of the linear colors uniform in the fragment shader.
+    let linear_colors_uniform = "linear_colors";
     // The name of the color input attribute in the vertex shader.
     let color_attrib = "color";
     // The name of the position input attribute in the vertex shader.
@@ -88,6 +92,7 @@ impl ObjectRenderState {
       precision highp sampler2D;
 
       uniform sampler2D {texture_unit_uniform};
+      uniform bool {linear_colors_uniform};
 
       in vec4 {color_in_out};
       in vec2 {texture_coord_in_out};
@@ -98,7 +103,9 @@ impl ObjectRenderState {
 
       void main() {{
         fragment_color = texture({texture_unit_uniform}, {texture_coord_in_out}) * {color_in_out};
-        fragment_color.rgb = linear_to_srgb(fragment_color.rgb);
+        if (!{linear_colors_uniform}) {{
+          fragment_color.rgb = linear_to_srgb(fragment_color.rgb);
+        }}
       }}
       "#,
       glsl_version = Shader::glsl_version(),
@@ -112,6 +119,7 @@ impl ObjectRenderState {
     let texture_unit_loc = program.query_uniform_location(texture_unit_uniform)?;
     let modelview_loc = program.query_uniform_location(modelview_uniform)?;
     let projection_loc = program.query_uniform_location(projection_uniform)?;
+    let linear_colors_loc = program.query_uniform_location(linear_colors_uniform)?;
     let color_idx = program.query_attrib_location(color_attrib)?;
     let position_idx = program.query_attrib_location(position_attrib)?;
     let texture_coord_idx = program.query_attrib_location(texture_coord_attrib)?;
@@ -122,6 +130,7 @@ impl ObjectRenderState {
       modelview_loc,
       projection_loc,
       texture_unit_loc,
+      linear_colors_loc,
       attrib_indices: [
         (color_idx, AttribType::Color),
         (position_idx, AttribType::Position),
@@ -159,6 +168,14 @@ impl ObjectRenderState {
     let () = self
       .context
       .set_uniform_1i(&self.texture_unit_loc, unit as _);
+  }
+
+  /// Enable/disable the usage of linear coloring (i.e., controlling
+  /// sRGB encoding) of the produced output.
+  pub fn set_linear_colors(&mut self, linear_colors: bool) {
+    let () = self
+      .context
+      .set_uniform_1ui(&self.linear_colors_loc, linear_colors as _);
   }
 
   pub fn attrib_indices(&self) -> &[(u32, AttribType)] {
