@@ -7,12 +7,14 @@ use anyhow::Result;
 
 use xgl::sys;
 
+use super::blur::BlurRenderState;
 use super::object::ObjectRenderState;
 
 
 /// An enumeration describing the currently active state.
 #[derive(Clone, Copy, Debug)]
 enum Active {
+  Blur,
   Object,
 }
 
@@ -24,6 +26,8 @@ pub(crate) struct State {
   context: sys::Context,
   /// The currently active state.
   active: Active,
+  /// The blur rendering state.
+  blur: BlurRenderState,
   /// The general object rendering state.
   object: ObjectRenderState,
 }
@@ -32,6 +36,7 @@ impl State {
   pub(crate) fn new(context: &sys::Context) -> Result<Self> {
     let mut slf = Self {
       active: Active::Object,
+      blur: BlurRenderState::new(context)?,
       object: ObjectRenderState::new(context)?,
       context: context.clone(),
     };
@@ -39,6 +44,17 @@ impl State {
     let () = slf.object.activate();
 
     Ok(slf)
+  }
+
+  pub fn blur(&mut self) -> &mut BlurRenderState {
+    match self.active {
+      Active::Blur => &mut self.blur,
+      _ => {
+        let () = self.blur.activate();
+        self.active = Active::Blur;
+        &mut self.blur
+      },
+    }
   }
 
   pub fn object(&mut self) -> &mut ObjectRenderState {
