@@ -4,6 +4,7 @@
 use std::num::NonZeroU16;
 use std::num::NonZeroU32;
 
+use xgl::sys;
 use xgl::sys::Gl as _;
 
 use crate::gl::Mat4f;
@@ -103,11 +104,15 @@ impl Camera {
     self.phys_h = phys_h;
   }
 
+  /// Set the viewport to the window's dimensions.
+  pub fn set_viewport(&self, context: &sys::Context) {
+    let () = context.set_viewport(0, 0, self.phys_w.get() as _, self.phys_h.get() as _);
+  }
+
   pub fn render_scene<F>(&self, state: &mut ObjectRenderState, f: F)
   where
     F: FnOnce(&mut ObjectRenderState),
   {
-    let () = state.set_viewport(0, 0, self.phys_w.get() as _, self.phys_h.get() as _);
     let () = state.set_projection(&self.projection);
     let () = f(state);
   }

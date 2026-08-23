@@ -350,7 +350,7 @@ impl ApplicationHandler for Handler {
       let change = match event {
         WindowEvent::Focused(focused) => {
           let () = app.on_focus_event(focused);
-          Change::Unchanged
+          Change::Changed
         },
         WindowEvent::CloseRequested => {
           let () = event_loop.exit();

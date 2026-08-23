@@ -27,6 +27,7 @@ use crate::Tick;
 use crate::gl::Renderer;
 use crate::gl::State;
 
+use super::Blur;
 use super::Camera;
 use super::Config;
 use super::Field;
@@ -85,6 +86,9 @@ struct Inner {
   score: Score,
   /// The AI playing the game, if any.
   ai: Option<ai::AI>,
+  /// The state we use for blurring the background when the game is
+  /// paused.
+  blur: Option<Blur>,
   /// The time of the next tick, i.e., the next downward movement.
   ///
   /// The attribute is `None` if the game is not running (e.g., paused).
@@ -200,6 +204,7 @@ impl Game {
       field,
       preview,
       ai,
+      blur: None,
       next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
     };
@@ -414,7 +419,10 @@ impl Game {
         // leave them there for the duration of the pause.
         let () = self.inner.field.on_pause();
         let _next_tick = self.inner.next_tick.take();
+
+        self.inner.blur = Blur::new(&self.state).ok();
       } else {
+        let _blur = self.inner.blur.take();
         let _next_tick = self
           .inner
           .next_tick
@@ -550,16 +558,31 @@ impl Game {
 
   /// Render the game and its components.
   pub fn render(&mut self) {
-    let (r, g, b) = SCREEN_CLEAR_COLOR.select(self.inner.color_mode);
-    let () = self.state.set_clear_color(r, g, b, 1.0);
-    let () = self.state.clear(sys::ClearMask::ColorBuffer);
+    let clear_color = SCREEN_CLEAR_COLOR.select(self.inner.color_mode);
 
-    let object = self.state.object();
-    let () = self.camera.render_scene(object, |object| {
-      let renderer = self.renderer.on_pre_render(object);
-      let () = self.inner.render(&renderer);
-      let () = drop(renderer);
-    });
+    if let Some(blur) = &self.inner.blur {
+      let state = self.state.object();
+      let () = blur.render_scene(state, clear_color, |object| {
+        let () = self.camera.render_scene(object, |object| {
+          let renderer = self.renderer.on_pre_render(object);
+          let () = self.inner.render(&renderer);
+        });
+      });
+
+      let state = self.state.blur();
+      let () = self.camera.set_viewport(state);
+      let () = blur.render_blur(state);
+    } else {
+      let state = self.state.object();
+      let () = self.camera.set_viewport(state);
+      let () = self.camera.render_scene(state, |object| {
+        let (r, g, b) = clear_color;
+        let () = object.set_clear_color(r, g, b, 1.0);
+        let () = object.clear(sys::ClearMask::ColorBuffer);
+        let renderer = self.renderer.on_pre_render(object);
+        let () = self.inner.render(&renderer);
+      });
+    }
   }
 
   /// Convert the game (back) into a [`Config`].

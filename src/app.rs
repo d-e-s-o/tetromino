@@ -101,7 +101,7 @@ impl<O> App<O> {
       k if *k == keys::KEY_PAUSE => {
         let () = game.pause(!game.is_paused());
         *repeat = KeyRepeat::Disabled;
-        Change::Unchanged
+        Change::Changed
       },
       k if *k == keys::KEY_MODE => {
         let () = game.toggle_color_mode();

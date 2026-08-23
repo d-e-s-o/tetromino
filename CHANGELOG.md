@@ -1,5 +1,6 @@
 Unreleased
 ----------
+- Added screen blur when game is paused
 - Improved line clearing "animation"
 - Integrated `Renderer` into `Game` type
 
