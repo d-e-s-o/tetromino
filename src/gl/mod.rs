@@ -11,6 +11,7 @@ mod state;
 mod texture;
 
 pub(crate) use color::Color;
+pub(crate) use color::ColorExt;
 pub(crate) use color::GLSL_LINEAR_TO_SRGB;
 pub(crate) use font::Font;
 pub(crate) use renderer::ActiveRenderer;

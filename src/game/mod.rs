@@ -1,7 +1,8 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 mod ai;
+mod blur;
 mod camera;
 mod config;
 mod data;
@@ -17,6 +18,7 @@ mod score;
 mod stone;
 mod stonelike;
 
+use blur::Blur;
 use camera::Camera;
 use factory::StoneFactory;
 use field::Field;

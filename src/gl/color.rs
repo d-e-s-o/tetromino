@@ -5,6 +5,8 @@ use std::ops::Add;
 use std::ops::Sub;
 
 
+const SRGB_GAMMA: f32 = 2.2;
+
 pub(crate) const GLSL_LINEAR_TO_SRGB: &str = r#"
 vec3 linear_to_srgb(vec3 color) {
   return pow(color, vec3(1.0 / 2.2));
@@ -142,5 +144,20 @@ impl Sub<Color> for Color {
 
   fn sub(self, other: Color) -> Self::Output {
     self.csub(other)
+  }
+}
+
+
+pub(crate) trait ColorExt {
+  /// Encode the color (assumed to be in sRGB space) into linear color
+  /// space.
+  fn to_linear(self) -> Self;
+}
+
+impl ColorExt for (f32, f32, f32) {
+  fn to_linear(self) -> Self {
+    let (r, g, b) = self;
+
+    (r.powf(SRGB_GAMMA), g.powf(SRGB_GAMMA), b.powf(SRGB_GAMMA))
   }
 }
