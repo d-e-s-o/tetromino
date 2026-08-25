@@ -24,8 +24,8 @@ use crate::Point;
 use crate::Texture;
 use crate::TextureBuilderExt as _;
 use crate::Tick;
+use crate::gl;
 use crate::gl::Renderer;
-use crate::gl::State;
 
 use super::Blur;
 use super::Camera;
@@ -143,7 +143,7 @@ impl Inner {
 #[derive(Debug)]
 pub struct Game {
   /// Our GL render state.
-  state: State,
+  gl_state: gl::State,
   /// The game's virtual "camera".
   camera: Camera,
   /// The renderer we use.
@@ -209,13 +209,13 @@ impl Game {
       score,
     };
 
-    let mut state = State::new(context).context("failed to initialize GL state")?;
-    let object = state.object();
+    let mut gl_state = gl::State::new(context).context("failed to initialize GL state")?;
+    let object = gl_state.object();
     let camera = Camera::new(phys_w, phys_h, inner.width(), inner.height());
     let renderer = Renderer::new(object).context("failed to create GL renderer")?;
 
     let slf = Self {
-      state,
+      gl_state,
       camera,
       renderer,
       inner,
@@ -420,7 +420,7 @@ impl Game {
         let () = self.inner.field.on_pause();
         let _next_tick = self.inner.next_tick.take();
 
-        self.inner.blur = Blur::new(&self.state).ok();
+        self.inner.blur = Blur::new(&self.gl_state).ok();
       } else {
         let _blur = self.inner.blur.take();
         let _next_tick = self
@@ -561,21 +561,21 @@ impl Game {
     let clear_color = SCREEN_CLEAR_COLOR.select(self.inner.color_mode);
 
     if let Some(blur) = &self.inner.blur {
-      let state = self.state.object();
-      let () = blur.render_scene(state, clear_color, |object| {
+      let gl_state = self.gl_state.object();
+      let () = blur.render_scene(gl_state, clear_color, |object| {
         let () = self.camera.render_scene(object, |object| {
           let renderer = self.renderer.on_pre_render(object);
           let () = self.inner.render(&renderer);
         });
       });
 
-      let state = self.state.blur();
-      let () = self.camera.set_viewport(state);
-      let () = blur.render_blur(state);
+      let gl_state = self.gl_state.blur();
+      let () = self.camera.set_viewport(gl_state);
+      let () = blur.render_blur(gl_state);
     } else {
-      let state = self.state.object();
-      let () = self.camera.set_viewport(state);
-      let () = self.camera.render_scene(state, |object| {
+      let gl_state = self.gl_state.object();
+      let () = self.camera.set_viewport(gl_state);
+      let () = self.camera.render_scene(gl_state, |object| {
         let (r, g, b) = clear_color;
         let () = object.set_clear_color(r, g, b, 1.0);
         let () = object.clear(sys::ClearMask::ColorBuffer);
