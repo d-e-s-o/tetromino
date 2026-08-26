@@ -74,8 +74,25 @@ const PREVIEW_SCORE_SPACE: i16 = 1;
 const CLEAR_TIME: Duration = Duration::from_millis(200);
 
 
+/// The state the [`Game`] is in.
+#[derive(Debug)]
+enum State {
+  Running {
+    /// The time of the next tick, i.e., the next downward movement.
+    next_tick: Instant,
+  },
+  Paused {
+    /// The state we use for blurring the background.
+    blur: Option<Blur>,
+  },
+  Over,
+}
+
+
 #[derive(Debug)]
 struct Inner {
+  /// The game's state.
+  state: State,
   /// The color mode in use.
   color_mode: ColorMode,
   /// The Tetris field.
@@ -86,13 +103,6 @@ struct Inner {
   score: Score,
   /// The AI playing the game, if any.
   ai: Option<ai::AI>,
-  /// The state we use for blurring the background when the game is
-  /// paused.
-  blur: Option<Blur>,
-  /// The time of the next tick, i.e., the next downward movement.
-  ///
-  /// The attribute is `None` if the game is not running (e.g., paused).
-  next_tick: Option<Instant>,
 }
 
 impl Inner {
@@ -189,6 +199,13 @@ impl Game {
 
     let score = Score::new(config.start_level, config.lines_for_level, piece);
 
+    let state = match field.state() {
+      FieldState::Moving { .. } | FieldState::Clearing { .. } => State::Running {
+        next_tick: Self::next_tick(Instant::now(), score.level()),
+      },
+      FieldState::Colliding { .. } => State::Over,
+    };
+
     let ai = if config.enable_ai {
       Self::create_ai(&field, &preview)
     } else {
@@ -196,6 +213,7 @@ impl Game {
     };
 
     let inner = Inner {
+      state,
       color_mode: if config.enable_dark_mode {
         ColorMode::Dark
       } else {
@@ -204,8 +222,6 @@ impl Game {
       field,
       preview,
       ai,
-      blur: None,
-      next_tick: Some(Self::next_tick(Instant::now(), score.level())),
       score,
     };
 
@@ -305,6 +321,11 @@ impl Game {
   /// This includes moving the currently active stone according to the
   /// elapsed time since the last update.
   pub fn tick(&mut self, now: Instant) -> (Change, Tick) {
+    let next_tick = match &mut self.inner.state {
+      State::Running { next_tick } => next_tick,
+      State::Paused { .. } | State::Over => return (Change::Unchanged, Tick::None),
+    };
+
     let clearing_until = if let FieldState::Clearing { until, .. } = self.inner.field.state() {
       Some(*until)
     } else {
@@ -315,22 +336,17 @@ impl Game {
     match self.inner.field.state() {
       FieldState::Moving { .. } => {
         if let Some(until) = clearing_until {
-          // The game must not have been paused while we were clearing.
-          // Pausing should always transition the field to "moving"
-          // state.
-          debug_assert!(self.inner.next_tick.is_some());
-
-          self.inner.next_tick = Some(Self::next_tick(until, self.inner.score.level()));
+          *next_tick = Self::next_tick(until, self.inner.score.level());
         }
       },
       FieldState::Clearing { .. } => return (change, field_tick),
       FieldState::Colliding { .. } => {
-        debug_assert_eq!(self.inner.next_tick, None);
-        self.inner.next_tick = None
+        let () = self.set_game_over();
+        return (Change::Unchanged, Tick::None)
       },
     }
 
-    while let Some(next_tick) = &mut self.inner.next_tick {
+    loop {
       change |= Self::ai_handle_regular_move(&mut self.inner.ai, &mut self.inner.field);
 
       if now >= *next_tick {
@@ -352,8 +368,8 @@ impl Game {
             );
           },
           MoveResult::Conflict => {
-            let () = self.end();
-            break
+            let () = self.set_game_over();
+            return (change, Tick::None)
           },
         }
 
@@ -363,11 +379,7 @@ impl Game {
       }
     }
 
-    let game_tick = match self.inner.next_tick {
-      None => Tick::None,
-      Some(next_tick) => Tick::At(next_tick),
-    };
-
+    let game_tick = Tick::At(*next_tick);
     (change, min(field_tick, game_tick))
   }
 
@@ -382,21 +394,25 @@ impl Game {
   /// Restart the game.
   pub fn restart(&mut self) -> Change {
     let change = self.inner.score.reset();
+
     let () = if self.inner.field.reset() {
       if self.inner.ai.is_some() {
         self.inner.ai = Self::create_ai(&self.inner.field, &self.inner.preview);
       }
-      self.inner.next_tick = Some(Self::next_tick(Instant::now(), self.inner.score.level()));
+      self.inner.state = State::Running {
+        next_tick: Self::next_tick(Instant::now(), self.inner.score.level()),
+      };
     } else {
-      self.end()
+      self.set_game_over()
     };
 
     change
   }
 
-  /// End the current game.
-  fn end(&mut self) {
-    self.inner.next_tick = None;
+  /// End the current game, setting `state` to [`State::Over`].
+  fn set_game_over(&mut self) {
+    debug_assert!(!matches!(self.inner.state, State::Over));
+    self.inner.state = State::Over;
 
     println!(
       "{} points @ level {}; total {} lines cleared (game over)",
@@ -409,8 +425,8 @@ impl Game {
   /// Pause or unpause the game.
   #[inline]
   pub(crate) fn pause(&mut self, pause: bool) {
-    if !matches!(self.inner.field.state(), FieldState::Colliding { .. }) {
-      if pause {
+    match &self.inner.state {
+      State::Running { .. } if pause => {
         // Note that strictly speaking the field could change state here
         // (if it was "clearing") and, conceptually, we should cause a
         // redraw (i.e., by returning `Change::Changed`. Practically,
@@ -418,23 +434,27 @@ impl Game {
         // eagerly remove cleared lines and it just makes more sense to
         // leave them there for the duration of the pause.
         let () = self.inner.field.on_pause();
-        let _next_tick = self.inner.next_tick.take();
-
-        self.inner.blur = Blur::new(&self.gl_state).ok();
-      } else {
-        let _blur = self.inner.blur.take();
-        let _next_tick = self
-          .inner
-          .next_tick
-          .replace(Self::next_tick(Instant::now(), self.inner.score.level()));
-      }
+        self.inner.state = State::Paused {
+          blur: Blur::new(&self.gl_state).ok(),
+        };
+      },
+      State::Paused { .. } if !pause => {
+        self.inner.state = State::Running {
+          next_tick: Self::next_tick(Instant::now(), self.inner.score.level()),
+        }
+      },
+      State::Over | State::Paused { .. } | State::Running { .. } => (),
     }
   }
 
   /// Inquire whether the game is currently paused.
+  ///
+  /// Note that this method truly only returns `true` when the game is
+  /// paused, and not just when it isn't running (e.g., because it is
+  /// over).
   #[inline]
   pub(crate) fn is_paused(&self) -> bool {
-    self.inner.next_tick.is_none()
+    matches!(&self.inner.state, State::Paused { .. })
   }
 
   /// Enable or disable auto-playing of the game.
@@ -477,7 +497,7 @@ impl Game {
   /// playing.
   #[inline]
   fn accepts_input(&self) -> bool {
-    self.inner.next_tick.is_some() && !self.is_auto_playing()
+    matches!(self.inner.state, State::Running { .. }) && !self.is_auto_playing()
   }
 
   #[inline]
@@ -490,7 +510,7 @@ impl Game {
           change |= Self::handle_merged_lines(&mut self.inner.score, lines);
         },
         MoveResult::Conflict => {
-          let () = self.end();
+          let () = self.set_game_over();
         },
       }
 
@@ -510,7 +530,7 @@ impl Game {
           change |= Self::handle_merged_lines(&mut self.inner.score, lines);
         },
         MoveResult::Conflict => {
-          let () = self.end();
+          let () = self.set_game_over();
         },
       }
 
@@ -560,28 +580,31 @@ impl Game {
   pub fn render(&mut self) {
     let clear_color = SCREEN_CLEAR_COLOR.select(self.inner.color_mode);
 
-    if let Some(blur) = &self.inner.blur {
-      let gl_state = self.gl_state.object();
-      let () = blur.render_scene(gl_state, clear_color, |object| {
-        let () = self.camera.render_scene(object, |object| {
+    match &self.inner.state {
+      State::Paused { blur: Some(blur) } => {
+        let gl_state = self.gl_state.object();
+        let () = blur.render_scene(gl_state, clear_color, |object| {
+          let () = self.camera.render_scene(object, |object| {
+            let renderer = self.renderer.on_pre_render(object);
+            let () = self.inner.render(&renderer);
+          });
+        });
+
+        let gl_state = self.gl_state.blur();
+        let () = self.camera.set_viewport(gl_state);
+        let () = blur.render_blur(gl_state);
+      },
+      State::Running { .. } | State::Paused { blur: None } | State::Over => {
+        let gl_state = self.gl_state.object();
+        let () = self.camera.set_viewport(gl_state);
+        let () = self.camera.render_scene(gl_state, |object| {
+          let (r, g, b) = clear_color;
+          let () = object.set_clear_color(r, g, b, 1.0);
+          let () = object.clear(sys::ClearMask::ColorBuffer);
           let renderer = self.renderer.on_pre_render(object);
           let () = self.inner.render(&renderer);
         });
-      });
-
-      let gl_state = self.gl_state.blur();
-      let () = self.camera.set_viewport(gl_state);
-      let () = blur.render_blur(gl_state);
-    } else {
-      let gl_state = self.gl_state.object();
-      let () = self.camera.set_viewport(gl_state);
-      let () = self.camera.render_scene(gl_state, |object| {
-        let (r, g, b) = clear_color;
-        let () = object.set_clear_color(r, g, b, 1.0);
-        let () = object.clear(sys::ClearMask::ColorBuffer);
-        let renderer = self.renderer.on_pre_render(object);
-        let () = self.inner.render(&renderer);
-      });
+      },
     }
   }
 
