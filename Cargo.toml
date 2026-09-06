@@ -103,7 +103,7 @@ panic = "abort"
 debug = true
 
 [build-dependencies]
-grev = { version = "0.1.3", default-features = false }
+grev = { version = "0.2.0", default-features = false }
 wasm-bindgen-cli-support = { version = "0.2", default-features = false, optional = true }
 
 [dependencies]
