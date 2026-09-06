@@ -1,4 +1,4 @@
-// Copyright (C) 2023 Daniel Mueller <deso@posteo.net>
+// Copyright (C) 2023-2026 Daniel Mueller <deso@posteo.net>
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 use std::cmp::max;
@@ -56,21 +56,22 @@ pub(super) fn rotate<S>(stone: &mut S, left: bool)
 where
   S: ?Sized + Stonelike,
 {
-  let center_x;
-  let center_y;
-
   let bounds = stone.bounds();
   let w = bounds.w;
   let h = bounds.h;
   let bounds = bounds.into_other::<f32>();
 
-  if left {
-    center_x = 0.5 * bounds.w;
-    center_y = 0.5 * bounds.h + if h & 1 == 0 { 0.0 } else { 0.5 };
+  let (center_x, center_y) = if left {
+    (
+      0.5 * bounds.w,
+      0.5 * bounds.h + if h & 1 == 0 { 0.0 } else { 0.5 },
+    )
   } else {
-    center_x = 0.5 * bounds.w + if w & 1 == 0 { 0.5 } else { 0.0 };
-    center_y = 0.5 * bounds.h;
-  }
+    (
+      0.5 * bounds.w + if w & 1 == 0 { 0.5 } else { 0.0 },
+      0.5 * bounds.h,
+    )
+  };
 
   // TODO: For now we need to add a constant value here before we
   //       rotate -- this is necessary because the rotation code is
